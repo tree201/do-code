@@ -1,0 +1,11 @@
+node_modules/
+dist/
+packages/cli/dist/
+packages/cli/LICENSE
+.do-code/
+jobs/
+scratch/
+.env
+.DS_Store
+__pycache__/
+*.pyc

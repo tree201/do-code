@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: macOS · Node ${{ matrix.node }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20.19.0, 22]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - name: Install required test tooling
+        run: |
+          if ! command -v rg >/dev/null; then
+            brew install ripgrep
+          fi
+      - run: npm run build:agent
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Verify published CLI package in a clean temporary prefix
+        run: |
+          mkdir -p .release-check
+          npm pack ./packages/cli --pack-destination .release-check
+          npm install --global --prefix "$RUNNER_TEMP/do-code-global" .release-check/do-code-*.tgz
+          "$RUNNER_TEMP/do-code-global/bin/do-code" --help
+          MODEL_API_KEY=ci MODEL_BASE_URL=http://127.0.0.1:9/v1 MODEL_ID=ci \
+            "$RUNNER_TEMP/do-code-global/bin/do-code" doctor

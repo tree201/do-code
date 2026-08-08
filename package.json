@@ -1,0 +1,43 @@
+{
+  "name": "do-code",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "do-code": "scripts/cli-entry.js"
+  },
+  "files": [
+    "dist/src",
+    "scripts/cli-entry.js",
+    "scripts/postinstall.mjs",
+    "README.md"
+  ],
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.mjs",
+    "build": "npm run build:agent",
+    "build:agent": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "release:pack": "npm run build:agent && mkdir -p .do-code/releases && npm pack ./packages/cli --pack-destination .do-code/releases",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "@xterm/headless": "^5.5.0",
+    "ink-testing-library": "^4.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "cli-highlight": "^2.1.11",
+    "ink": "npm:@jrichman/ink@6.6.9",
+    "marked": "^18.0.9",
+    "string-width": "^7.2.0"
+  },
+  "optionalDependencies": {
+    "node-pty": "^1.1.0"
+  }
+}

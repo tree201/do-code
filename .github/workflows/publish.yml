@@ -1,0 +1,51 @@
+name: Publish npm package
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: macos-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm ci
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install --global npm@^11.5.1
+      - name: Install required test tooling
+        run: |
+          if ! command -v rg >/dev/null; then
+            brew install ripgrep
+          fi
+      - run: npm run build:agent
+      - run: npm test
+      - run: npm run typecheck
+      - name: Verify the Git tag matches package version
+        if: github.event_name == 'push'
+        run: |
+          VERSION=$(node -p "require('./packages/cli/package.json').version")
+          test "$GITHUB_REF_NAME" = "v$VERSION"
+      - run: mkdir -p release-artifacts && npm pack ./packages/cli --pack-destination release-artifacts
+      - name: Publish to npm with provenance
+        run: npm publish ./packages/cli --access public
+      - name: Create GitHub release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            gh release create "$GITHUB_REF_NAME" release-artifacts/*.tgz --generate-notes --prerelease
+          else
+            gh release create "$GITHUB_REF_NAME" release-artifacts/*.tgz --generate-notes
+          fi

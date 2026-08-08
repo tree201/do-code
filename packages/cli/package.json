@@ -1,0 +1,51 @@
+{
+  "name": "do-code",
+  "version": "0.3.0",
+  "description": "A local-first terminal coding agent with multi-provider support, safe tool execution, and persistent sessions.",
+  "keywords": [
+    "ai",
+    "agent",
+    "coding-agent",
+    "cli",
+    "developer-tools",
+    "llm",
+    "terminal"
+  ],
+  "author": "tree201",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tree201/do-code.git"
+  },
+  "homepage": "https://github.com/tree201/do-code#readme",
+  "bugs": {
+    "url": "https://github.com/tree201/do-code/issues"
+  },
+  "type": "module",
+  "bin": {
+    "do-code": "scripts/cli-entry.js"
+  },
+  "files": [
+    "dist",
+    "scripts/cli-entry.js",
+    "README.md"
+  ],
+  "scripts": {
+    "prepack": "node ../../scripts/prepare-cli-package.mjs"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "dependencies": {
+    "cli-highlight": "^2.1.11",
+    "ink": "npm:@jrichman/ink@6.6.9",
+    "marked": "^18.0.9",
+    "react": "^19.2.8"
+  },
+  "optionalDependencies": {
+    "node-pty": "^1.1.0"
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  }
+}

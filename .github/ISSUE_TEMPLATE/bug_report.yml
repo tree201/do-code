@@ -1,0 +1,37 @@
+name: Bug report
+description: Report a reproducible do-code defect
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include API keys, private code, or unredacted conversations. Security issues must use private reporting."
+  - type: input
+    id: version
+    attributes:
+      label: do-code version
+      placeholder: "0.4.0-beta.1"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: "Commands, expected behaviour, and actual behaviour"
+    validations:
+      required: true
+  - type: textarea
+    id: error-id
+    attributes:
+      label: Error ID or redacted diagnostic output
+      description: "Optional: run do-code errors show <id>. Remove credentials and private source code."
+  - type: dropdown
+    id: terminal
+    attributes:
+      label: Terminal
+      options: [macOS Terminal, iTerm2, VS Code terminal, Windows Terminal, Linux terminal, Other]
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "OS, Node version, model provider, shell"
