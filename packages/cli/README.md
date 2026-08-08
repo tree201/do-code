@@ -1,8 +1,7 @@
 # do-code
 
-do-code is a local-first terminal coding agent. It works inside an existing
-repository, supports multiple Chinese and international model providers, and
-keeps sessions, diagnostics, and credentials on your machine.
+do-code is an open-source terminal coding agent. It works inside an existing
+repository and supports multiple Chinese and international model providers.
 
 ## Install
 

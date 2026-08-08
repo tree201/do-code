@@ -1,7 +1,7 @@
 {
   "name": "do-code",
   "version": "0.3.0",
-  "description": "A local-first terminal coding agent with multi-provider support, safe tool execution, and persistent sessions.",
+  "description": "An open-source coding agent.",
   "keywords": [
     "ai",
     "agent",
