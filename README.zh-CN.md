@@ -47,7 +47,7 @@ do-code
 `do-code auth` 会引导配置模型服务。API Key 仅保存在本机用户配置中；环境变量可覆盖本地配置。
 
 > [!NOTE]
-> npm 包发布后，可使用 `npm install -g do-code` 安装。首次使用建议在 Git 仓库中运行，并从默认权限模式开始。
+> 可使用 `npm install -g @tree201/do-code` 安装。首次使用建议在 Git 仓库中运行，并从默认权限模式开始。
 
 ## 用 do-code 做什么
 

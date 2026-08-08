@@ -1,6 +1,6 @@
 # 个人开源发布流程
 
-do-code 的 GitHub 源码仓库是 `tree201/do-code`，npm 只发布 CLI 包 `packages/cli`，包名为 `do-code`。
+do-code 的 GitHub 源码仓库是 `tree201/do-code`，npm 只发布 CLI 包 `packages/cli`，包名为 `@tree201/do-code`。
 
 ## 首次发布（只做一次）
 
@@ -46,7 +46,7 @@ git push origin v0.4.0-beta.1
 推送 Tag 后，`.github/workflows/publish.yml` 会重新测试、构建、打包、发布 npm，并创建 GitHub prerelease。用户可安装：
 
 ```bash
-npm install -g do-code@beta
+npm install -g @tree201/do-code@beta
 ```
 
 ## 稳定版发布
@@ -65,8 +65,8 @@ git push origin v0.4.0
 发布后的最小验收：
 
 ```bash
-npx --yes do-code@0.4.0 --help
-npx --yes do-code@0.4.0 doctor
+npx --yes @tree201/do-code@0.4.0 --help
+npx --yes @tree201/do-code@0.4.0 doctor
 ```
 
 如需撤回有问题版本，请使用 npm deprecate 给出替代版本说明，而不是删除已被用户安装的版本。

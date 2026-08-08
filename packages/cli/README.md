@@ -8,7 +8,7 @@ repository and supports multiple Chinese and international model providers.
 Node.js 20.19+ or 22.12+ is required.
 
 ```bash
-npm install -g do-code
+npm install -g @tree201/do-code
 do-code auth
 cd /path/to/project
 do-code

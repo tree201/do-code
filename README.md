@@ -47,7 +47,7 @@ do-code
 `do-code auth` guides you through provider setup. API keys are stored only in local user configuration; environment variables override saved values.
 
 > [!NOTE]
-> Once the npm package is published, install it with `npm install -g do-code`. For first use, start in a Git repository and use the default permission mode.
+> Install the npm package with `npm install -g @tree201/do-code`. For first use, start in a Git repository and use the default permission mode.
 
 ## What it does
 
