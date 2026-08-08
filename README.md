@@ -2,43 +2,29 @@
 
 # do-code
 
+**开源 Coding Agent。**
+
+在自己的终端与工作区中阅读代码、修改文件、运行命令，并验证结果。
+
 [![CI](https://github.com/tree201/do-code/actions/workflows/ci.yml/badge.svg)](https://github.com/tree201/do-code/actions/workflows/ci.yml)
 [![Node.js](https://img.shields.io/badge/node-20.19%2B%20%7C%2022.12%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**面向真实项目工作的、本地优先的开源 Coding Agent。**
-
-在终端中阅读、修改和验证代码；模型、权限与会话都由你掌控。
-
-[快速开始](#快速开始) · [使用说明](docs/README.md) · [贡献](CONTRIBUTING.md)
+[快速开始](#安装) · [使用文档](docs/README.md) · [贡献](CONTRIBUTING.md) · [安全策略](SECURITY.md)
 
 </div>
 
-## 为什么是 do-code？
+<p align="center">
+  <img src="assets/terminal-preview.png" alt="do-code 终端界面预览" width="100%">
+</p>
 
-- **本地优先**：在你的工作区、终端和 Git 仓库中执行；会话、检查点、错误报告和 API Key 不会上传到 do-code 服务。
-- **适配国内与国际模型**：通过一个交互向导接入火山方舟、阿里云百炼、DeepSeek、MiniMax、智谱、ModelScope，以及 OpenAI-compatible、Anthropic 和 Gemini 服务。
-- **为真实改代码而设计**：支持工作区文件引用、Shell、Git Diff、会话恢复、上下文压缩、检查点恢复、计划模式与权限控制。
-- **可自动化集成**：提供稳定的 Headless/JSONL 接口，适用于 CI、脚本与外部评测器。
+---
 
-> [!NOTE]
-> do-code 处于公开 Beta。它会直接操作你指定的工作区；首次使用请在 Git 仓库中运行，并从默认的审批模式开始。
+## 安装
 
-## 安装与快速开始
+需要 Node.js `20.19+` 或 `22.12+`。
 
-需要 Node.js 20.19+ 或 22.12+。
-
-首次 npm Beta 发布完成后，安装方式是：
-
-```bash
-npm install -g do-code@beta
-
-cd /path/to/your-project
-do-code auth       # 选择模型服务并保存本地配置
-do-code            # 开始对话
-```
-
-在 npm 包首次发布前，请从源码本地安装：
+当前可直接从源码运行：
 
 ```bash
 git clone https://github.com/tree201/do-code.git
@@ -46,65 +32,88 @@ cd do-code
 npm install
 npm run build:agent
 npm link
+```
 
+进入一个已有项目并开始使用：
+
+```bash
 cd /path/to/your-project
 do-code auth
 do-code
 ```
 
-`do-code auth` 会引导完成模型配置。API Key 只保存在本机用户配置中，Shell 环境变量会覆盖本地配置。
+`do-code auth` 会引导配置模型服务。API Key 仅保存在本机用户配置中；环境变量可覆盖本地配置。
 
-```bash
-do-code doctor     # 检查 Node、模型、工作区与本机工具
-do-code --continue # 继续最近一次会话
-do-code sessions   # 浏览、搜索、导出或删除会话
-```
+> [!NOTE]
+> npm 包发布后，可使用 `npm install -g do-code` 安装。首次使用建议在 Git 仓库中运行，并从默认权限模式开始。
 
-## 使用方式
+## 用 do-code 做什么
 
-| 场景 | 命令 | 说明 |
-| --- | --- | --- |
-| 交互式开发 | `do-code` | 终端对话、`@文件` 引用、`/` 命令与多轮会话。 |
-| 恢复会话 | `do-code resume <session-id>` | 载入此前对话和工作区上下文。 |
-| 脚本 / CI | `do-code run --yes "修复失败测试并验证"` | 非交互执行，支持 JSON 或 JSONL 输出。 |
-| 自动化集成 | `do-code acp` | 通过 ACP 标准输入/输出运行 Agent。 |
-| 模型管理 | `do-code auth` / `do-code config` | 使用向导配置或查看已脱敏的模型预设。 |
+- **在真实工作区完成任务**：读取和引用文件、修改代码、执行 Shell 命令、查看 Git Diff、运行测试。
+- **接入自己的模型**：内置火山方舟、百炼、DeepSeek、MiniMax、智谱、ModelScope，也支持 OpenAI-compatible、Anthropic 与 Gemini 服务。
+- **保持执行可控**：计划模式与权限模式彼此独立；每次编辑会创建本地检查点，方便检查或恢复。
 
-在交互界面中：
+输入 `/` 浏览命令，输入 `@` 引用工作区文件：
 
 ```text
-/plan                 进入只读规划；Shift+Tab 可快速切换
-/permissions           选择 Ask / Auto / Full Access 权限模式
+/plan                 在只读模式下探索并提出计划
+/permissions          选择 Ask / Auto / Full Access
 /model                 查看或切换模型预设
 /resume                恢复历史会话
-/bug <说明>            保存脱敏的本地 Bad Case，并生成错误 ID
-@src/app.ts            将工作区文件加入当前上下文
-!npm test              直接执行 Shell 命令（会遵循当前权限）
+@src/app.ts           将文件加入当前上下文
+!npm test             运行命令（遵循当前权限）
 ```
 
-完整命令与快捷键请看 [使用说明](docs/README.md)。
+## 运行方式
 
-## 安全模型
+### 交互式终端
 
-默认的 **Ask** 模式会在高风险操作前请求确认；**Auto** 仅自动处理普通工作区改动；**Full Access** 适合已信任的工作区或 CI。计划模式是独立状态，不会静默改变你的权限模式。
+```bash
+do-code
+do-code --continue
+do-code resume <session-id>
+```
 
-每次编辑前会创建本地检查点，可通过 `/restore` 和 `/rewind` 恢复。遇到异常时可用 `do-code errors show <error-id>` 查看可复现的本地诊断信息。
+### 脚本与 CI
 
-## 开发与发布
+`run` 提供稳定的 JSON / JSONL 输出，适合外部自动化调用：
+
+```bash
+do-code run --yes --output-format stream-json "修复失败测试并验证"
+```
+
+也可通过 `do-code acp` 使用 ACP 标准输入/输出协议。详见 [Headless / JSONL 协议](docs/headless-protocol.md)。
+
+## 安全与数据
+
+默认的 **Ask** 模式会在高风险操作前请求确认；**Auto** 自动处理普通工作区改动；**Full Access** 仅适用于已信任的工作区或 CI。
+
+会话、检查点、错误报告与凭据默认都留在本机。出现异常时：
+
+```bash
+do-code errors list
+do-code errors show <error-id>
+```
+
+## 文档
+
+- [使用说明与命令导航](docs/README.md)
+- [模型接入与配置说明](docs/README.md)
+- [Bad Case 回流与错误诊断](docs/bad-case-feedback.md)
+- [Headless / JSONL 协议](docs/headless-protocol.md)
+- [架构说明](docs/architecture.md)
+- [个人发布流程](docs/releasing.md)
+
+## 参与贡献
+
+欢迎提交 Issue 与 Pull Request。开始前请阅读 [贡献指南](CONTRIBUTING.md) 和 [安全策略](SECURITY.md)。
 
 ```bash
 npm test
 npm run typecheck
 npm run build
-npm pack ./packages/cli --dry-run
 ```
 
-- [文档导航](docs/README.md)
-- [贡献指南](CONTRIBUTING.md)
-- [安全策略](SECURITY.md)
-- [个人发布流程](docs/releasing.md)
-- [变更记录](CHANGELOG.md)
+## License
 
-## 许可证
-
-[Apache-2.0](LICENSE)。
+[Apache-2.0](LICENSE)
