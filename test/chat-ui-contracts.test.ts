@@ -5,7 +5,7 @@ import type { PlanProposal } from "../src/tools.js"
 import { ApprovalBridge, PlanReviewBridge, QuestionBridge } from "../src/ui/async-bridges.js"
 import { canRunSlashCommandDuringTask } from "../src/ui/shortcut-command-policy.js"
 import { createPausableOutput } from "../src/ui/pausable-output.js"
-import { acceptAttachments, attachmentIndex } from "../src/ui/attachment-model.js"
+import { acceptAttachments, attachmentIndex, attachmentInsertionIndex, attachmentTokenIndex, insertAttachmentTokens, removeAttachmentToken, stripAttachmentTokens } from "../src/ui/attachment-model.js"
 import { turnSubmissionDisposition } from "../src/ui/turn-submission-model.js"
 import { cachedTranscriptViewerLines, cachedTranscriptViewerText } from "../src/ui/transcript-viewer-cache.js"
 import type { TranscriptItem } from "../src/ui/transcript-model.js"
@@ -135,6 +135,18 @@ test("attachment model resolves index/name references and accepts only byte-safe
     skipped: 1,
     totalBytes: 10,
   })
+})
+
+test("attachment tokens behave as inline editor nodes", () => {
+  let editor = createEditor("before after")
+  editor = { ...editor, cursor: 7 }
+  editor = insertAttachmentTokens(editor)
+  assert.equal(attachmentInsertionIndex(editor), 1)
+  assert.equal(attachmentTokenIndex(editor, "backspace"), 0)
+  assert.equal(stripAttachmentTokens(editor.value), "before after")
+  editor = removeAttachmentToken(editor, 0)
+  assert.equal(editor.value, "before after")
+  assert.equal(editor.cursor, 7)
 })
 
 test("transcript viewer cache reuses immutable snapshots and invalidates by view inputs", () => {

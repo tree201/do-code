@@ -1,11 +1,19 @@
 import { useCallback } from "react"
 import { classifyPastedImagePaths, MAX_IMAGE_COUNT, MAX_IMAGE_TOTAL_BYTES } from "../../image-attachments.js"
-import { acceptAttachments, attachmentIndex } from "../attachment-model.js"
+import { acceptAttachments, attachmentIndex, attachmentInsertionIndex, insertAttachmentTokens, removeAttachmentToken } from "../attachment-model.js"
 import { insertEditorText } from "../editor.js"
 import type { ChatAppProps } from "../chat-app-types.js"
 import type { ChatAppState } from "./use-chat-app-state.js"
 
 export function useAttachmentActions(props: ChatAppProps, state: ChatAppState) {
+  const insertAttachedImages = useCallback((images: typeof state.attachedImages) => {
+    if (!images.length) return
+    const snapshot = state.composerOwner.getSnapshot()
+    const index = attachmentInsertionIndex(snapshot.editor)
+    state.updateAttachedImages((current) => [...current.slice(0, index), ...images, ...current.slice(index)])
+    state.setEditor((current) => insertAttachmentTokens(current, images.length))
+  }, [state.composerOwner, state.setEditor, state.updateAttachedImages])
+
   const removeAttachedImage = useCallback((query: string) => {
     const index = attachmentIndex(state.attachedImages, query)
     const image = state.attachedImages[index]
@@ -13,8 +21,9 @@ export function useAttachmentActions(props: ChatAppProps, state: ChatAppState) {
       state.append({ kind: "error", text: "Usage: /remove-image <index|name>" })
       return
     }
+    state.setEditor((current) => removeAttachmentToken(current, index))
     state.updateAttachedImages((current) => current.filter((_, currentIndex) => currentIndex !== index))
-  }, [state.append, state.attachedImages, state.updateAttachedImages])
+  }, [state.append, state.attachedImages, state.setEditor, state.updateAttachedImages])
 
   const attachClipboardImage = useCallback(async () => {
     if (!props.pasteImage) throw new Error("Clipboard image support is unavailable")
@@ -29,9 +38,9 @@ export function useAttachmentActions(props: ChatAppProps, state: ChatAppState) {
       return false
     }
     state.composerOwner.markPaste()
-    state.updateAttachedImages((current) => [...current, image])
+    insertAttachedImages(accepted)
     return true
-  }, [props.pasteImage, state.append, state.composerOwner, state.updateAttachedImages])
+  }, [insertAttachedImages, props.pasteImage, state.append, state.composerOwner])
 
   const attachPastedImagePaths = useCallback((pasted: string) => {
     const classified = classifyPastedImagePaths(pasted)
@@ -46,10 +55,10 @@ export function useAttachmentActions(props: ChatAppProps, state: ChatAppState) {
       const { accepted, skipped } = acceptAttachments(state.composerOwner.getSnapshot().attachments, images, MAX_IMAGE_TOTAL_BYTES)
       if (!accepted.length) { state.append({ kind: "error", text: "Attached images exceed the 20 MB total limit." }); return }
       if (skipped) state.append({ kind: "error", text: "Some images were skipped because attachments exceed the 20 MB total limit." })
-      state.updateAttachedImages((current) => [...current, ...accepted])
+      insertAttachedImages(accepted)
     }).catch(() => state.setEditor((current) => insertEditorText(current, pasted)))
     return true
-  }, [props.pasteImagePaths, state.append, state.composerOwner, state.setEditor, state.updateAttachedImages])
+  }, [insertAttachedImages, props.pasteImagePaths, state.append, state.composerOwner, state.setEditor])
 
   return { removeAttachedImage, attachClipboardImage, attachPastedImagePaths }
 }

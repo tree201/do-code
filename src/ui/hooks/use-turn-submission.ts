@@ -2,6 +2,7 @@ import { useCallback, useEffect } from "react"
 import { MaxSessionTurnsError } from "../../turn-limits.js"
 import { createToolPresentation } from "../../tool-presentation.js"
 import { expandPromptExtension } from "../../extension-registry.js"
+import { stripAttachmentTokens } from "../attachment-model.js"
 import { createEditor } from "../editor.js"
 import { enqueueMessage, takeNextMessage } from "../message-queue.js"
 import { routeSlashCommand } from "../slash-command-router.js"
@@ -19,7 +20,7 @@ import type { TranscriptController } from "./use-transcript-controller.js"
 export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, transcript: TranscriptController, attachments: AttachmentActions, sessions: SessionActions, exit: () => void) {
   const SHELL_TOOL_NAME = "shell"
   const submit = useCallback((rawInput: string) => {
-    const input = rawInput.trim()
+    const input = stripAttachmentTokens(rawInput).trim()
     const composer = state.composerOwner.getSnapshot()
     const images = composer.attachments
     const disposition = turnSubmissionDisposition(input, images.length, state.turnOwner.getSnapshot().running)

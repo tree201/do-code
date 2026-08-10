@@ -1,4 +1,5 @@
 import { applyCompletion, completionsForEditor } from "./completion.js"
+import { attachmentTokenIndex } from "./attachment-model.js"
 import { backspaceEditor, createEditor, deleteEditor, insertEditorText, moveEditorCursor, moveEditorEnd, moveEditorHome, moveEditorVertical, redoEditor, undoEditor } from "./editor.js"
 import { takeLastMessage } from "./message-queue.js"
 import { nextReasoningEffort } from "./model-actions.js"
@@ -31,7 +32,7 @@ export function routeEditorInput(rawInput: string, input: string, key: ChatInput
   }
   if (state.turnOwner.getSnapshot().running && (key.escape || (key.ctrl && input === "c"))) { state.turnOwner.abort(); return }
   if (key.ctrl && input === "c") {
-    if (composer.editor.value) { state.setEditor(createEditor()); state.clearExitConfirmation() }
+    if (composer.editor.value) { state.setEditor(createEditor()); state.updateAttachedImages([]); state.clearExitConfirmation() }
     else if (composer.exitConfirmation) exit()
     else state.armExitConfirmation()
     return
@@ -70,8 +71,13 @@ export function routeEditorInput(rawInput: string, input: string, key: ChatInput
   if (key.rightArrow) { state.setEditor((current) => moveEditorCursor(current, 1)); return }
   if (key.home || (key.ctrl && input === "a")) { state.setEditor((current) => moveEditorHome(current)); return }
   if (key.end || (key.ctrl && input === "e")) { state.setEditor((current) => moveEditorEnd(current)); return }
-  if (key.backspace || key.delete) { state.setEditor((current) => backspaceEditor(current)); return }
-  if (key.ctrl && input === "u") { state.setEditor(createEditor()); return }
+  if (key.backspace || key.delete) {
+    const attachmentIndex = attachmentTokenIndex(composer.editor, "backspace")
+    if (attachmentIndex >= 0) { attachments.removeAttachedImage(String(attachmentIndex + 1)); return }
+    state.setEditor((current) => backspaceEditor(current))
+    return
+  }
+  if (key.ctrl && input === "u") { state.setEditor(createEditor()); state.updateAttachedImages([]); return }
   if ((key.ctrl || key.meta || key.super) && input.toLowerCase() === "z") { state.setEditor((current) => key.shift ? redoEditor(current) : undoEditor(current)); return }
   if (key.ctrl && input.toLowerCase() === "y") { state.setEditor((current) => redoEditor(current)); return }
   if (completionItems.length && key.upArrow) { state.setCompletionIndex((composer.completionIndex - 1 + completionItems.length) % completionItems.length); return }
