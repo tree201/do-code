@@ -2,7 +2,7 @@ import React from "react"
 import { highlight, supportsLanguage } from "cli-highlight"
 import { Box, Text } from "ink"
 import { marked, type Token, type Tokens } from "marked"
-import { displayWidth, padTerminalEnd, wrapTerminalLines } from "./terminal-text.js"
+import { MarkdownTable } from "./markdown-table.js"
 import { tuiTheme } from "./theme.js"
 
 export function parseMarkdownBlocks(source: string) {
@@ -127,38 +127,7 @@ function BlockToken({ token, contentWidth, pendingCodeRows }: BlockTokenProps) {
     const value = token as Tokens.List
     return <ListToken value={value} {...(contentWidth ? { contentWidth } : {})} {...(pendingCodeRows ? { pendingCodeRows } : {})} />
   }
-  if (token.type === "table") {
-    const value = token as Tokens.Table
-    const rows = [value.header, ...value.rows].map((row) => row.map((cell) => cell.text))
-    const columnCount = Math.max(1, value.header.length)
-    const separatorsWidth = Math.max(0, columnCount - 1) * 3
-    const available = Math.max(columnCount * 3, (contentWidth ?? 80) - 4 - separatorsWidth)
-    const naturalWidths = value.header.map((_, column) => Math.max(3, ...rows.map((row) => displayWidth(row[column] ?? ""))))
-    const columnWidths = naturalWidths.map(() => 3)
-    let remaining = Math.max(0, available - columnWidths.reduce((sum, width) => sum + width, 0))
-    while (remaining > 0) {
-      let changed = false
-      for (let column = 0; column < columnWidths.length && remaining > 0; column++) {
-        if ((columnWidths[column] ?? 3) >= (naturalWidths[column] ?? 3)) continue
-        columnWidths[column] = (columnWidths[column] ?? 3) + 1
-        remaining--
-        changed = true
-      }
-      if (!changed) break
-    }
-    const wrappedRows = rows.map((row) => {
-      const cells = row.map((cell, column) => wrapTerminalLines(cell, columnWidths[column] ?? 3))
-      const height = Math.max(1, ...cells.map((cell) => cell.length))
-      return Array.from({ length: height }, (_, line) => cells.map((cell, column) => padTerminalEnd(cell[line] ?? "", columnWidths[column] ?? 3)).join(" │ "))
-    })
-    return (
-      <Box flexDirection="column" borderStyle="single" borderColor={tuiTheme.border} paddingX={1} {...(contentWidth ? { width: contentWidth } : {})}>
-        {wrappedRows[0]?.map((line, index) => <Text key={`header-${index}`} bold>{line}</Text>)}
-        <Text dimColor>{columnWidths.map((cellWidth) => "─".repeat(cellWidth)).join("─┼─")}</Text>
-        {wrappedRows.slice(1).flatMap((row, rowIndex) => row.map((line, lineIndex) => <Text key={`${rowIndex}-${lineIndex}`}>{line}</Text>))}
-      </Box>
-    )
-  }
+  if (token.type === "table") return <MarkdownTable value={token as Tokens.Table} {...(contentWidth ? { width: contentWidth } : {})} />
   if (token.type === "hr") return <Text dimColor>{"─".repeat(40)}</Text>
   if (token.type === "html") return <Text dimColor>{(token as Tokens.HTML).text}</Text>
   if (token.type === "text") {
