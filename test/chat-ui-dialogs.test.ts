@@ -8,9 +8,9 @@ import type { ChatModel } from "../src/protocol.js"
 import { ApprovalBridge, ApprovalDialog, askAnswerPairs, ChatApp, PermissionModeDialog, PlanReviewBridge, PlanReviewDialog, QuestionBridge, QuestionDialog, TranscriptLine, planMarkdown, type ChatAppProps } from "../src/ui/chat-app.js"
 import { DialogManager, DialogSurface } from "../src/ui/components/dialog-manager.js"
 import { displayWidth } from "../src/ui/terminal-text.js"
-import { tick } from "./support/chat-ui.js"
+import { tick, visibleFrame } from "./support/chat-ui.js"
 
-test("transient dialogs share one responsive control surface", () => {
+test("transient dialogs share one responsive control surface", (t) => {
   const width = 34
   const view = render(React.createElement(Box, { width },
     React.createElement(DialogManager, null,
@@ -21,13 +21,13 @@ test("transient dialogs share one responsive control surface", () => {
       ),
     ),
   ))
-  const frame = view.lastFrame() ?? ""
+  t.after(() => view.unmount())
+  const frame = visibleFrame(view)
   assert.match(frame, /需要批准这个操作/)
   assert.ok(frame.split("\n").every((line) => displayWidth(line) <= width))
-  view.unmount()
 })
 
-test("agent questions separate title, prompt, options, and localized controls", () => {
+test("agent questions separate title, prompt, options, and localized controls", (t) => {
   const view = render(React.createElement(Box, { width: 60 }, React.createElement(QuestionDialog, {
     question: "你希望主要优化哪个方向？",
     options: ["代码结构重构", "运行性能优化", "打包体积优化"],
@@ -35,7 +35,8 @@ test("agent questions separate title, prompt, options, and localized controls", 
     draft: "",
     language: "zh",
   })))
-  const lines = (view.lastFrame() ?? "").split("\n")
+  t.after(() => view.unmount())
+  const lines = visibleFrame(view).split("\n")
   const title = lines.findIndex((line) => line.includes("需要你的输入"))
   const prompt = lines.findIndex((line) => line.includes("你希望主要优化哪个方向"))
   const firstOption = lines.findIndex((line) => line.includes("代码结构重构"))
@@ -44,10 +45,9 @@ test("agent questions separate title, prompt, options, and localized controls", 
   assert.ok(firstOption >= prompt + 2, "question and options should be visually separated")
   assert.ok(controls >= firstOption + 4, "controls should be visually separated from the option list")
   assert.ok(lines.every((line) => displayWidth(line) <= 60))
-  view.unmount()
 })
 
-test("file approval uses a localized restrained Codex-style diff", () => {
+test("file approval uses a localized restrained Codex-style diff", (t) => {
   const view = render(React.createElement(Box, { width: 72 }, React.createElement(ApprovalDialog, {
     request: {
       tool: "edit_file",
@@ -68,7 +68,8 @@ test("file approval uses a localized restrained Codex-style diff", () => {
     language: "zh",
     width: 72,
   })))
-  const frame = view.lastFrame() ?? ""
+  t.after(() => view.unmount())
+  const frame = visibleFrame(view)
   assert.match(frame, /修改 src\/earth\.js  中等风险/)
   assert.match(frame, /- earthSystem\.add\(nightLights\)/)
   assert.match(frame, /\+ earth\.add\(nightLights\)/)
@@ -77,10 +78,9 @@ test("file approval uses a localized restrained Codex-style diff", () => {
   assert.match(frame, /3\. 始终允许此操作/)
   assert.doesNotMatch(frame, /Original|Updated|legacy raw detail|mode\.default/)
   assert.ok(frame.split("\n").every((line) => displayWidth(line) <= 72))
-  view.unmount()
 })
 
-test("plan review keeps the dynamic confirmation compact while the full plan stays in scrollback", () => {
+test("plan review keeps the dynamic confirmation compact while the full plan stays in scrollback", (t) => {
   const plan = {
     title: "拆分认证模块",
     summary: "保持行为兼容，拆分策略与传输层。",
@@ -94,7 +94,8 @@ test("plan review keeps the dynamic confirmation compact while the full plan sta
     selectedIndex: 0,
     language: "zh",
   }))
-  const frame = view.lastFrame() ?? ""
+  t.after(() => view.unmount())
+  const frame = visibleFrame(view)
   assert.match(frame, /建议计划/)
   assert.doesNotMatch(frame, /拆分认证模块/)
   assert.doesNotMatch(frame, /完整计划已写入上方对话历史/)
@@ -104,14 +105,14 @@ test("plan review keeps the dynamic confirmation compact while the full plan sta
   assert.doesNotMatch(frame, /1\. 提取策略/)
   assert.doesNotMatch(frame, /逐项确认|自动编辑/)
   assert.ok(frame.split("\n").length <= 14, "the transient plan confirmation must stay viewport-safe")
-  view.unmount()
 
   const transcript = render(React.createElement(TranscriptLine, {
     item: { id: 99, kind: "plan", plan },
     width: 80,
     language: "zh",
   }))
-  const transcriptFrame = transcript.lastFrame() ?? ""
+  t.after(() => transcript.unmount())
+  const transcriptFrame = visibleFrame(transcript)
   assert.match(transcriptFrame, /1\. 提取策略/)
   assert.match(transcriptFrame, /src\/auth\.ts/)
   assert.match(transcriptFrame, /npm test/)
@@ -120,7 +121,6 @@ test("plan review keeps the dynamic confirmation compact while the full plan sta
   const verificationLine = transcriptLines.findIndex((line) => line.includes("npm test"))
   assert.equal(transcriptLines[titleLine - 1]?.trim(), "", "plan content should have one row of top padding")
   assert.equal(transcriptLines[verificationLine + 1]?.trim(), "", "plan content should have one row of bottom padding")
-  transcript.unmount()
 })
 
 test("plan markdown preserves structured steps without duplicate numbering", () => {
@@ -142,7 +142,7 @@ test("plan markdown preserves structured steps without duplicate numbering", () 
   assert.doesNotMatch(markdown, /### 2\. -/)
 })
 
-test("plan review pauses animated activity so terminal scrollback is not pulled back", async () => {
+test("plan review pauses animated activity so terminal scrollback is not pulled back", async (t) => {
   let finishModel: (() => void) | undefined
   const model: ChatModel = {
     async complete() {
@@ -160,10 +160,14 @@ test("plan review pauses animated activity so terminal scrollback is not pulled 
     exportCurrentSession: async () => "unused", save: async () => {}, reportError: async () => ({ id: "err_test", file: "/tmp/error.json" }),
   }
   const view = render(React.createElement(ChatApp, props))
+  t.after(() => {
+    finishModel?.()
+    view.unmount()
+  })
   await tick()
   view.stdin.write("制定计划\r")
   await tick()
-  assert.match(view.lastFrame() ?? "", /思考中/)
+  assert.match(visibleFrame(view), /思考中/)
 
   const decision = planReviewBridge.request({
     title: "长计划滚动回归",
@@ -173,7 +177,7 @@ test("plan review pauses animated activity so terminal scrollback is not pulled 
   })
   await tick()
   await tick()
-  const frame = view.lastFrame() ?? ""
+  const frame = visibleFrame(view)
   assert.match(frame, /步骤 30/)
   assert.doesNotMatch(frame, /思考中/, "the animated spinner must be unmounted while plan review waits")
   await new Promise((resolve) => setTimeout(resolve, 160))
@@ -185,25 +189,24 @@ test("plan review pauses animated activity so terminal scrollback is not pulled 
   assert.equal(await decision, "execute")
   finishModel?.()
   await tick()
-  view.unmount()
 })
 
-test("permission menu presents the three real do-code approval levels", () => {
+test("permission menu presents the three real do-code approval levels", (t) => {
   const view = render(React.createElement(PermissionModeDialog, {
     currentMode: "full-access",
     selectedIndex: 0,
     language: "zh",
   }))
-  const frame = view.lastFrame() ?? ""
+  t.after(() => view.unmount())
+  const frame = visibleFrame(view)
   assert.match(frame, /更新模型权限/)
   assert.match(frame, /请求批准/)
   assert.match(frame, /自动批准安全操作/)
   assert.match(frame, /完全访问（当前）/)
   assert.match(frame, /工作区外文件/)
-  view.unmount()
 })
 
-test("agent interactions record the question before the answer without exposing ask_user", async () => {
+test("agent interactions record the question before the answer without exposing ask_user", async (t) => {
   assert.deepEqual(askAnswerPairs({ questions: [{ id: "direction", header: "方向", question: "选择优化方向" }] }, JSON.stringify({ answers: { direction: "代码结构" } })), [
     { question: "[方向] 选择优化方向", answer: "代码结构" },
   ])
@@ -219,16 +222,16 @@ test("agent interactions record the question before the answer without exposing 
     reportError: async () => ({ id: "err_test", file: "/tmp/error.json" }),
   }
   const view = render(React.createElement(ChatApp, props))
+  t.after(() => view.unmount())
   await tick()
   const pendingAnswer = questionBridge.request("[Direction] Choose one", ["Structure", "Performance"])
   await tick()
   view.stdin.write("\r")
   assert.equal(await pendingAnswer, "Structure")
   await tick()
-  const frame = view.lastFrame() ?? ""
+  const frame = visibleFrame(view)
   assert.equal(frame.match(/Ask: \[Direction\] Choose one/g)?.length, 1)
   assert.equal(frame.match(/Answer: Structure/g)?.length, 1)
   assert.ok(frame.indexOf("Ask: [Direction] Choose one") < frame.indexOf("Answer: Structure"))
   assert.doesNotMatch(frame, /ask_user/)
-  view.unmount()
 })
