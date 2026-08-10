@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import path from "node:path"
-import { doCodeConfigPath, effectiveReasoningEffort, effectiveThinkingMode, migrateConfig, normalizeLanguage, normalizeReasoningEffort, normalizeThinkingMode, outputLanguageInstruction, projectConfigPath, systemConfigPath } from "../src/config.js"
+import { doCodeConfigPath, effectiveReasoningEffort, effectiveThinkingMode, localeDefinitions, migrateConfig, normalizeLanguage, normalizeReasoningEffort, normalizeThinkingMode, outputLanguageInstruction, projectConfigPath, supportedLanguages, systemConfigPath } from "../src/config.js"
 
 test("configuration paths honor explicit environment overrides", () => {
   const previous = {
@@ -28,12 +28,19 @@ test("project configuration path is rooted at the resolved workspace", () => {
   assert.equal(projectConfigPath("./workspace"), path.join(path.resolve("./workspace"), ".do-code", "config.json"))
 })
 
-test("language normalization accepts supported aliases and emits stable instructions", () => {
+test("locale registry drives aliases, configuration validation, and model instructions", () => {
+  assert.deepEqual(supportedLanguages(), localeDefinitions.map((locale) => locale.id))
   assert.equal(normalizeLanguage("English"), "en")
   assert.equal(normalizeLanguage("简体中文"), "zh")
   assert.equal(normalizeLanguage("fr"), null)
-  assert.match(outputLanguageInstruction("en"), /Respond to the user in English/)
-  assert.match(outputLanguageInstruction("zh"), /Respond to the user in Simplified Chinese/)
+  for (const locale of localeDefinitions) {
+    assert.equal(migrateConfig({ language: locale.id }).language, locale.id)
+    assert.ok(locale.nativeName)
+    assert.ok(locale.englishName)
+    assert.ok(locale.bcp47)
+    assert.equal(outputLanguageInstruction(locale.id), locale.outputInstruction)
+  }
+  assert.throws(() => migrateConfig({ language: "fr" }), /language must be one of: en, zh/)
 })
 
 test("model preference normalization selects supported fallback levels", () => {

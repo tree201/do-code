@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react"
 import type { ApprovalMode } from "../../policy.js"
 import type { DoCodeLanguage, ReasoningEffort, ThinkingMode } from "../../config.js"
+import { localeDefinitions } from "../../locale-registry.js"
 import { buildWorkspaceCompletionIndex, completionsForEditor, type ArgumentCompletions } from "../completion.js"
 import { editorCursorParts } from "../editor.js"
 import { approvalModeNotice, inlineViewerHeight } from "../chat-presentation.js"
@@ -60,7 +61,7 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
   const argumentCompletions = useMemo<ArgumentCompletions>(() => ({
     [EFFORT_COMMAND]: (["low", "medium", "high", "xhigh", "max"] as ReasoningEffort[]).map((effort) => ({ label: effort, description: t(activeLanguage, effort === activeEffort ? "Current reasoning effort" : "Switch reasoning effort"), insert: effort, submit: true })),
     [THINKING_COMMAND]: (["auto", "on", "off"] as ThinkingMode[]).map((mode) => ({ label: mode, description: t(activeLanguage, mode === activeThinkingMode ? "Current thinking mode" : mode === "auto" ? "Let the model decide when to think" : mode === "on" ? "Force thinking on" : "Turn thinking off"), insert: mode, submit: true })),
-    [LANGUAGE_COMMAND]: [{ label: "zh", description: t(activeLanguage, "Set interface and output language to Chinese"), insert: "zh", submit: true }, { label: "en", description: t(activeLanguage, "Set interface and output language to English"), insert: "en", submit: true }],
+    [LANGUAGE_COMMAND]: localeDefinitions.map((language) => ({ label: language.id, description: t(activeLanguage, `Set interface and output language to ${language.englishName}`), insert: language.id, submit: true })),
     [APPROVAL_MODE_COMMAND]: (["ask", "auto", "full-access"] as ApprovalMode[]).map((mode) => ({ label: mode, description: approvalModeNotice(mode, activeLanguage).split("\n").slice(1).join(" "), insert: mode, submit: true })),
     [MEMORY_COMMAND]: ["list", "show", "reload"].map((value) => ({ label: value, description: t(activeLanguage, `${value} project instructions`), insert: value, submit: true })),
     [REWIND_COMMAND]: ["both", "chat", "files"].map((value) => ({ label: value, description: t(activeLanguage, `Rewind ${value}`), insert: value, submit: true })),

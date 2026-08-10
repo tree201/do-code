@@ -2,6 +2,7 @@ import path from "node:path"
 import React from "react"
 import { highlight, supportsLanguage } from "cli-highlight"
 import { Box, Text } from "ink"
+import type { DoCodeLanguage } from "../../config.js"
 import type { ActivityDiffFile } from "../activity-summary.js"
 import { displayWidth, truncateTerminal } from "../terminal-text.js"
 import { tuiTheme } from "../theme.js"
@@ -45,7 +46,7 @@ function highlightedCode(source: string, filePath: string) {
 export function ActivityDiff({ file, width, language, showHeader = true }: {
   file: ActivityDiffFile
   width: number
-  language: "en" | "zh"
+  language: DoCodeLanguage
   showHeader?: boolean
 }) {
   const contentWidth = Math.max(12, width)

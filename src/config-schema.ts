@@ -1,6 +1,7 @@
 import type { HookEvent, McpServerConfig, ProviderProtocol, ReasoningEffort, StoredConfig, ThinkingMode } from "./config-contracts.js"
 import { migrateAgentProfiles } from "./config-agent-profile.js"
 import { migrateModelProviders, migrateProviders } from "./config-provider-migration.js"
+import { isSupportedLanguage, supportedLanguages } from "./locale-registry.js"
 
 const EMPTY_CONFIG: StoredConfig = { version: 2 }
 const REASONING_EFFORTS: ReasoningEffort[] = ["low", "medium", "high", "xhigh", "max"]
@@ -25,7 +26,7 @@ export function migrateConfig(value: unknown, source = "configuration"): StoredC
     config.defaultThinkingMode = raw.defaultThinkingMode as ThinkingMode
   }
   if (raw.language !== undefined) {
-    if (raw.language !== "en" && raw.language !== "zh") throw new Error(`${source}.language must be en or zh`)
+    if (!isSupportedLanguage(raw.language)) throw new Error(`${source}.language must be one of: ${supportedLanguages().join(", ")}`)
     config.language = raw.language
   }
   if (raw.agents !== undefined) config.agents = migrateAgentProfiles(raw.agents, source)

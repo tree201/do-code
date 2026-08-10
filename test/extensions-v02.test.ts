@@ -53,7 +53,7 @@ test("language preference validates aliases and persists in user configuration",
     assert.equal(normalizeLanguage("中文"),"zh")
     assert.equal(normalizeLanguage("English"),"en")
     assert.equal(normalizeLanguage("Japanese"),null)
-    assert.throws(()=>migrateConfig({version:2,language:"ja"}),/language must be en or zh/)
+    assert.throws(()=>migrateConfig({version:2,language:"ja"}),/language must be one of: en, zh/)
     await saveLanguagePreference("zh")
     assert.equal((await loadStoredConfig()).language,"zh")
     assert.equal(JSON.parse(await readFile(file,"utf8")).language,"zh")

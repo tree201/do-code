@@ -1,4 +1,5 @@
 import type { DoCodeLanguage } from "../config.js"
+import { localeDefinition, localeDefinitions } from "../locale-registry.js"
 
 const zh: Record<string, string> = {
   "Show available commands": "查看可用命令",
@@ -74,6 +75,18 @@ export function t(language: DoCodeLanguage, value: string) {
 }
 
 export function languageDisplay(language: DoCodeLanguage, locale: DoCodeLanguage = language) {
-  if (locale === "zh") return language === "zh" ? "中文 [zh-CN]" : "英文 [en-US]"
-  return language === "zh" ? "Chinese [zh-CN]" : "English [en-US]"
+  const definition = localeDefinition(language)
+  return `${locale === "zh" ? definition.nativeName : definition.englishName} [${definition.bcp47}]`
+}
+
+export function availableLanguagesText(locale: DoCodeLanguage) {
+  return localeDefinitions.map((language) => languageDisplay(language.id, locale)).join(", ")
+}
+
+export function languageUsageText() {
+  return `/language [${localeDefinitions.map((language) => language.id).join("|")}]`
+}
+
+export function invalidLanguageText(locale: DoCodeLanguage) {
+  return `${locale === "zh" ? "无效语言。用法" : "Invalid language. Usage"}: ${languageUsageText()}`
 }
