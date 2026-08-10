@@ -38,7 +38,6 @@ export function reduceLiveTranscript(
   } else if (event.type === "step.started") {
     state.activityEpoch++
     state.reasoningCharacters = 0
-    effects.flushPendingTools = true
   } else if (event.type === "model.retrying") {
     state.activeTool = language === "zh"
       ? `正在重试第 ${event.attempt} 次 · ${Math.ceil(event.delayMs / 1000)} 秒后`

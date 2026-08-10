@@ -1,7 +1,7 @@
 import { applyCompletion, completionsForEditor } from "./completion.js"
 import { backspaceEditor, createEditor, deleteEditor, insertEditorText, moveEditorCursor, moveEditorEnd, moveEditorHome, moveEditorVertical, redoEditor, undoEditor } from "./editor.js"
 import { takeLastMessage } from "./message-queue.js"
-import { modelStateFromConfig, nextReasoningEffort } from "./model-actions.js"
+import { nextReasoningEffort } from "./model-actions.js"
 import { isReasoningEffortShortcut } from "./shortcut-command-policy.js"
 import type { ChatInputKey } from "./input-routing-types.js"
 import type { ChatAppProps } from "./chat-app-types.js"
@@ -26,11 +26,7 @@ export function routeEditorInput(rawInput: string, input: string, key: ChatInput
   if (isReasoningEffortShortcut(input, key)) {
     const effort = nextReasoningEffort(state.activeEffort)
     if (!state.runtimeStore.canSwitchEffort) state.append({ kind: "error", text: "This client does not support reasoning effort switching." })
-    else void state.runtimeStore.switchEffort(effort).then((config) => {
-      const modelState = modelStateFromConfig(config)
-      const requested = modelState.effort ?? effort
-      state.append({ kind: "info", text: `Reasoning effort: ${requested}${modelState.effectiveEffort && modelState.effectiveEffort !== requested ? ` (effective: ${modelState.effectiveEffort})` : ""}` })
-    }).catch((error) => transcript.appendReportedError("Effort switch failed", error, "effort.switch", { effort }))
+    else void state.runtimeStore.switchEffort(effort).catch((error) => transcript.appendReportedError("Effort switch failed", error, "effort.switch", { effort }))
     return
   }
   if (state.turnOwner.getSnapshot().running && (key.escape || (key.ctrl && input === "c"))) { state.turnOwner.abort(); return }

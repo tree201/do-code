@@ -14,6 +14,16 @@ export type ActivitySummary = {
   diffs?: ActivityDiffFile[]
 }
 
+export function activityVisibleSignature(items: ToolSummaryItem[], language: DoCodeLanguage) {
+  const summary = buildActivitySummary(items, language)
+  return JSON.stringify({
+    ok: items.every((item) => item.ok),
+    title: summary.title,
+    lines: summary.lines,
+    diffs: summary.diffs?.map((file) => ({ path: file.path, stats: file.stats, lines: file.lines })),
+  })
+}
+
 export type ActivityDiffFile = {
   path: string
   stats: string
@@ -151,7 +161,7 @@ function backgroundSummary(item: ToolSummaryItem, language: DoCodeLanguage): Act
   return { title: item.ok ? `${base}${job}` : zh ? `${base}失败${job}` : `${base} failed${job}`, lines: (presentation?.excerpt ?? []).slice(-3).map((text) => ({ text, tone: "muted" })) }
 }
 
-export function buildActivitySummary(items: ToolSummaryItem[], language: DoCodeLanguage): ActivitySummary {
+function buildActivitySummaryBase(items: ToolSummaryItem[], language: DoCodeLanguage): ActivitySummary {
   const first = items[0]
   if (!first) return { title: language === "zh" ? "工具活动" : "Tool activity", lines: [] }
   const ok = items.every((item) => item.ok)
@@ -177,4 +187,15 @@ export function buildActivitySummary(items: ToolSummaryItem[], language: DoCodeL
   }
   if (kind === "delegate") return { title: language === "zh" ? `委派任务 ${quoted(first.presentation?.query ?? "")}` : `Delegated ${quoted(first.presentation?.query ?? "")}`, lines: [] }
   return { title: buildToolGroupSummary(items, language), lines: [] }
+}
+
+export function buildActivitySummary(items: ToolSummaryItem[], language: DoCodeLanguage): ActivitySummary {
+  const summary = buildActivitySummaryBase(items, language)
+  if (items.length < 2) return summary
+  const signatures = items.map((item) => JSON.stringify(buildActivitySummaryBase([item], language)))
+  if (!signatures.every((signature) => signature === signatures[0])) return summary
+  const suffix = language === "zh" ? ` · ${items.length} 次` : ` · ${items.length} times`
+  return summary.lines.length
+    ? { ...summary, lines: [{ ...summary.lines[0]!, text: `${summary.lines[0]!.text}${suffix}` }, ...summary.lines.slice(1)] }
+    : { ...summary, title: `${summary.title}${suffix}` }
 }

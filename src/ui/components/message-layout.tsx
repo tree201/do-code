@@ -42,23 +42,40 @@ export function MessageContinuation({ children, marginTop = 0, marginBottom = 0 
   return <Box flexDirection="column" paddingLeft={MESSAGE_PREFIX_WIDTH} marginTop={marginTop} marginBottom={marginBottom}>{children}</Box>
 }
 
-/** Codex-style turn boundary with stable vertical padding at every content height. */
-export function UserMessageRow({ children, width }: { children: ReactNode; width: number }) {
+/** Shared user-authored surface for history turns and the active composer. */
+export function UserInputSurface({
+  children,
+  width,
+  ariaLabel,
+  active = false,
+  paddingY = 1,
+}: {
+  children: ReactNode
+  width?: number | string
+  ariaLabel: string
+  active?: boolean
+  paddingY?: number
+}) {
   return (
     <Box
-      width={Math.max(1, width)}
+      {...(typeof width === "number" ? { width: Math.max(1, width) } : width ? { width } : {})}
       flexDirection="row"
       backgroundColor={tuiTheme.userMessageBackground}
-      paddingY={1}
+      paddingY={paddingY}
       paddingRight={1}
-      aria-label="User:"
+      aria-label={ariaLabel}
     >
       <Box width={MESSAGE_PREFIX_WIDTH} flexShrink={0}>
-        <Text bold color={tuiTheme.accent}>›</Text>
+        <Text bold color={active ? tuiTheme.accent : tuiTheme.pending}>›</Text>
       </Box>
       <Box flexGrow={1} flexDirection="column">{children}</Box>
     </Box>
   )
+}
+
+/** Codex-style turn boundary with stable vertical padding at every content height. */
+export function UserMessageRow({ children, width }: { children: ReactNode; width: number }) {
+  return <UserInputSurface width={width} ariaLabel="User:">{children}</UserInputSurface>
 }
 
 export function StatusMessage({

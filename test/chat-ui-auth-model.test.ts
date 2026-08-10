@@ -7,9 +7,9 @@ import type { ChatModel } from "../src/protocol.js"
 import { ApprovalBridge, ChatApp, type ChatAppProps } from "../src/ui/chat-app.js"
 import { AuthDialog } from "../src/ui/components/auth-dialog.js"
 import { ModelDialog } from "../src/ui/components/model-dialog.js"
-import { tick, waitForFrame } from "./support/chat-ui.js"
+import { tick, visibleFrame, waitForFrame } from "./support/chat-ui.js"
 
-test("auth dialog configures a provider without exposing the API key", async () => {
+test("auth dialog configures a provider without exposing the API key", async (t) => {
   let submitted: Parameters<NonNullable<React.ComponentProps<typeof AuthDialog>["onSubmit"]>>[0] | undefined
   let closed = false
   const view = render(React.createElement(AuthDialog, {
@@ -21,6 +21,7 @@ test("auth dialog configures a provider without exposing the API key", async () 
       return { source: "config", sourceLabel: "test", preset: "deepseek/deepseek-v4-pro", provider: "deepseek", modelId: "deepseek-v4-pro", baseUrl: "https://api.deepseek.com", apiKey: input.apiKey }
     },
   }))
+  t.after(() => view.unmount())
   assert.match(view.lastFrame() ?? "", /DeepSeek API/)
   view.stdin.write("\r")
   await tick()
@@ -106,7 +107,7 @@ test("auth dialog discovers models for a custom OpenAI-compatible provider", asy
   view.unmount()
 })
 
-test("auth dialog falls back to manual model IDs when discovery fails", async () => {
+test("auth dialog falls back to manual model IDs when discovery fails", async (t) => {
   let submitted: Parameters<NonNullable<React.ComponentProps<typeof AuthDialog>["onSubmit"]>>[0] | undefined
   const view = render(React.createElement(AuthDialog, {
     currentModel: "",
@@ -118,6 +119,7 @@ test("auth dialog falls back to manual model IDs when discovery fails", async ()
       return { source: "config", sourceLabel: "test", preset: "proxy/manual-model", provider: "proxy", modelId: "manual-model", baseUrl: input.baseUrl!, apiKey: input.apiKey }
     },
   }))
+  t.after(() => view.unmount())
   view.stdin.write("\r")
   await tick()
   view.stdin.write("\r")
@@ -126,8 +128,8 @@ test("auth dialog falls back to manual model IDs when discovery fails", async ()
   await tick()
   view.stdin.write("secret-key\r")
   await tick(); await tick()
-  assert.match(view.lastFrame() ?? "", /HTTP 401.*手动输入模型 ID/)
-  assert.doesNotMatch(view.lastFrame() ?? "", /secret-key/)
+  assert.match(visibleFrame(view), /HTTP 401.*手动输入模型 ID/)
+  assert.doesNotMatch(visibleFrame(view), /secret-key/)
   view.stdin.write("manual-model\r")
   await tick(); await tick()
   assert.deepEqual(submitted?.modelIds, ["manual-model"])

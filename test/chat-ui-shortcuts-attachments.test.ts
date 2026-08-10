@@ -88,7 +88,7 @@ test("interactive Ctrl+R switches effort while Ctrl+E keeps its editor behavior"
   view.stdin.write("\u0012")
   await tick(); await tick()
   assert.deepEqual(switched, ["medium"])
-  assert.match(view.lastFrame() ?? "", /Reasoning effort: medium/)
+  assert.doesNotMatch(view.lastFrame() ?? "", /Reasoning effort: medium/)
   view.unmount()
 })
 

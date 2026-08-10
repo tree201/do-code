@@ -2,7 +2,7 @@ import { normalizeLanguage } from "../config.js"
 import { setWorkspaceTrusted } from "../policy.js"
 import { languageDisplay, t } from "./i18n.js"
 import { approvalModeNotice } from "./chat-presentation.js"
-import { modelPresetArgument, modelStateFromConfig, parseReasoningEffort, parseThinkingMode } from "./model-actions.js"
+import { modelPresetArgument, parseReasoningEffort, parseThinkingMode } from "./model-actions.js"
 import { enqueueMessage } from "./message-queue.js"
 import type { ApprovalMode } from "../policy.js"
 import type { SlashCommandContext } from "./slash-command-context.js"
@@ -23,7 +23,7 @@ export function executeGeneralSlashCommand(input: string, context: SlashCommandC
   if (commandWithArgument(input, LANGUAGE_COMMAND)) {
     const requested = normalizeLanguage(commandArgument(input, LANGUAGE_COMMAND))
     if (!requested) state.append({ kind: "error", text: t(state.activeLanguage, "Invalid language. Usage: /language [en|zh]") })
-    else void state.runtimeStore.setLanguage(requested).then(() => state.append({ kind: "info", text: t(requested, requested === "zh" ? "Language changed to Chinese." : "Language changed to English.") })).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Language setting failed"), error, "language.switch", { requested }))
+    else void state.runtimeStore.setLanguage(requested).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Language setting failed"), error, "language.switch", { requested }))
     return true
   }
   if (input === MODEL_COMMAND) {
@@ -48,7 +48,7 @@ export function executeGeneralSlashCommand(input: string, context: SlashCommandC
     const effort = parseReasoningEffort(commandArgument(input, EFFORT_COMMAND))
     if (!effort) state.append({ kind: "error", text: "Usage: /effort low|medium|high|xhigh|max" })
     else if (!state.runtimeStore.canSwitchEffort) state.append({ kind: "error", text: "This client does not support reasoning effort switching." })
-    else void state.runtimeStore.switchEffort(effort).then((config) => { const modelState = modelStateFromConfig(config); const requested = modelState.effort ?? effort; state.append({ kind: "info", text: `Reasoning effort: ${requested}${modelState.effectiveEffort && modelState.effectiveEffort !== requested ? ` (effective: ${modelState.effectiveEffort})` : ""}` }) }).catch((error) => transcript.appendReportedError("Effort switch failed", error, "effort.switch", { effort }))
+    else void state.runtimeStore.switchEffort(effort).catch((error) => transcript.appendReportedError("Effort switch failed", error, "effort.switch", { effort }))
     return true
   }
   if (input === THINKING_COMMAND) { state.append({ kind: "info", text: state.activeLanguage === "zh" ? `思考模式：${state.activeThinkingMode}\n可选：auto（自动）、on（开启）、off（关闭）\n用法：/thinking <mode>` : `Thinking mode: ${state.activeThinkingMode}\nAvailable: auto, on, off\nUsage: /thinking <mode>` }); return true }
@@ -56,7 +56,7 @@ export function executeGeneralSlashCommand(input: string, context: SlashCommandC
     const mode = parseThinkingMode(commandArgument(input, THINKING_COMMAND))
     if (!mode) state.append({ kind: "error", text: state.activeLanguage === "zh" ? "用法：/thinking auto|on|off" : "Usage: /thinking auto|on|off" })
     else if (!state.runtimeStore.canSwitchThinking) state.append({ kind: "error", text: state.activeLanguage === "zh" ? "当前客户端不支持切换思考模式。" : "This client does not support thinking mode switching." })
-    else void state.runtimeStore.switchThinking(mode).then((config) => { const modelState = modelStateFromConfig(config); const requested = modelState.thinkingMode ?? mode; const effective = modelState.effectiveThinkingMode ?? requested; state.append({ kind: "info", text: state.activeLanguage === "zh" ? `思考模式：${requested}${effective !== requested ? `（实际：${effective}）` : ""}` : `Thinking mode: ${requested}${effective !== requested ? ` (effective: ${effective})` : ""}` }) }).catch((error) => transcript.appendReportedError(state.activeLanguage === "zh" ? "思考模式切换失败" : "Thinking mode switch failed", error, "thinking.switch", { mode }))
+    else void state.runtimeStore.switchThinking(mode).catch((error) => transcript.appendReportedError(state.activeLanguage === "zh" ? "思考模式切换失败" : "Thinking mode switch failed", error, "thinking.switch", { mode }))
     return true
   }
   if (input === EXTENSIONS_COMMAND) { state.append({ kind: "info", text: props.promptExtensions?.length ? props.promptExtensions.map((item) => `/${item.name}  [${item.kind} · ${item.source}] ${item.description}`).join("\n") : "No custom commands or skills are loaded." }); return true }
@@ -85,12 +85,12 @@ export function executeGeneralSlashCommand(input: string, context: SlashCommandC
     const requested = commandArgument(input, APPROVAL_MODE_COMMAND)
     if (!requested) state.append({ kind: "info", text: (["ask", "auto", "full-access"] as ApprovalMode[]).map((mode) => approvalModeNotice(mode, state.activeLanguage)).join("\n\n") })
     else if (!["ask", "auto", "full-access"].includes(requested)) state.append({ kind: "error", text: state.activeLanguage === "zh" ? "用法：/approval-mode [ask|auto|full-access]；计划模式请使用 /plan。" : "Usage: /approval-mode [ask|auto|full-access]; use /plan for planning." })
-    else { state.applyApprovalMode(requested as ApprovalMode); state.append({ kind: "info", text: approvalModeNotice(requested as ApprovalMode, state.activeLanguage) }) }
+    else state.applyApprovalMode(requested as ApprovalMode)
     return true
   }
   if (input === TRUST_COMMAND || input === UNTRUST_COMMAND) {
     const next = input === TRUST_COMMAND
-    void setWorkspaceTrusted(props.workspace, next).then(() => { state.setTrusted(next); state.append({ kind: "info", text: next ? "The current directory is now trusted." : "Workspace trust has been removed." }) }).catch((error) => transcript.appendReportedError("Failed to update workspace trust", error, "workspace.trust"))
+    void setWorkspaceTrusted(props.workspace, next).then(() => state.setTrusted(next)).catch((error) => transcript.appendReportedError("Failed to update workspace trust", error, "workspace.trust"))
     return true
   }
   return false

@@ -119,6 +119,10 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
   />
   renderer = createInteractiveRenderer(createApp)
   const instance = renderer.start()
-  await instance.waitUntilExit(); await store.save(); await hookRunner.fire("sessionEnd", { sessionId: store.session().id }); mcpManager.close()
+  try {
+    await instance.waitUntilExit(); await store.save(); await hookRunner.fire("sessionEnd", { sessionId: store.session().id }); mcpManager.close()
+  } finally {
+    renderer.stop()
+  }
   process.stdout.write(`\n${runtimeStore.getSnapshot().language === "zh" ? "恢复此会话：" : "Resume this session:"}\n  do-code resume ${runtimeStore.getSnapshot().session.id}\n`)
 }

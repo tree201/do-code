@@ -14,7 +14,6 @@ export function useAttachmentActions(props: ChatAppProps, state: ChatAppState) {
       return
     }
     state.updateAttachedImages((current) => current.filter((_, currentIndex) => currentIndex !== index))
-    state.append({ kind: "info", text: `Image removed: ${image.name}` })
   }, [state.append, state.attachedImages, state.updateAttachedImages])
 
   const attachClipboardImage = useCallback(async () => {
@@ -31,7 +30,6 @@ export function useAttachmentActions(props: ChatAppProps, state: ChatAppState) {
     }
     state.composerOwner.markPaste()
     state.updateAttachedImages((current) => [...current, image])
-    state.append({ kind: "info", text: `Image attached: ${image.name}` })
     return true
   }, [props.pasteImage, state.append, state.composerOwner, state.updateAttachedImages])
 
@@ -49,7 +47,6 @@ export function useAttachmentActions(props: ChatAppProps, state: ChatAppState) {
       if (!accepted.length) { state.append({ kind: "error", text: "Attached images exceed the 20 MB total limit." }); return }
       if (skipped) state.append({ kind: "error", text: "Some images were skipped because attachments exceed the 20 MB total limit." })
       state.updateAttachedImages((current) => [...current, ...accepted])
-      accepted.forEach((image) => state.append({ kind: "info", text: `Image attached: ${image.name}` }))
     }).catch(() => state.setEditor((current) => insertEditorText(current, pasted)))
     return true
   }, [props.pasteImagePaths, state.append, state.composerOwner, state.setEditor, state.updateAttachedImages])

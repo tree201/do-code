@@ -226,6 +226,8 @@ test("agent interactions record the question before the answer without exposing 
   assert.equal(await pendingAnswer, "Structure")
   await tick()
   const frame = view.lastFrame() ?? ""
+  assert.equal(frame.match(/Ask: \[Direction\] Choose one/g)?.length, 1)
+  assert.equal(frame.match(/Answer: Structure/g)?.length, 1)
   assert.ok(frame.indexOf("Ask: [Direction] Choose one") < frame.indexOf("Answer: Structure"))
   assert.doesNotMatch(frame, /ask_user/)
   view.unmount()

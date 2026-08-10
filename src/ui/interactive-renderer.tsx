@@ -1,6 +1,7 @@
 import React from "react"
 import { render } from "ink"
 import { createPausableOutput } from "./pausable-output.js"
+import { enableEnhancedKeyboardInput } from "./enhanced-keyboard-input.js"
 import { AlternateTranscriptViewer, ViewerInputBridge, type ViewerInputKey } from "./components/transcript-viewer.js"
 import type { DoCodeLanguage } from "../config.js"
 import type { TranscriptItem } from "./transcript-model.js"
@@ -10,6 +11,7 @@ export const INTERACTIVE_RENDER_OPTIONS = { exitOnCtrlC: false, patchConsole: fa
 export function createInteractiveRenderer(createApp: () => React.ReactElement) {
   const mainOutput = createPausableOutput(process.stdout)
   let mainInstance: ReturnType<typeof render> | undefined
+  let restoreKeyboardInput: (() => void) | undefined
   let revision = 0
   let alternateOpen = false
   let viewerInput: ((input: string, key: ViewerInputKey) => void) | undefined
@@ -41,8 +43,13 @@ export function createInteractiveRenderer(createApp: () => React.ReactElement) {
 
   return {
     start() {
+      restoreKeyboardInput = enableEnhancedKeyboardInput()
       mainInstance = render(createApp(), { ...INTERACTIVE_RENDER_OPTIONS, stdout: mainOutput.stdout, stderr: process.stderr, stdin: process.stdin })
       return mainInstance
+    },
+    stop() {
+      restoreKeyboardInput?.()
+      restoreKeyboardInput = undefined
     },
     openTranscriptViewer,
     forwardViewerInput(input: string, key: ViewerInputKey) { viewerInput?.(input, key) },

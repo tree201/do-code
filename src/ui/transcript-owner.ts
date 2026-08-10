@@ -1,5 +1,6 @@
 import { activityGroupKey } from "../tool-presentation.js"
 import type { DoCodeLanguage } from "../config.js"
+import { activityVisibleSignature } from "./activity-summary.js"
 import type { AgentEvent } from "../protocol.js"
 import { completedToolTranscript } from "./live-transcript.js"
 import { createLiveAssistantPublisher } from "./live-assistant-publisher.js"
@@ -76,15 +77,15 @@ export function createTranscriptOwner(initialItems: TranscriptItem[]) {
     const item = { kind: "tool", tools: pending.tools, id: nextId++ } as TranscriptItem
     publish({ items: [...snapshot.items, item], pendingToolGroup: null })
   }
-  const addPendingTool = (tool: TranscriptTool) => {
+  const addPendingTool = (tool: TranscriptTool, language: DoCodeLanguage) => {
     const groupKey = activityGroupKey(tool.name, tool.callId)
-    const step = tool.step ?? 0
+    const signature = activityVisibleSignature([tool], language)
     const current = snapshot.pendingToolGroup
-    if (current && (current.groupKey !== groupKey || current.step !== step)) flushPendingTools()
+    if (current && (current.groupKey !== groupKey || current.signature !== signature)) flushPendingTools()
     const pending = snapshot.pendingToolGroup
-    publish({ pendingToolGroup: pending && pending.groupKey === groupKey && pending.step === step
-      ? { groupKey, step, tools: [...pending.tools, tool] }
-      : { groupKey, step, tools: [tool] } })
+    publish({ pendingToolGroup: pending && pending.groupKey === groupKey && pending.signature === signature
+      ? { groupKey, signature, tools: [...pending.tools, tool] }
+      : { groupKey, signature, tools: [tool] } })
   }
   const handleEvent = (event: AgentEvent, language: DoCodeLanguage) => {
     const previous = liveState
@@ -105,8 +106,8 @@ export function createTranscriptOwner(initialItems: TranscriptItem[]) {
       const args = toolArgs.get(event.callId)
       toolArgs.delete(event.callId)
       const decision = completedToolTranscript(event, args)
-      if (decision.kind === "hidden") { flushPendingTools(); append({ kind: "tool", tools: [decision.tool], hidden: true }) }
-      else if (decision.kind !== "ignore") addPendingTool(decision.tool)
+      if (decision.kind === "hidden") append({ kind: "tool", tools: [decision.tool], hidden: true })
+      else if (decision.kind !== "ignore") addPendingTool(decision.tool, language)
     }
     const next = transition.state
     if (next.activityEpoch !== snapshot.activityEpoch || next.reasoningCharacters !== snapshot.reasoningCharacters || next.activeTool !== snapshot.activeTool) {

@@ -4,7 +4,7 @@ import type { PlanProposal, TodoItem } from "../tool-contracts.js"
 import type { ToolSummaryItem } from "./tool-summary.js"
 
 export type TranscriptTool = ToolSummaryItem & { callId?: string; step?: number }
-export type PendingToolGroup = { groupKey: string; step: number; tools: TranscriptTool[] }
+export type PendingToolGroup = { groupKey: string; signature: string; tools: TranscriptTool[] }
 
 export type TranscriptItem =
   | { id: number; kind: "header"; workspace: string; model: string; sessionId: string; restored: boolean; agent?: string }

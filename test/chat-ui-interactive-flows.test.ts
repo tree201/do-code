@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { stripVTControlCharacters } from "node:util"
 import test from "node:test"
 import React from "react"
 import { render } from "ink-testing-library"
@@ -7,7 +8,7 @@ import type { AgentEvent, ChatModel } from "../src/protocol.js"
 import { ApprovalBridge, ChatApp, type ChatAppProps } from "../src/ui/chat-app.js"
 import { currentScreen, tick } from "./support/chat-ui.js"
 
-test("composer stays visible while running and queues the next prompt", async () => {
+test("composer stays visible while running and queues the next prompt", async (t) => {
   let finishFirst: (() => void) | undefined
   let requests = 0
   const model: ChatModel = {
@@ -30,6 +31,10 @@ test("composer stays visible while running and queues the next prompt", async ()
     reportError: async (_error, operation, category) => { reports.push({ operation, ...(category ? { category } : {}) }); return { id: "err_20260806_12345678", file: "/tmp/error.json" } },
   }
   const view = render(React.createElement(ChatApp, props))
+  t.after(() => {
+    finishFirst?.()
+    view.unmount()
+  })
   await tick()
   const activeSink = sink as ((event: AgentEvent) => void) | null
   assert.ok(activeSink)
@@ -84,22 +89,21 @@ test("composer stays visible while running and queues the next prompt", async ()
   assert.match(view.lastFrame() ?? "", /other-model · default · 0%/)
   assert.match(view.lastFrame() ?? "", /Thinking/)
   assert.doesNotMatch(view.lastFrame() ?? "", /Thinking step|step 1/)
-  const thinkingLines = (view.lastFrame() ?? "").split("\n")
+  const thinkingLines = stripVTControlCharacters(view.lastFrame() ?? "").split("\n")
   const thinkingLine = thinkingLines.findIndex((line) => line.includes("Thinking"))
   const runningPromptLine = thinkingLines.findIndex((line) => line.includes("Current task is running"))
-  const composerBorder = thinkingLines.findIndex((line, index) => index > thinkingLine && line.includes("─"))
   const modelStatusLine = thinkingLines.findIndex((line) => line.includes("other-model · default · 0%"))
-  assert.ok(thinkingLine >= 0 && composerBorder === thinkingLine + 1, "thinking status should render immediately above the composer border")
-  assert.ok(runningPromptLine > composerBorder && modelStatusLine > runningPromptLine, "the input and model status should remain below the composer border")
-  const runningLines = (view.lastFrame() ?? "").split("\n")
-  const promptLine = runningLines.findIndex((line) => line.includes("Current task is running"))
-  const statusLine = runningLines.findIndex((line) => line.includes("other-model · default · 0%"))
-  assert.ok(promptLine >= 0 && statusLine - promptLine >= 2, "composer should reserve at least two input rows before the status line")
+  assert.equal(thinkingLines[thinkingLine + 1]?.trim(), "", "the composer should keep its top padding row")
+  assert.equal(runningPromptLine, thinkingLine + 2, "the single input row should follow the top padding")
+  assert.equal(thinkingLines[runningPromptLine + 1]?.trim(), "", "the composer should keep its bottom padding row")
+  assert.equal(modelStatusLine, runningPromptLine + 2, "the model status should render below the padded composer")
+  assert.doesNotMatch(thinkingLines.slice(thinkingLine, modelStatusLine + 1).join("\n"), /─/)
 
   view.stdin.write("/")
   await tick()
-  assert.match(view.lastFrame() ?? "", /\/help  Show available commands/)
-  assert.match(view.lastFrame() ?? "", /other-model · default · 0%/)
+  const completionFrame = stripVTControlCharacters(view.lastFrame() ?? "")
+  assert.match(completionFrame, /\/help  Show available commands/)
+  assert.match(completionFrame, /other-model · default · 0%/)
   view.stdin.write("\u0015")
   await tick()
   view.stdin.write("/status\r")
@@ -128,7 +132,6 @@ test("composer stays visible while running and queues the next prompt", async ()
   await tick()
   assert.match(view.frames.join("\n"), /err_20260806_12345678/)
   assert.deepEqual(reports.at(-1), { operation: "interactive.bad_case", category: "bad_case" })
-  view.unmount()
 })
 
 test("tool activity owns its leading row after an assistant was already frozen", async () => {
@@ -184,11 +187,11 @@ test("Ctrl+C clears a draft before arming exit confirmation", async () => {
   await tick()
   view.stdin.write("draft")
   await tick()
-  view.stdin.write("\u0003")
+  view.stdin.write("\u001b[99;5u")
   await tick()
-  assert.doesNotMatch(view.lastFrame() ?? "", /draft/)
+  assert.doesNotMatch(view.lastFrame() ?? "", /draft|\[99;5u/)
   assert.doesNotMatch(view.lastFrame() ?? "", /Press Ctrl\+C again to exit/)
-  view.stdin.write("\u0003")
+  view.stdin.write("\u001b[99;5u")
   await tick()
   assert.match(view.lastFrame() ?? "", /Press Ctrl\+C again to exit/)
   view.unmount()

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { stripVTControlCharacters } from "node:util"
 import test from "node:test"
 import React from "react"
 import { render } from "ink-testing-library"
@@ -27,20 +28,24 @@ test("language command switches the live interface with second-level completion"
   view.stdin.write("zh\r")
   await tick();await tick()
   assert.equal(selected,"zh")
-  assert.match(view.frames.join("\n"),/语言已切换为中文/)
-  assert.match(view.lastFrame()??"",/输入任务或 @文件路径/)
+  assert.doesNotMatch(stripVTControlCharacters(view.frames.join("\n")),/语言已切换为中文/)
+  assert.match(stripVTControlCharacters(view.lastFrame()??""),/输入任务或 @文件路径/)
   view.stdin.write("/")
   await tick()
-  assert.match(view.lastFrame()??"",/\/help  查看可用命令/)
+  assert.match(stripVTControlCharacters(view.lastFrame()??""),/\/help  查看可用命令/)
   view.stdin.write("\u0015")
   view.stdin.write("/thinking ")
   await tick();await tick()
-  assert.match(view.lastFrame()??"",/auto.*当前思考模式/)
-  assert.match(view.lastFrame()??"",/off.*关闭思考/)
+  const thinkingSuggestions = stripVTControlCharacters(view.lastFrame()??"")
+  assert.match(thinkingSuggestions,/auto.*当前思考模式/)
+  assert.match(thinkingSuggestions,/off.*关闭思考/)
   view.stdin.write("off\r")
   await tick();await tick()
   assert.equal(selectedThinking,"off")
-  assert.match(view.lastFrame()??"",/思考模式：off/)
+  assert.doesNotMatch(stripVTControlCharacters(view.lastFrame()??""),/思考模式：off/)
+  view.stdin.write("/thinking\r")
+  await tick();await tick()
+  assert.match(stripVTControlCharacters(view.lastFrame()??""),/思考模式：off/)
   view.unmount()
 })
 
@@ -96,7 +101,7 @@ test("resuming a session restores conversation and read-only tool history withou
   assert.ok(questionLine >= 0 && toolLine > questionLine)
   assert.equal(restoredLines[toolLine - 1]?.trim(), "", "restored tool activity should own its leading row")
   assert.doesNotMatch(frame, /Permission granted/)
-  assert.match(frame, /Permission denied for shell/)
+  assert.doesNotMatch(frame, /Permission denied for shell/)
   assert.match(frame, /Safe refactor/)
   assert.match(frame, /Split the module without changing behavior/)
   assert.match(frame, /1\. Extract helpers/)

@@ -14,8 +14,8 @@ export function ChatComposer({ props, state }: { props: ChatAppProps; state: Cha
   return <Composer
     key="composer"
     running={state.running}
-    input={state.viewerItems ? <Text><Text bold color={tuiTheme.accent}>› </Text><Text dimColor>{state.activeLanguage === "zh" ? "正在查看消息；按 Ctrl+T 或 Esc 返回输入" : "Viewing messages; press Ctrl+T or Esc to return to input"}</Text></Text> : <Text>
-      <Text bold color={tuiTheme.accent}>› </Text>{state.cursorParts.before}<Text inverse>{state.cursorParts.cursor}</Text>{state.cursorParts.after}
+    input={state.viewerItems ? <Text dimColor>{state.activeLanguage === "zh" ? "正在查看消息；按 Ctrl+T 或 Esc 返回输入" : "Viewing messages; press Ctrl+T or Esc to return to input"}</Text> : <Text>
+      {state.cursorParts.before}<Text inverse>{state.cursorParts.cursor}</Text>{state.cursorParts.after}
       {!state.editor.value ? <Text dimColor> {t(state.activeLanguage, state.running ? "Current task is running; press Enter to queue a message" : "Enter a task or @file path")}</Text> : null}
     </Text>}
     activity={!state.viewerItems && state.running && showRunningActivity(state.activeDialog) ? <RunningStatus activityEpoch={state.activityEpoch} activeTool={state.activeTool} reasoningCharacters={state.reasoningCharacters} language={state.activeLanguage} /> : undefined}

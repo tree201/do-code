@@ -1,6 +1,7 @@
 import type { DoCodeLanguage } from "../config.js"
 import { contentText, type Message, type ToolPresentation } from "../protocol.js"
 import { activityGroupKey, createToolPresentation } from "../tool-presentation.js"
+import { activityVisibleSignature } from "./activity-summary.js"
 import type { PlanProposal } from "../tool-contracts.js"
 import { blockedTodoCount, type HistoricalToolEvent, type NewTranscriptItem, type TranscriptTool } from "./transcript-model.js"
 
@@ -80,10 +81,12 @@ export function askAnswerPairs(args: unknown, output: string) {
 }
 
 function interactionItems(args: unknown, output: string, language: DoCodeLanguage): NewTranscriptItem[] {
-  return askAnswerPairs(args, output).flatMap((pair) => [
-    { kind: "info", text: `${language === "zh" ? "提问" : "Ask"}: ${pair.question}` },
-    ...(pair.answer ? [{ kind: "info" as const, text: `${language === "zh" ? "回答" : "Answer"}: ${pair.answer}` }] : []),
-  ])
+  const ask = language === "zh" ? "提问" : "Ask"
+  const reply = language === "zh" ? "回答" : "Answer"
+  return askAnswerPairs(args, output).map((pair) => ({
+    kind: "info",
+    text: `${ask}: ${pair.question}${pair.answer ? `\n${reply}: ${pair.answer}` : ""}`,
+  }))
 }
 
 function assistantTextByFirstToolCall(messages: Message[]) {
@@ -100,7 +103,7 @@ export function restoredEventTranscript(events: unknown[], language: DoCodeLangu
   const items: NewTranscriptItem[] = []
   const argsByCallId = new Map<string, unknown>()
   const assistantTextByCallId = assistantTextByFirstToolCall(messages)
-  let pending: { turnId: string; groupKey: string; step: number; tools: TranscriptTool[] } | null = null
+  let pending: { turnId: string; groupKey: string; signature: string; tools: TranscriptTool[] } | null = null
   let hasTurnHistory = false
   const flushTools = () => {
     if (pending?.tools.length) items.push({ kind: "tool", tools: pending.tools })
@@ -134,7 +137,6 @@ export function restoredEventTranscript(events: unknown[], language: DoCodeLangu
     if (type === "tool.completed" && typeof event.callId === "string" && typeof event.name === "string") {
       const step = typeof event.step === "number" ? event.step : 0
       const groupKey = activityGroupKey(event.name, event.callId)
-      if (pending && (pending.turnId !== turnId || pending.groupKey !== groupKey || pending.step !== step)) flushTools()
       const args = argsByCallId.get(event.callId)
       const output = typeof event.output === "string" ? event.output : "No stored tool result"
       const ok = event.ok === true
@@ -161,22 +163,23 @@ export function restoredEventTranscript(events: unknown[], language: DoCodeLangu
           : createToolPresentation(event.name, args, { ok, output }, 0),
       }
       if ((event.name === "todo_write" || event.name === "todo_read") && ok && blockedTodoCount([tool]) === 0) {
-        flushTools()
         items.push({ kind: "tool", tools: [tool], hidden: true })
         continue
       }
-      if (pending) {
-        pending = { turnId: pending.turnId, groupKey: pending.groupKey, step: pending.step, tools: [...pending.tools, tool] }
-      } else {
-        pending = { turnId, groupKey, step, tools: [tool] }
+      const signature = activityVisibleSignature([tool], language)
+      if (
+        pending &&
+        pending.turnId === turnId &&
+        pending.groupKey === groupKey &&
+        pending.signature === signature
+      ) pending.tools.push(tool)
+      else {
+        flushTools()
+        pending = { turnId, groupKey, signature, tools: [tool] }
       }
       continue
     }
-    if (type === "approval.resolved" && typeof event.name === "string") {
-      if (event.approved !== true) {
-        flushTools()
-        items.push({ kind: "info", text: `Permission denied for ${event.name}.` })
-      }
+    if (type === "approval.resolved") {
       continue
     }
     if (type === "turn.completed" && typeof event.output === "string") {
@@ -202,14 +205,32 @@ export function restoredTranscript(messages: Message[], events: unknown[] = [], 
     .map((message) => [message.tool_call_id, storedToolResult(message.content)]))
   const eventTools = historicalToolEvents(events)
   let fallbackStep = 0
+  let pending: { groupKey: string; signature: string; tools: TranscriptTool[] } | null = null
+  const flushTools = () => {
+    if (pending?.tools.length) items.push({ kind: "tool", tools: pending.tools })
+    pending = null
+  }
+  const appendTool = (tool: TranscriptTool) => {
+    const groupKey = activityGroupKey(tool.name, tool.callId)
+    const signature = activityVisibleSignature([tool], language)
+    if (pending && pending.groupKey === groupKey && pending.signature === signature) pending.tools.push(tool)
+    else {
+      flushTools()
+      pending = { groupKey, signature, tools: [tool] }
+    }
+  }
   for (const message of messages) {
-    if (message.role === "user") items.push({ kind: "user", text: contentText(message.content).split("\n\nReferenced file context:")[0]! })
+    if (message.role === "user") {
+      flushTools()
+      items.push({ kind: "user", text: contentText(message.content).split("\n\nReferenced file context:")[0]! })
+    }
     if (message.role !== "assistant") continue
-    if (message.content?.trim()) items.push({ kind: "assistant", text: message.content })
+    if (message.content?.trim()) {
+      flushTools()
+      items.push({ kind: "assistant", text: message.content })
+    }
     if (!message.tool_calls?.length) continue
     fallbackStep++
-    const tools: TranscriptTool[] = []
-    const hiddenTools: TranscriptTool[] = []
     for (const call of message.tool_calls) {
       const stored = results.get(call.id)
       const event = eventTools.get(call.id)
@@ -217,10 +238,12 @@ export function restoredTranscript(messages: Message[], events: unknown[] = [], 
       const args = event?.args ?? storedToolArgs(call.function.arguments)
       const output = event?.output ?? stored?.output ?? "No stored tool result"
       if (name === "ask_user") {
+        flushTools()
         items.push(...interactionItems(args, output, language))
         continue
       }
       if (name === "exit_plan_mode") {
+        flushTools()
         const plan = planProposalFromArgs(args)
         if (plan) items.push({ kind: "plan", plan })
         continue
@@ -239,12 +262,14 @@ export function restoredTranscript(messages: Message[], events: unknown[] = [], 
           0,
         ),
       }
-      if ((name === "todo_write" || name === "todo_read") && tool.ok && blockedTodoCount([tool]) === 0) hiddenTools.push(tool)
-      else tools.push(tool)
+      if ((name === "todo_write" || name === "todo_read") && tool.ok && blockedTodoCount([tool]) === 0) {
+        items.push({ kind: "tool", tools: [tool], hidden: true })
+        continue
+      }
+      appendTool(tool)
     }
-    if (tools.length) items.push({ kind: "tool", tools })
-    if (hiddenTools.length) items.push({ kind: "tool", tools: hiddenTools, hidden: true })
   }
+  flushTools()
   return items
 }
 

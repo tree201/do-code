@@ -15,7 +15,6 @@ export function useTranscriptController(props: ChatAppProps, state: ChatAppState
     props.approvalBridge.attach((request) => state.setActiveDialog({ kind: "approval", request, selectedIndex: 0 }))
     props.questionBridge?.attach((request) => {
       state.transcriptOwner.flushPendingTools()
-      state.append({ kind: "info", text: `${state.activeLanguage === "zh" ? "提问" : "Ask"}: ${request.question}` })
       state.setActiveDialog({ kind: "question", request, selectedIndex: 0, draft: "" })
     })
     props.planReviewBridge?.attach((request) => {
@@ -36,14 +35,15 @@ export function useTranscriptController(props: ChatAppProps, state: ChatAppState
     const dialog = state.getActiveDialog()
     if (dialog.kind !== "approval") return
     dialog.request.resolve(choice)
-    if (choice === "deny") state.append({ kind: "info", text: `Permission denied for ${dialog.request.tool}.` })
     state.setActiveDialog({ kind: "none" })
-  }, [state.append, state.getActiveDialog, state.setActiveDialog])
+  }, [state.getActiveDialog, state.setActiveDialog])
   const finishQuestion = useCallback((answer: string) => {
     const dialog = state.getActiveDialog()
     if (dialog.kind !== "question") return
     dialog.request.resolve(answer)
-    state.append({ kind: "info", text: `${state.activeLanguage === "zh" ? "回答" : "Answer"}: ${answer}` })
+    const ask = state.activeLanguage === "zh" ? "提问" : "Ask"
+    const reply = state.activeLanguage === "zh" ? "回答" : "Answer"
+    state.append({ kind: "info", text: `${ask}: ${dialog.request.question}\n${reply}: ${answer}` })
     state.setActiveDialog({ kind: "none" })
   }, [state.activeLanguage, state.append, state.getActiveDialog, state.setActiveDialog])
   const finishPlanReview = useCallback((decision: PlanReviewDecision) => {

@@ -9,6 +9,7 @@ import { modelPresetArgument, modelStateFromConfig, nextReasoningEffort, parseRe
 import { matchSessionQuery, parseExportArguments, parseRewindMode } from "../src/ui/session-actions.js"
 import { filterSessions, sessionPickerWindowStart } from "../src/ui/session-picker-model.js"
 import { restoredEventTranscript, restoredSessionItems, restoredTranscript } from "../src/ui/session-transcript.js"
+import { buildActivitySummary } from "../src/ui/activity-summary.js"
 import { routeSlashCommand, slashCommandName } from "../src/ui/slash-command-router.js"
 import { createTranscriptOwner } from "../src/ui/transcript-owner.js"
 
@@ -22,6 +23,51 @@ test("session transcript restores ordered event history without replaying tools"
   assert.deepEqual(items.map((item) => item.kind), ["user", "tool", "assistant"])
   assert.equal(items[1]?.kind === "tool" ? items[1].tools[0]?.output : "", "src")
   assert.equal(items[2]?.kind === "assistant" ? items[2].text : "", "The project is ready.")
+})
+
+test("adjacent identical visible actions merge across internal steps only", () => {
+  const events = [
+    { event: { type: "turn.started", turnId: "turn-merge", input: "inspect" } },
+    { event: { type: "tool.started", turnId: "turn-merge", callId: "read-1", name: "read_file", args: { path: "src/main.js" } } },
+    { event: { type: "tool.completed", turnId: "turn-merge", callId: "read-1", name: "read_file", step: 1, ok: true, output: "source" } },
+    { event: { type: "step.started", turnId: "turn-merge", step: 2 } },
+    { event: { type: "tool.started", turnId: "turn-merge", callId: "read-2", name: "read_file", args: { path: "src/main.js" } } },
+    { event: { type: "tool.completed", turnId: "turn-merge", callId: "read-2", name: "read_file", step: 2, ok: true, output: "source" } },
+    { event: { type: "turn.completed", turnId: "turn-merge", output: "done" } },
+  ]
+  const restored = restoredEventTranscript(events, "zh")
+  const group = restored.find((item) => item.kind === "tool")
+  assert.equal(group?.kind === "tool" ? group.tools.length : 0, 2)
+  assert.equal(group?.kind === "tool" ? buildActivitySummary(group.tools, "zh").lines[0]?.text : "", "读取 src/main.js · 2 次")
+
+  const owner = createTranscriptOwner([])
+  const base = { protocolVersion: 1 as const, turnId: "turn-merge" }
+  owner.handleEvent({ ...base, type: "turn.started", input: "inspect" }, "zh")
+  owner.handleEvent({ ...base, type: "tool.started", step: 1, callId: "read-1", name: "read_file", args: { path: "src/main.js" } }, "zh")
+  owner.handleEvent({ ...base, type: "tool.completed", step: 1, callId: "read-1", name: "read_file", ok: true, output: "source" }, "zh")
+  owner.handleEvent({ ...base, type: "step.started", step: 2 }, "zh")
+  owner.handleEvent({ ...base, type: "tool.started", step: 2, callId: "read-2", name: "read_file", args: { path: "src/main.js" } }, "zh")
+  owner.handleEvent({ ...base, type: "tool.completed", step: 2, callId: "read-2", name: "read_file", ok: true, output: "source" }, "zh")
+  owner.handleEvent({ ...base, type: "turn.completed", output: "done" }, "zh")
+  const liveGroup = owner.getSnapshot().items.find((item) => item.kind === "tool")
+  assert.equal(liveGroup?.kind === "tool" ? liveGroup.tools.length : 0, 2)
+  owner.destroy()
+})
+
+test("different or failed actions interrupt adjacent aggregation", () => {
+  const items = restoredEventTranscript([
+    { event: { type: "turn.started", turnId: "turn-split", input: "inspect" } },
+    { event: { type: "tool.started", turnId: "turn-split", callId: "read-1", name: "read_file", args: { path: "src/main.js" } } },
+    { event: { type: "tool.completed", turnId: "turn-split", callId: "read-1", name: "read_file", step: 1, ok: true, output: "source" } },
+    { event: { type: "tool.started", turnId: "turn-split", callId: "glob-1", name: "glob", args: { pattern: "src/*.js" } } },
+    { event: { type: "tool.completed", turnId: "turn-split", callId: "glob-1", name: "glob", step: 2, ok: true, output: "src/main.js" } },
+    { event: { type: "tool.started", turnId: "turn-split", callId: "read-2", name: "read_file", args: { path: "src/main.js" } } },
+    { event: { type: "tool.completed", turnId: "turn-split", callId: "read-2", name: "read_file", step: 3, ok: false, output: "denied" } },
+    { event: { type: "turn.completed", turnId: "turn-split", output: "done" } },
+  ], "en")
+  const groups = items.filter((item) => item.kind === "tool")
+  assert.equal(groups.length, 3)
+  assert.deepEqual(groups.map((item) => item.kind === "tool" ? item.tools.length : 0), [1, 1, 1])
 })
 
 test("session transcript restores assistant text before each historical tool step", () => {
@@ -46,6 +92,19 @@ test("session transcript restores assistant text before each historical tool ste
   assert.deepEqual(items.map((item) => item.kind), ["user", "assistant", "tool", "assistant", "tool", "assistant"])
   assert.equal(items[1]?.kind === "assistant" ? items[1].text : "", "I will inspect the directory.")
   assert.equal(items[3]?.kind === "assistant" ? items[3].text : "", "I found hello.c and will read it.")
+})
+
+test("restored interactions use one compact item and omit duplicate denial notices", () => {
+  const items = restoredEventTranscript([
+    { event: { type: "turn.started", turnId: "turn-interaction", input: "choose" } },
+    { event: { type: "tool.started", turnId: "turn-interaction", callId: "ask-1", name: "ask_user", args: { questions: [{ id: "direction", question: "Choose direction" }] } } },
+    { event: { type: "tool.completed", turnId: "turn-interaction", callId: "ask-1", name: "ask_user", step: 1, ok: true, output: JSON.stringify({ answers: { direction: "Structure" } }) } },
+    { event: { type: "approval.resolved", turnId: "turn-interaction", name: "shell", approved: false } },
+    { event: { type: "turn.completed", turnId: "turn-interaction", output: "done" } },
+  ], "en")
+  const interaction = items.filter((item) => item.kind === "info")
+  assert.deepEqual(interaction, [{ kind: "info", text: "Ask: Choose direction\nAnswer: Structure" }])
+  assert.doesNotMatch(JSON.stringify(items), /Permission denied/)
 })
 
 test("session transcript falls back to stored messages and summarizes resume counts", () => {
@@ -151,6 +210,7 @@ test("transcript owner handles synchronous streaming and tool events from one sn
   owner.handleEvent({ ...base, type: "tool.started", callId: "shell-owner", name: "shell", args: { command: "npm test" } }, "en")
   owner.handleEvent({ ...base, type: "tool.completed", callId: "shell-owner", name: "shell", ok: true, output: "passed" }, "en")
   owner.handleEvent({ ...base, type: "step.started", step: 2 }, "en")
+  owner.flushPendingTools()
 
   const snapshot = owner.getSnapshot()
   assert.deepEqual(snapshot.items.map((item) => item.kind), ["assistant", "tool"])

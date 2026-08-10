@@ -4,7 +4,6 @@ import { canOpenHelp, canOpenTranscriptViewer } from "./dialog-coordinator.js"
 import { isHelpShortcut } from "./shortcut-command-policy.js"
 import { shortcutHelpText } from "./components/help-dialog.js"
 import { wrapTerminalLines } from "./terminal-text.js"
-import { approvalModeNotice } from "./chat-presentation.js"
 import type { ChatInputKey } from "./input-routing-types.js"
 import type { ChatAppProps } from "./chat-app-types.js"
 import type { ChatAppState } from "./hooks/use-chat-app-state.js"
@@ -112,7 +111,7 @@ export function routeDialogInput(rawInput: string, input: string, key: ChatInput
 }
 
 function finishPermissionMenu(mode: ApprovalMode | undefined, state: ChatAppState) {
-  if (mode) { state.applyApprovalMode(mode); state.append({ kind: "info", text: approvalModeNotice(mode, state.activeLanguage) }) }
+  if (mode) state.applyApprovalMode(mode)
   state.setActiveDialog({ kind: "none" })
 }
 

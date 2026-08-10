@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { stripVTControlCharacters } from "node:util"
 import test from "node:test"
 import React from "react"
 import { render } from "ink-testing-library"
@@ -6,6 +7,8 @@ import { Box, Text } from "ink"
 import { formatElapsedTime, TranscriptLine, WelcomeHeader } from "../src/ui/chat-app.js"
 import { Composer } from "../src/ui/components/composer.js"
 import { RunningStatus } from "../src/ui/components/chat-activity.js"
+import { TranscriptBlock } from "../src/ui/components/transcript-block.js"
+import { transcriptBoundary } from "../src/ui/transcript-layout.js"
 import { displayWidth } from "../src/ui/terminal-text.js"
 
 test("elapsed time uses compact second, minute, and hour units", () => {
@@ -70,7 +73,8 @@ test("transcript distinguishes roles without repeating role names", () => {
     item: { id: 1, kind: "user", text: "Please inspect this project" },
     width: 80,
   }))
-  assert.equal((user.lastFrame() ?? "").trim(), "› Please inspect this project")
+  assert.equal(stripVTControlCharacters(user.lastFrame() ?? "").trim(), "› Please inspect this project")
+  assert.match(user.lastFrame() ?? "", /\u001b\[90m.*›/)
   assert.doesNotMatch(user.lastFrame() ?? "", /You/)
   user.unmount()
 
@@ -137,6 +141,41 @@ test("system actions use one dot marker and distinguish state with color", () =>
   }
 })
 
+test("transcript dividers mark tool-to-assistant phase changes only", () => {
+  const tool = { id: 1, kind: "tool" as const, tools: [{ name: "read_file", args: { path: "src/main.ts" }, ok: true, output: "done" }] }
+  const assistant = { id: 2, kind: "assistant" as const, text: "阶段结论" }
+  const continuation = { id: 3, kind: "assistant" as const, text: "继续", continuation: true }
+  const plan = { id: 4, kind: "plan" as const, plan: { title: "计划", summary: "说明", steps: ["执行"] } }
+  const user = { id: 5, kind: "user" as const, text: "继续处理" }
+  const secondTool = { id: 6, kind: "tool" as const, tools: [{ name: "glob", args: { pattern: "src/**" }, ok: true, output: "src/main.ts" }] }
+
+  assert.equal(transcriptBoundary(undefined, assistant), "none")
+  assert.equal(transcriptBoundary(tool, assistant), "divider")
+  assert.equal(transcriptBoundary(tool, plan), "divider")
+  assert.equal(transcriptBoundary(tool, continuation), "none")
+  assert.equal(transcriptBoundary(tool, user), "space")
+  assert.equal(transcriptBoundary(tool, secondTool), "space")
+  assert.equal(transcriptBoundary(assistant, secondTool), "space")
+})
+
+test("tool-to-assistant divider replaces the normal boundary row", () => {
+  const width = 48
+  const tool = { id: 1, kind: "tool" as const, tools: [{ name: "read_file", args: { path: "src/main.ts" }, ok: true, output: "done" }] }
+  const assistant = { id: 2, kind: "assistant" as const, text: "阶段结论" }
+  const view = render(React.createElement(Box, { flexDirection: "column", width },
+    React.createElement(TranscriptBlock, { first: true, width }, React.createElement(TranscriptLine, { item: tool, width, language: "zh" })),
+    React.createElement(TranscriptBlock, { boundary: transcriptBoundary(tool, assistant), width }, React.createElement(TranscriptLine, { item: assistant, width, language: "zh" })),
+  ))
+  const lines = stripVTControlCharacters(view.lastFrame() ?? "").split("\n")
+  const toolLine = lines.findIndex((line) => line.includes("检查了项目"))
+  const assistantLine = lines.findIndex((line) => line.includes("阶段结论"))
+  assert.ok(toolLine >= 0 && assistantLine > toolLine)
+  assert.match(lines[assistantLine - 1] ?? "", /^─{48}$/)
+  assert.equal(assistantLine, toolLine + 2)
+  assert.ok(lines.every((line) => displayWidth(line) <= width))
+  view.unmount()
+})
+
 test("conversation rows wrap Chinese and emoji within the current terminal width", () => {
   for (const width of [28, 40, 72]) {
     const item = { id: 1, kind: "assistant" as const, text: "中文回答 🚀 ".repeat(20) }
@@ -149,7 +188,7 @@ test("conversation rows wrap Chinese and emoji within the current terminal width
 test("composer reflows without duplicating its input surface", () => {
   const composer = (width: number) => React.createElement(Box, { width }, React.createElement(Composer, {
     running: false,
-    input: React.createElement(Text, null, React.createElement(Text, { color: "cyan" }, "› "), "输入任务或 @文件路径"),
+    input: React.createElement(Text, null, "输入任务或 @文件路径"),
     suggestions: React.createElement(Text, null, "› /help  查看帮助"),
     status: React.createElement(React.Fragment, null, "model · 0%"),
     statusRight: React.createElement(Text, null, "计划"),
@@ -157,14 +196,22 @@ test("composer reflows without duplicating its input surface", () => {
   const view = render(composer(72))
   view.rerender(composer(32))
   const frame = view.lastFrame() ?? ""
-  assert.equal(frame.split("输入任务或 @文件路径").length - 1, 1)
-  assert.equal(frame.split("› /help").length - 1, 1)
-  assert.match(frame.split("\n").find((line) => line.includes("model · 0%")) ?? "", /model · 0%\s+计划$/)
-  assert.ok(frame.split("\n").every((line) => displayWidth(line) <= 32))
+  const plainFrame = stripVTControlCharacters(frame)
+  assert.equal(plainFrame.split("输入任务或 @文件路径").length - 1, 1)
+  assert.equal(plainFrame.split("› /help").length - 1, 1)
+  const inputLine = plainFrame.split("\n").findIndex((line) => line.includes("输入任务或 @文件路径"))
+  const statusLine = plainFrame.split("\n").findIndex((line) => line.includes("model · 0%"))
+  assert.match(plainFrame.split("\n")[inputLine] ?? "", /^› 输入任务或 @文件路径/)
+  assert.match(plainFrame.split("\n")[statusLine] ?? "", /^model · 0%\s+计划$/)
+  assert.equal(plainFrame.split("\n")[inputLine - 1]?.trim(), "")
+  assert.equal(plainFrame.split("\n")[inputLine + 1]?.trim(), "")
+  assert.equal(statusLine, inputLine + 2)
+  assert.match(frame.split("\n").find((line) => line.includes("输入任务或 @文件路径")) ?? "", /\u001b\[36m.*›/)
+  assert.ok(plainFrame.split("\n").every((line) => displayWidth(line) <= 32))
   view.unmount()
 })
 
-test("composer owns one visual row above the complete input control surface", () => {
+test("composer owns two visual rows above the complete input control surface", () => {
   const view = render(React.createElement(Box, { flexDirection: "column", width: 72 },
     React.createElement(Text, null, "Completed answer"),
     React.createElement(Composer, {
@@ -180,25 +227,30 @@ test("composer owns one visual row above the complete input control surface", ()
 
   assert.ok(answerLine >= 0 && suggestionLine > answerLine)
   assert.equal(lines[answerLine + 1]?.trim(), "")
-  assert.equal(suggestionLine, answerLine + 2)
+  assert.equal(lines[answerLine + 2]?.trim(), "")
+  assert.equal(suggestionLine, answerLine + 3)
   view.unmount()
 })
 
-test("running status renders immediately above the composer border", () => {
+test("running status renders above the padded single-line composer", () => {
   const view = render(React.createElement(Box, { flexDirection: "column", width: 72 },
     React.createElement(Composer, {
       running: true,
-      input: React.createElement(Text, null, "› 任务正在运行；按 Enter 将消息加入队列"),
+      input: React.createElement(Text, null, "任务正在运行；按 Enter 将消息加入队列"),
       activity: React.createElement(RunningStatus, { activityEpoch: 1, activeTool: null, reasoningCharacters: 0, language: "zh" }),
       status: React.createElement(React.Fragment, null, "model · 1%"),
     }),
   ))
-  const lines = (view.lastFrame() ?? "").split("\n")
+  const lines = stripVTControlCharacters(view.lastFrame() ?? "").split("\n")
   const input = lines.findIndex((line) => line.includes("任务正在运行"))
   const activity = lines.findIndex((line) => line.includes("思考中"))
-  const border = lines.findIndex((line, index) => index > activity && line.includes("─"))
   const status = lines.findIndex((line) => line.includes("model · 1%"))
-  assert.ok(activity >= 0 && border > activity && input > border && status > input)
-  assert.equal(border, activity + 1)
+  assert.equal(lines[activity + 1]?.trim(), "")
+  assert.equal(input, activity + 2)
+  assert.equal(lines[input + 1]?.trim(), "")
+  assert.equal(status, input + 2)
+  assert.match(lines[input] ?? "", /^› 任务正在运行/)
+  assert.match(lines[status] ?? "", /^model · 1%/)
+  assert.doesNotMatch(lines.slice(activity, status + 1).join("\n"), /─/)
   view.unmount()
 })
