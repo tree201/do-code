@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import path from "node:path"
 import { doCodeConfigPath, effectiveReasoningEffort, effectiveThinkingMode, localeDefinitions, migrateConfig, normalizeLanguage, normalizeReasoningEffort, normalizeThinkingMode, outputLanguageInstruction, projectConfigPath, supportedLanguages, systemConfigPath } from "../src/config.js"
+import { availableLanguagesText, languageDisplay, t } from "../src/ui/i18n.js"
 
 test("configuration paths honor explicit environment overrides", () => {
   const previous = {
@@ -32,7 +33,11 @@ test("locale registry drives aliases, configuration validation, and model instru
   assert.deepEqual(supportedLanguages(), localeDefinitions.map((locale) => locale.id))
   assert.equal(normalizeLanguage("English"), "en")
   assert.equal(normalizeLanguage("简体中文"), "zh")
-  assert.equal(normalizeLanguage("fr"), null)
+  assert.equal(normalizeLanguage("日本語"), "ja")
+  assert.equal(normalizeLanguage("한국어"), "ko")
+  assert.equal(normalizeLanguage("español"), "es")
+  assert.equal(normalizeLanguage("français"), "fr")
+  assert.equal(normalizeLanguage("de"), null)
   for (const locale of localeDefinitions) {
     assert.equal(migrateConfig({ language: locale.id }).language, locale.id)
     assert.ok(locale.nativeName)
@@ -40,7 +45,14 @@ test("locale registry drives aliases, configuration validation, and model instru
     assert.ok(locale.bcp47)
     assert.equal(outputLanguageInstruction(locale.id), locale.outputInstruction)
   }
-  assert.throws(() => migrateConfig({ language: "fr" }), /language must be one of: en, zh/)
+  assert.throws(() => migrateConfig({ language: "de" }), /language must be one of: en, zh, ja, ko, es, fr/)
+  assert.equal(languageDisplay("ja", "en"), "Japanese [ja-JP]")
+  assert.equal(languageDisplay("ja", "zh"), "日本語 [ja-JP]")
+  assert.match(availableLanguagesText("en"), /Japanese \[ja-JP\].*Korean \[ko-KR\].*Spanish \[es-ES\].*French \[fr-FR\]/)
+  assert.equal(t("ja", "Current language"), "現在の言語")
+  assert.equal(t("ko", "Current language"), "현재 언어")
+  assert.equal(t("es", "Current language"), "Idioma actual")
+  assert.equal(t("fr", "Current language"), "Langue actuelle")
 })
 
 test("model preference normalization selects supported fallback levels", () => {
