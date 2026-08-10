@@ -20,7 +20,7 @@ export function ChatDialogs({ props, state }: { props: ChatAppProps; state: Chat
     {dialog.kind === "auth" && state.runtimeStore.canConfigureAuth ? <AuthDialog currentModel={state.activeModel} language={state.activeLanguage} onClose={() => state.setActiveDialog({ kind: "none" })} onSubmit={state.runtimeStore.configureAuth} /> : null}
     {dialog.kind === "model" && state.runtimeStore.canSwitchModel ? <ModelDialog models={state.activeModelPresets} currentModel={state.activeModel} language={state.activeLanguage} onClose={() => state.setActiveDialog({ kind: "none" })} onSelect={state.runtimeStore.switchModel} /> : null}
     {dialog.kind === "approval" ? <ApprovalDialog request={dialog.request} selectedIndex={dialog.selectedIndex} language={state.activeLanguage} width={state.terminalWidth} /> : null}
-    {dialog.kind === "question" ? <QuestionDialog question={dialog.request.question} options={dialog.request.options} selectedIndex={dialog.selectedIndex} draft={dialog.draft} language={state.activeLanguage} /> : null}
+    {dialog.kind === "question" ? <QuestionDialog question={dialog.request.question} options={dialog.request.options} selectedIndex={dialog.selectedIndex} draft={dialog.draft} customAnswer={dialog.customAnswer} language={state.activeLanguage} /> : null}
     {dialog.kind === "plan-review" ? <PlanReviewDialog plan={dialog.request.plan} selectedIndex={dialog.selectedIndex} language={state.activeLanguage} width={state.terminalWidth} /> : null}
     {dialog.kind === "permission-menu" ? <PermissionModeDialog currentMode={state.activeApprovalMode} selectedIndex={dialog.selectedIndex} language={state.activeLanguage} /> : null}
     {dialog.kind === "session-picker" && !state.running ? <DialogManager><DialogSurface>

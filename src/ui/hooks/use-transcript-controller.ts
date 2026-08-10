@@ -15,7 +15,7 @@ export function useTranscriptController(props: ChatAppProps, state: ChatAppState
     props.approvalBridge.attach((request) => state.setActiveDialog({ kind: "approval", request, selectedIndex: 0 }))
     props.questionBridge?.attach((request) => {
       state.transcriptOwner.flushPendingTools()
-      state.setActiveDialog({ kind: "question", request, selectedIndex: 0, draft: "" })
+      state.setActiveDialog({ kind: "question", request, selectedIndex: 0, draft: "", customAnswer: request.options.length === 0, returnToOptions: false })
     })
     props.planReviewBridge?.attach((request) => {
       state.transcriptOwner.flushPendingTools()
