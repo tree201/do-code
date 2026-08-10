@@ -36,8 +36,8 @@ export function createInteractiveRenderer(createApp: () => React.ReactElement) {
       await closed
     } finally {
       if (viewer) { viewer.clear(); viewer.unmount() }
-      mainInstance?.clear(); restorePrimary(); process.off("exit", restorePrimary)
-      viewerInput = undefined; alternateOpen = false; mainOutput.resume(false); revision++; mainInstance?.rerender(createApp())
+      restorePrimary(); process.off("exit", restorePrimary)
+      viewerInput = undefined; alternateOpen = false; mainOutput.resume(); mainInstance?.rerender(createApp())
     }
   }
 

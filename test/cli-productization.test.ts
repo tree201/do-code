@@ -11,12 +11,13 @@ import { deleteSession, exportSession, listSessions, loadSession, projectDataRoo
 process.env.DO_CODE_DATA_DIR = await mkdtemp(path.join(os.tmpdir(), "do-code-data-"))
 
 test("production launcher uses the active Node runtime and starts the compiled CLI", async () => {
-  const rootPackage = JSON.parse(await readFile(path.resolve("package.json"), "utf8")) as { bin: Record<string, string>; engines: { node: string } }
-  const cliPackage = JSON.parse(await readFile(path.resolve("packages/cli/package.json"), "utf8")) as { bin: Record<string, string>; engines: { node: string }; dependencies: { ink: string } }
+  const rootPackage = JSON.parse(await readFile(path.resolve("package.json"), "utf8")) as { version: string; bin: Record<string, string>; engines: { node: string } }
+  const cliPackage = JSON.parse(await readFile(path.resolve("packages/cli/package.json"), "utf8")) as { version: string; bin: Record<string, string>; engines: { node: string }; dependencies: { ink: string } }
   assert.equal(rootPackage.bin["do-code"], "scripts/cli-entry.js")
   assert.equal(cliPackage.bin["do-code"], "scripts/cli-entry.js")
   assert.equal(rootPackage.engines.node, "^20.19.0 || >=22.12.0")
   assert.equal(cliPackage.engines.node, rootPackage.engines.node)
+  assert.equal(cliPackage.version, rootPackage.version)
   assert.equal(cliPackage.dependencies.ink, "npm:@jrichman/ink@6.6.9")
 
   const launched = spawnSync(process.execPath, ["scripts/cli-entry.js", "--version"], {
@@ -24,7 +25,7 @@ test("production launcher uses the active Node runtime and starts the compiled C
     encoding: "utf8",
   })
   assert.equal(launched.status, 0, launched.stderr)
-  assert.match(launched.stdout, /^0\.3\.0\s*$/)
+  assert.match(launched.stdout, new RegExp(`^${rootPackage.version}\\s*$`))
 })
 
 test("lists and restores the latest project session",async()=>{

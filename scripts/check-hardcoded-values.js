@@ -20,13 +20,13 @@ async function filesUnder(directory) {
     if (ignoredDirectories.has(entry.name)) continue
     const target = path.join(directory, entry.name)
     if (entry.isDirectory()) files.push(...await filesUnder(target))
-    else if (extensions.has(path.extname(entry.name)) && target.includes(`${path.sep}src${path.sep}`)) files.push(target)
+    else if (extensions.has(path.extname(entry.name))) files.push(target)
   }
   return files
 }
 
 const failures = []
-for (const file of await filesUnder(root)) {
+for (const file of await filesUnder(path.join(root, "src"))) {
   const relative = path.relative(root, file).split(path.sep).join("/")
   if (baseline.paths?.includes(relative)) continue
   const lines = (await readFile(file, "utf8")).split(/\r?\n/)

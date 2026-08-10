@@ -6,7 +6,7 @@ import { Box } from "ink"
 import { AgentConversation } from "../src/agent.js"
 import type { AgentEvent, ChatModel } from "../src/protocol.js"
 import { ApprovalBridge, ChatApp, TranscriptBlock, TranscriptLine, type ChatAppProps } from "../src/ui/chat-app.js"
-import { tick } from "./support/chat-ui.js"
+import { tick, visibleFrame } from "./support/chat-ui.js"
 
 test("edit activities render a compact line-numbered Codex-style diff", () => {
   const view = render(React.createElement(TranscriptLine, {
@@ -35,7 +35,7 @@ test("edit activities render a compact line-numbered Codex-style diff", () => {
     width: 72,
     language: "en",
   }))
-  const frame = view.lastFrame() ?? ""
+  const frame = visibleFrame(view)
   assert.match(frame, /• Edited src\/main\.js \(\+1 -1\)/)
   assert.match(frame, /140 - const oldValue = true/)
   assert.match(frame, /140 \+ const newValue = true/)
@@ -77,10 +77,10 @@ test("multi-file edit headers and code share the Codex seven-cell line-number gr
     width: 72,
     language: "en",
   }))
-  const frame = view.lastFrame() ?? ""
+  const frame = visibleFrame(view)
   assert.match(frame, /^  └ src\/main\.js \(\+1 -0\)$/m)
-  assert.match(frame, /^     12 \+ makeNightLightsTexture,$/m)
-  assert.match(frame, /^    220 \+ \.panel \{\}$/m)
+  assert.match(frame, /^     12 \+ makeNightLightsTexture,\s*$/m)
+  assert.match(frame, /^    220 \+ \.panel \{\}\s*$/m)
   view.unmount()
 })
 
@@ -193,7 +193,7 @@ test("line-number gaps render explicit unchanged-region omissions without hiding
     width: 72,
     language: "zh",
   }))
-  const frame = view.lastFrame() ?? ""
+  const frame = visibleFrame(view)
   assert.match(frame, /^\s*⋮\s*$/m)
   assert.doesNotMatch(frame, /省略.*行修改/)
   view.unmount()
@@ -227,7 +227,7 @@ test("completed edit batches keep large diffs out of the animated pending region
 
   activeSink({ protocolVersion: 1, turnId: "turn_test", type: "step.started", step: 2 })
   await tick()
-  const frozenFrame = view.lastFrame() ?? ""
+  const frozenFrame = visibleFrame(view)
   assert.match(frozenFrame, /Edited 2 files \(\+2 -2\)/)
   assert.match(frozenFrame, /new-a/)
   assert.match(frozenFrame, /new-b/)

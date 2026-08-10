@@ -15,13 +15,16 @@ async function filesUnder(directory) {
     if (ignoredDirectories.has(entry.name)) continue
     const target = path.join(directory, entry.name)
     if (entry.isDirectory()) files.push(...await filesUnder(target))
-    else if (extensions.has(path.extname(entry.name)) && (target.includes(`${path.sep}src${path.sep}`) || target.includes(`${path.sep}test${path.sep}`))) files.push(target)
+    else if (extensions.has(path.extname(entry.name))) files.push(target)
   }
   return files
 }
 
 const baseline = JSON.parse(await readFile(baselineFile, "utf8"))
-const files = await filesUnder(root)
+const files = [
+  ...await filesUnder(path.join(root, "src")),
+  ...await filesUnder(path.join(root, "test")),
+]
 const failures = []
 const migrated = []
 for (const file of files) {

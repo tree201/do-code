@@ -10,6 +10,7 @@ import { RunningStatus } from "../src/ui/components/chat-activity.js"
 import { TranscriptBlock } from "../src/ui/components/transcript-block.js"
 import { transcriptBoundary } from "../src/ui/transcript-layout.js"
 import { displayWidth } from "../src/ui/terminal-text.js"
+import { visibleFrame } from "./support/chat-ui.js"
 
 test("elapsed time uses compact second, minute, and hour units", () => {
   assert.equal(formatElapsedTime(0), "0s")
@@ -28,17 +29,19 @@ test("welcome header uses a branded wide layout and a compact narrow fallback", 
     restored: false,
   }
   const wide = render(React.createElement(WelcomeHeader, { ...common, width: 110 }))
-  assert.match(wide.lastFrame() ?? "", /____   ___/)
-  assert.match(wide.lastFrame() ?? "", /›_ do-code/)
-  assert.match(wide.lastFrame() ?? "", /ark\/glm-5\.2/)
-  assert.match(wide.lastFrame() ?? "", /Type \/ for commands/)
+  const wideFrame = visibleFrame(wide)
+  assert.match(wideFrame, /____   ___/)
+  assert.match(wideFrame, /›_ do-code/)
+  assert.match(wideFrame, /ark\/glm-5\.2/)
+  assert.match(wideFrame, /Type \/ for commands/)
   wide.unmount()
 
   const narrow = render(React.createElement(WelcomeHeader, { ...common, width: 42 }))
-  assert.doesNotMatch(narrow.lastFrame() ?? "", /____   ___/)
-  assert.match(narrow.lastFrame() ?? "", /›_ do-code/)
-  assert.match(narrow.lastFrame() ?? "", /Workspace/)
-  assert.match(narrow.lastFrame() ?? "", /…/)
+  const narrowFrame = visibleFrame(narrow)
+  assert.doesNotMatch(narrowFrame, /____   ___/)
+  assert.match(narrowFrame, /›_ do-code/)
+  assert.match(narrowFrame, /Workspace/)
+  assert.match(narrowFrame, /…/)
   narrow.unmount()
 })
 
@@ -46,9 +49,9 @@ test("welcome header uses terminal-stable ASCII art at responsive boundaries", (
   const common = { workspace: "/tmp/project", model: "ark/glm-5.2", sessionId: "session_test", restored: false }
   for (const width of [75, 76, 77, 100, 171]) {
     const view = render(React.createElement(WelcomeHeader, { ...common, width }))
-    const frame = view.lastFrame() ?? ""
+    const frame = visibleFrame(view)
     assert.doesNotMatch(frame, /[█╔╗╚╝║]/)
-    assert.ok(frame.split("\n").every((line) => line.length <= width), `rendered line exceeded ${width} columns`)
+    assert.ok(frame.split("\n").every((line) => displayWidth(line) <= width), `rendered line exceeded ${width} columns`)
     view.unmount()
   }
 })
@@ -93,7 +96,7 @@ test("user turns keep one padding row above and below single-line and multiline 
       item: { id: 1, kind: "user", text },
       width: 40,
     }))
-    const lines = (view.lastFrame() ?? "").split("\n")
+    const lines = visibleFrame(view).split("\n")
     const content = text.split("\n")
     const firstLine = lines.findIndex((line) => line.includes(content[0]!))
     const lastLine = lines.findIndex((line) => line.includes(content.at(-1)!))
@@ -117,7 +120,7 @@ test("transcript message bodies share one terminal-cell baseline", () => {
 
   for (const { item, body } of cases) {
     const view = render(React.createElement(TranscriptLine, { item, width: 80, language: "zh" }))
-    const line = (view.lastFrame() ?? "").split("\n").find((candidate) => candidate.includes(body)) ?? ""
+    const line = visibleFrame(view).split("\n").find((candidate) => candidate.includes(body)) ?? ""
     assert.equal(line.indexOf(body), 2, `${item.kind} body should begin in column 3`)
     view.unmount()
   }
@@ -134,7 +137,7 @@ test("system actions use one dot marker and distinguish state with color", () =>
 
   for (const { item, legacy } of cases) {
     const view = render(React.createElement(TranscriptLine, { item, width: 80 }))
-    const frame = view.lastFrame() ?? ""
+    const frame = visibleFrame(view)
     assert.match(frame, /^•/)
     assert.doesNotMatch(frame, legacy)
     view.unmount()

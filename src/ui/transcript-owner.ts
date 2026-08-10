@@ -79,18 +79,17 @@ export function createTranscriptOwner(initialItems: TranscriptItem[]) {
   }
   const addPendingTool = (tool: TranscriptTool, language: DoCodeLanguage) => {
     const groupKey = activityGroupKey(tool.name, tool.callId)
-    const signature = activityVisibleSignature([tool], language)
     const current = snapshot.pendingToolGroup
-    if (current && (current.groupKey !== groupKey || current.signature !== signature)) flushPendingTools()
+    if (current && current.groupKey !== groupKey) flushPendingTools()
     const pending = snapshot.pendingToolGroup
-    publish({ pendingToolGroup: pending && pending.groupKey === groupKey && pending.signature === signature
-      ? { groupKey, signature, tools: [...pending.tools, tool] }
-      : { groupKey, signature, tools: [tool] } })
+    const tools = pending?.groupKey === groupKey ? [...pending.tools, tool] : [tool]
+    publish({ pendingToolGroup: { groupKey, signature: activityVisibleSignature(tools, language), tools } })
   }
   const handleEvent = (event: AgentEvent, language: DoCodeLanguage) => {
     const previous = liveState
     const transition = reduceLiveTranscript(previous, event, language)
     liveState = transition.state
+    if (event.type === "step.started" && snapshot.pendingToolGroup?.groupKey === "edit") flushPendingTools()
     if (transition.effects.flushPendingTools) flushPendingTools()
     if (transition.effects.commitAssistant) commitAssistant(previous.liveAssistant)
     else if (transition.state.liveAssistant !== previous.liveAssistant) {

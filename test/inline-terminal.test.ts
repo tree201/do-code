@@ -156,8 +156,8 @@ test("Ctrl+T viewer restores the inline primary screen before the next edit", { 
     assert.equal((screen.match(/after-viewer/g) ?? []).length, 1, screen)
     const inputRow = visible.findIndex((line) => line.includes("after-viewer"))
     assert.ok(inputRow > 0, screen)
-    assert.ok(visible.slice(Math.max(0, inputRow - 3), inputRow).some((line) => /^─{20,}$/.test(line.trim())), screen)
-    assert.ok(visible.slice(inputRow + 1, inputRow + 4).some((line) => /^─{20,}$/.test(line.trim())), screen)
+    assert.equal(visible[inputRow - 1]?.trim(), "", screen)
+    assert.equal(visible[inputRow + 1]?.trim(), "", screen)
   } finally {
     terminal.dispose()
   }

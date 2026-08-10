@@ -6,7 +6,7 @@ import { Box } from "ink"
 import { AgentConversation } from "../src/agent.js"
 import type { AgentEvent, ChatModel } from "../src/protocol.js"
 import { ApprovalBridge, boundedLiveOutput, ChatApp, inlineViewerHeight, TranscriptBlock, TranscriptLine, TranscriptViewer, transcriptViewerText, type ChatAppProps, type TranscriptItem } from "../src/ui/chat-app.js"
-import { tick, waitForFrame } from "./support/chat-ui.js"
+import { tick, visibleFrame, waitForFrame } from "./support/chat-ui.js"
 
 test("inline message viewer never grows into a full-terminal transient frame", () => {
   assert.equal(inlineViewerHeight(190, 60), 38)
@@ -36,14 +36,16 @@ test("message viewer exposes full history through a bounded scroll window", () =
   assert.match(transcript, /最后一条问题/)
 
   const top = render(React.createElement(TranscriptViewer, { items, offset: 0, width: 48, height: 9, language: "zh" }))
-  assert.match(top.lastFrame() ?? "", /消息查看模式/)
-  assert.match(top.lastFrame() ?? "", /第一条问题/)
-  assert.doesNotMatch(top.lastFrame() ?? "", /最后一条问题/)
+  const topFrame = visibleFrame(top)
+  assert.match(topFrame, /消息查看模式/)
+  assert.match(topFrame, /第一条问题/)
+  assert.doesNotMatch(topFrame, /最后一条问题/)
   top.unmount()
 
   const bottom = render(React.createElement(TranscriptViewer, { items, offset: Number.MAX_SAFE_INTEGER, width: 48, height: 9, language: "zh" }))
-  assert.match(bottom.lastFrame() ?? "", /最后一条问题/)
-  assert.match(bottom.lastFrame() ?? "", /Ctrl\+T\/Esc 返回/)
+  const bottomFrame = visibleFrame(bottom)
+  assert.match(bottomFrame, /最后一条问题/)
+  assert.match(bottomFrame, /Ctrl\+T\/Esc 返回/)
   bottom.unmount()
 })
 
@@ -255,9 +257,10 @@ test("successful internal task updates stay out of chat and remain available in 
 
   view.stdin.write("\u0014")
   await tick(); await tick()
-  assert.match(view.lastFrame() ?? "", /消息查看模式/)
-  assert.match(view.lastFrame() ?? "", /检查项目/)
-  assert.match(view.lastFrame() ?? "", /运行测试/)
+  const viewerFrame = visibleFrame(view)
+  assert.match(viewerFrame, /消息查看模式/)
+  assert.match(viewerFrame, /检查项目/)
+  assert.match(viewerFrame, /运行测试/)
   view.stdin.write("\u001b")
   finishModel?.()
   await tick(); await tick()
@@ -278,7 +281,7 @@ test("blocked and failed task updates remain visible while successful updates ca
     width: 80,
     language: "zh",
   }))
-  assert.match(blocked.lastFrame() ?? "", /任务受阻 · 1 项/)
+  assert.match(visibleFrame(blocked), /任务受阻 · 1 项/)
   blocked.unmount()
 
   const failed = render(React.createElement(TranscriptLine, {
@@ -286,6 +289,6 @@ test("blocked and failed task updates remain visible while successful updates ca
     width: 80,
     language: "zh",
   }))
-  assert.match(failed.lastFrame() ?? "", /更新任务进度失败/)
+  assert.match(visibleFrame(failed), /更新任务进度失败/)
   failed.unmount()
 })

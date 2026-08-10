@@ -6,7 +6,7 @@ import { AgentConversation } from "../src/agent.js"
 import { classifyPastedImagePaths } from "../src/image-attachments.js"
 import type { ChatModel } from "../src/protocol.js"
 import { ApprovalBridge, ChatApp, HelpDialog, isHelpShortcut, isReasoningEffortShortcut, nextReasoningEffort, type ChatAppProps } from "../src/ui/chat-app.js"
-import { tick } from "./support/chat-ui.js"
+import { tick, visibleFrame } from "./support/chat-ui.js"
 
 test("reasoning effort shortcut cycles through the configured levels", () => {
   assert.equal(nextReasoningEffort("low"), "medium")
@@ -30,9 +30,12 @@ test("Ctrl+H is recognized from Ink's backspace key event", () => {
   assert.equal(isHelpShortcut("h", { backspace: true }), false)
 })
 
-test("help dialog renders localized shortcut content", () => {
-  const zh = render(React.createElement(HelpDialog, { language: "zh", width: 80, height: 24, offset: 0 })).lastFrame() ?? ""
-  const en = render(React.createElement(HelpDialog, { language: "en", width: 80, height: 24, offset: 0 })).lastFrame() ?? ""
+test("help dialog renders localized shortcut content", (t) => {
+  const zhView = render(React.createElement(HelpDialog, { language: "zh", width: 80, height: 24, offset: 0 }))
+  const enView = render(React.createElement(HelpDialog, { language: "en", width: 80, height: 24, offset: 0 }))
+  t.after(() => { zhView.unmount(); enView.unmount() })
+  const zh = visibleFrame(zhView)
+  const en = visibleFrame(enView)
   assert.match(zh, /快捷键与操作帮助/)
   assert.match(zh, /Ctrl\+R.*切换思考强度/)
   assert.match(en, /Keyboard shortcuts and help/)
