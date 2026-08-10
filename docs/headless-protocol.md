@@ -18,6 +18,18 @@ do-code run --yes --task-file task.md --output-format stream-json
 
 每次运行还会写入 `run-config.json`、`events.jsonl`、`agent-result.json` 和 `patch.diff`；外部自动化可消费同一份版本化 Agent 事件。
 
+## 图片输入
+
+Headless 模式支持重复使用 `--image <path>`：
+
+```bash
+do-code run --image screenshots/bug.png --image screenshots/diagram.webp "分析这些图片并修复问题"
+```
+
+图片必须是 PNG、JPEG、GIF 或 WebP；每张最大 10 MB，每次提示最多 4 张、总大小最多 20 MB。图片会复制到本次运行的 `~/.local/share/do-code/projects/<project-key>/sessions/<run-id>/attachments/`，请求发送前才转换为 Provider 所需的 Base64。运行配置、消息和事件只保存会话相对引用，例如 `attachments/image_xxx.png`，不会保存 Base64 或原工作区绝对路径。可通过 `DO_CODE_DATA_DIR` 覆盖全局数据根目录。
+
+交互式 TUI 支持在编辑器中输入 `@path/to/image.png`，也可使用 `/paste-image` 从系统剪贴板导入图片；使用 `/remove-image <index|name>` 删除当前提示中的附件。
+
 ## 退出码
 
 | 退出码 | 含义 |

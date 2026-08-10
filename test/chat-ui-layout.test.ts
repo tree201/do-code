@@ -1,0 +1,204 @@
+import assert from "node:assert/strict"
+import test from "node:test"
+import React from "react"
+import { render } from "ink-testing-library"
+import { Box, Text } from "ink"
+import { formatElapsedTime, TranscriptLine, WelcomeHeader } from "../src/ui/chat-app.js"
+import { Composer } from "../src/ui/components/composer.js"
+import { RunningStatus } from "../src/ui/components/chat-activity.js"
+import { displayWidth } from "../src/ui/terminal-text.js"
+
+test("elapsed time uses compact second, minute, and hour units", () => {
+  assert.equal(formatElapsedTime(0), "0s")
+  assert.equal(formatElapsedTime(59.9), "59s")
+  assert.equal(formatElapsedTime(60), "1m")
+  assert.equal(formatElapsedTime(197), "3m 17s")
+  assert.equal(formatElapsedTime(3_600), "1h")
+  assert.equal(formatElapsedTime(3_845), "1h 4m")
+})
+
+test("welcome header uses a branded wide layout and a compact narrow fallback", () => {
+  const common = {
+    workspace: "/Users/example/Projects/a-very-long-project-name",
+    model: "ark/glm-5.2",
+    sessionId: "session_very_long_identifier",
+    restored: false,
+  }
+  const wide = render(React.createElement(WelcomeHeader, { ...common, width: 110 }))
+  assert.match(wide.lastFrame() ?? "", /____   ___/)
+  assert.match(wide.lastFrame() ?? "", /›_ do-code/)
+  assert.match(wide.lastFrame() ?? "", /ark\/glm-5\.2/)
+  assert.match(wide.lastFrame() ?? "", /Type \/ for commands/)
+  wide.unmount()
+
+  const narrow = render(React.createElement(WelcomeHeader, { ...common, width: 42 }))
+  assert.doesNotMatch(narrow.lastFrame() ?? "", /____   ___/)
+  assert.match(narrow.lastFrame() ?? "", /›_ do-code/)
+  assert.match(narrow.lastFrame() ?? "", /Workspace/)
+  assert.match(narrow.lastFrame() ?? "", /…/)
+  narrow.unmount()
+})
+
+test("welcome header uses terminal-stable ASCII art at responsive boundaries", () => {
+  const common = { workspace: "/tmp/project", model: "ark/glm-5.2", sessionId: "session_test", restored: false }
+  for (const width of [75, 76, 77, 100, 171]) {
+    const view = render(React.createElement(WelcomeHeader, { ...common, width }))
+    const frame = view.lastFrame() ?? ""
+    assert.doesNotMatch(frame, /[█╔╗╚╝║]/)
+    assert.ok(frame.split("\n").every((line) => line.length <= width), `rendered line exceeded ${width} columns`)
+    view.unmount()
+  }
+})
+
+test("welcome header respects narrow widths with Chinese workspace text", () => {
+  for (const width of [24, 28, 36, 48]) {
+    const view = render(React.createElement(WelcomeHeader, {
+      workspace: "/Users/example/工作项目/一个很长的中文项目名称",
+      model: "provider/a-very-long-model-name",
+      sessionId: "session_very_long_identifier",
+      restored: false,
+      width,
+      language: "zh",
+    }))
+    assert.ok((view.lastFrame() ?? "").split("\n").every((line) => displayWidth(line) <= width), `header exceeded ${width} cells`)
+    view.unmount()
+  }
+})
+
+test("transcript distinguishes roles without repeating role names", () => {
+  const user = render(React.createElement(TranscriptLine, {
+    item: { id: 1, kind: "user", text: "Please inspect this project" },
+    width: 80,
+  }))
+  assert.equal((user.lastFrame() ?? "").trim(), "› Please inspect this project")
+  assert.doesNotMatch(user.lastFrame() ?? "", /You/)
+  user.unmount()
+
+  const assistant = render(React.createElement(TranscriptLine, {
+    item: { id: 2, kind: "assistant", text: "Inspection complete." },
+    width: 80,
+  }))
+  assert.equal((assistant.lastFrame() ?? "").trim(), "Inspection complete.")
+  assert.doesNotMatch(assistant.lastFrame() ?? "", /do-code/)
+  assistant.unmount()
+})
+
+test("user turns keep one padding row above and below single-line and multiline content", () => {
+  for (const text of ["Single-line user turn", "第一行\n第二行\n第三行"]) {
+    const view = render(React.createElement(TranscriptLine, {
+      item: { id: 1, kind: "user", text },
+      width: 40,
+    }))
+    const lines = (view.lastFrame() ?? "").split("\n")
+    const content = text.split("\n")
+    const firstLine = lines.findIndex((line) => line.includes(content[0]!))
+    const lastLine = lines.findIndex((line) => line.includes(content.at(-1)!))
+
+    assert.ok(firstLine > 0, "user text should have one padding row above it")
+    assert.equal(lines[firstLine - 1]?.trim(), "")
+    assert.equal(lines[lastLine + 1]?.trim(), "")
+    assert.equal(lines.length, content.length + 2)
+    view.unmount()
+  }
+})
+
+test("transcript message bodies share one terminal-cell baseline", () => {
+  const cases = [
+    { item: { id: 1, kind: "user" as const, text: "中文用户消息" }, body: "中文用户消息" },
+    { item: { id: 2, kind: "assistant" as const, text: "中文回答" }, body: "中文回答" },
+    { item: { id: 3, kind: "tool" as const, tools: [{ name: "read_file", args: { path: "src/main.ts" }, ok: true, output: "读取完成" }] }, body: "检查了项目" },
+    { item: { id: 4, kind: "info" as const, text: "权限已授予" }, body: "权限已授予" },
+    { item: { id: 5, kind: "error" as const, text: "执行失败" }, body: "执行失败" },
+  ]
+
+  for (const { item, body } of cases) {
+    const view = render(React.createElement(TranscriptLine, { item, width: 80, language: "zh" }))
+    const line = (view.lastFrame() ?? "").split("\n").find((candidate) => candidate.includes(body)) ?? ""
+    assert.equal(line.indexOf(body), 2, `${item.kind} body should begin in column 3`)
+    view.unmount()
+  }
+})
+
+test("system actions use one dot marker and distinguish state with color", () => {
+  const cases = [
+    { item: { id: 1, kind: "tool" as const, tools: [{ name: "read_file", args: { path: "src/main.ts" }, ok: true, output: "done" }] }, legacy: /[✓✗✕!↻]/ },
+    { item: { id: 2, kind: "tool" as const, tools: [{ name: "read_file", args: { path: "src/main.ts" }, ok: false, output: "failed" }] }, legacy: /[✓✗✕!↻]/ },
+    { item: { id: 3, kind: "info" as const, text: "Permission denied" }, legacy: /[✓✗✕!↻]/ },
+    { item: { id: 4, kind: "error" as const, text: "Request failed" }, legacy: /[✓✗✕!↻]/ },
+    { item: { id: 5, kind: "resume" as const, title: "Session", visibleCount: 1, conversationCount: 1, toolCount: 0 }, legacy: /[✓✗✕!↻]/ },
+  ]
+
+  for (const { item, legacy } of cases) {
+    const view = render(React.createElement(TranscriptLine, { item, width: 80 }))
+    const frame = view.lastFrame() ?? ""
+    assert.match(frame, /^•/)
+    assert.doesNotMatch(frame, legacy)
+    view.unmount()
+  }
+})
+
+test("conversation rows wrap Chinese and emoji within the current terminal width", () => {
+  for (const width of [28, 40, 72]) {
+    const item = { id: 1, kind: "assistant" as const, text: "中文回答 🚀 ".repeat(20) }
+    const view = render(React.createElement(Box, { width }, React.createElement(TranscriptLine, { item, width, language: "zh" })))
+    assert.ok((view.lastFrame() ?? "").split("\n").every((line) => displayWidth(line) <= width), `message exceeded ${width} cells`)
+    view.unmount()
+  }
+})
+
+test("composer reflows without duplicating its input surface", () => {
+  const composer = (width: number) => React.createElement(Box, { width }, React.createElement(Composer, {
+    running: false,
+    input: React.createElement(Text, null, React.createElement(Text, { color: "cyan" }, "› "), "输入任务或 @文件路径"),
+    suggestions: React.createElement(Text, null, "› /help  查看帮助"),
+    status: React.createElement(React.Fragment, null, "model · 0%"),
+    statusRight: React.createElement(Text, null, "计划"),
+  }))
+  const view = render(composer(72))
+  view.rerender(composer(32))
+  const frame = view.lastFrame() ?? ""
+  assert.equal(frame.split("输入任务或 @文件路径").length - 1, 1)
+  assert.equal(frame.split("› /help").length - 1, 1)
+  assert.match(frame.split("\n").find((line) => line.includes("model · 0%")) ?? "", /model · 0%\s+计划$/)
+  assert.ok(frame.split("\n").every((line) => displayWidth(line) <= 32))
+  view.unmount()
+})
+
+test("composer owns one visual row above the complete input control surface", () => {
+  const view = render(React.createElement(Box, { flexDirection: "column", width: 72 },
+    React.createElement(Text, null, "Completed answer"),
+    React.createElement(Composer, {
+      running: false,
+      input: React.createElement(Text, null, "› /re"),
+      suggestions: React.createElement(Text, null, "› /restore  Restore a checkpoint"),
+      status: React.createElement(React.Fragment, null, "model · 1%"),
+    }),
+  ))
+  const lines = (view.lastFrame() ?? "").split("\n")
+  const answerLine = lines.findIndex((line) => line.includes("Completed answer"))
+  const suggestionLine = lines.findIndex((line) => line.includes("/restore"))
+
+  assert.ok(answerLine >= 0 && suggestionLine > answerLine)
+  assert.equal(lines[answerLine + 1]?.trim(), "")
+  assert.equal(suggestionLine, answerLine + 2)
+  view.unmount()
+})
+
+test("running status renders immediately above the composer border", () => {
+  const view = render(React.createElement(Box, { flexDirection: "column", width: 72 },
+    React.createElement(Composer, {
+      running: true,
+      input: React.createElement(Text, null, "› 任务正在运行；按 Enter 将消息加入队列"),
+      activity: React.createElement(RunningStatus, { activityEpoch: 1, activeTool: null, reasoningCharacters: 0, language: "zh" }),
+      status: React.createElement(React.Fragment, null, "model · 1%"),
+    }),
+  ))
+  const lines = (view.lastFrame() ?? "").split("\n")
+  const input = lines.findIndex((line) => line.includes("任务正在运行"))
+  const activity = lines.findIndex((line) => line.includes("思考中"))
+  const border = lines.findIndex((line, index) => index > activity && line.includes("─"))
+  const status = lines.findIndex((line) => line.includes("model · 1%"))
+  assert.ok(activity >= 0 && border > activity && input > border && status > input)
+  assert.equal(border, activity + 1)
+  view.unmount()
+})

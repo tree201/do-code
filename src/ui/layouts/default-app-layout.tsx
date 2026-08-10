@@ -8,7 +8,7 @@ export type DefaultAppLayoutProps = {
   controls: ReactNode
 }
 
-/** Gemini-style inline layout: static history followed by transient content and controls. */
+/** Static history followed by transient content and controls. */
 export function DefaultAppLayout({ width, main, controls }: DefaultAppLayoutProps) {
   return (
     <Box

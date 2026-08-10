@@ -58,7 +58,7 @@ const zh: Record<string, string> = {
   "Enter a task or @file path": "输入任务或 @文件路径",
   "Enter Command · Esc Interrupt": "Enter 执行命令 · Esc 中断",
   "Enter Queue · ↑ Recall · Esc Interrupt": "Enter 加入队列 · ↑ 召回 · Esc 中断",
-  "Enter Send · Alt+Enter New line": "Enter 发送 · Alt+Enter 换行",
+  "Enter Send · Alt+Enter New line": "Enter 发送 · Ctrl+Enter 换行",
   "Thinking": "思考中",
   "Running": "正在执行",
   "Current language": "当前语言",

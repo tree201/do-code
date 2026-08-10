@@ -21,8 +21,7 @@ export type Args = {
   sessionTitle?: string
   exportFormat?: "md" | "json"
   output?: string
-  configAction?: "show" | "setup" | "import"
-  configSource?: "opencode"
+  configAction?: "show" | "setup"
   errorAction?: "list" | "show"
   errorId?: string
   model?: string
@@ -91,16 +90,11 @@ export function parseArgs(input: string[]): Args {
   if(command!=="chat")argv=argv.slice(1)
   let workspace=process.cwd(),taskFile:string|undefined,artifactDirectory:string|undefined,yes=false,json=false,outputFormat:Args["outputFormat"]="text",maxSteps=DEFAULT_MAX_TURNS,timeoutSeconds=600,continueSession=false,sessionId:string|undefined,approvalMode:ApprovalMode="ask",model:string|undefined,provider:string|undefined,worktree:string|undefined,agent:string|undefined
   const images:string[]=[]
-  let configAction:Args["configAction"],configSource:Args["configSource"]
+  let configAction:Args["configAction"]
   if(command==="config"){
     const action=argv.shift()??"show"
-    if(action!=="show"&&action!=="setup"&&action!=="import")throw new Error(`Unknown config action: ${action}`)
+    if(action!=="show"&&action!=="setup")throw new Error(`Unknown config action: ${action}`)
     configAction=action
-    if(action==="import"){
-      const source=argv.shift()
-      if(source!=="opencode")throw new Error("Usage: do-code config import opencode")
-      configSource=source
-    }
   }
   if(command==="resume"&&argv[0]&&!argv[0]!.startsWith("-"))sessionId=argv.shift()
   const task:string[]=[]
@@ -176,5 +170,5 @@ export function parseArgs(input: string[]): Args {
   if(command!=="run"&&command!=="chat"&&command!=="sessions"&&command!=="errors"&&command!=="update"&&task.length)throw new Error(`Unknown argument: ${task[0]}`)
   if(command!=="run"&&command!=="chat"&&(taskFile||json||outputFormat!=="text"||artifactDirectory))throw new Error("Task and output options are only available in headless mode")
   if(command==="resume")continueSession=true
-  return {command,workspace:path.resolve(workspace),yes,approvalMode,json,outputFormat,maxSteps,timeoutSeconds,continueSession,...((command==="run"||command==="chat")&&task.length?{task:task.join(" ")}:{ }),...(taskFile?{taskFile:path.resolve(taskFile)}:{}),...(artifactDirectory?{artifactDirectory:path.resolve(artifactDirectory)}:{}),...(sessionId?{sessionId}:{}),...(sessionAction?{sessionAction}:{}),...(sessionQuery?{sessionQuery}:{}),...(sessionTitle?{sessionTitle}:{}),...(exportFormat?{exportFormat}:{}),...(output?{output}:{}),...(configAction?{configAction}:{}),...(configSource?{configSource}:{}),...(errorAction?{errorAction}:{}),...(errorIdValue?{errorId:errorIdValue}:{}),...(model?{model}:{}),...(provider?{provider}:{}),...(agent?{agent}:{}),...(images.length?{images}:{}),...(updateAction?{updateAction}:{}),...(updateChannel?{updateChannel}:{}),...(worktree!==undefined?{worktree}:{})}
+  return {command,workspace:path.resolve(workspace),yes,approvalMode,json,outputFormat,maxSteps,timeoutSeconds,continueSession,...((command==="run"||command==="chat")&&task.length?{task:task.join(" ")}:{ }),...(taskFile?{taskFile:path.resolve(taskFile)}:{}),...(artifactDirectory?{artifactDirectory:path.resolve(artifactDirectory)}:{}),...(sessionId?{sessionId}:{}),...(sessionAction?{sessionAction}:{}),...(sessionQuery?{sessionQuery}:{}),...(sessionTitle?{sessionTitle}:{}),...(exportFormat?{exportFormat}:{}),...(output?{output}:{}),...(configAction?{configAction}:{}),...(errorAction?{errorAction}:{}),...(errorIdValue?{errorId:errorIdValue}:{}),...(model?{model}:{}),...(provider?{provider}:{}),...(agent?{agent}:{}),...(images.length?{images}:{}),...(updateAction?{updateAction}:{}),...(updateChannel?{updateChannel}:{}),...(worktree!==undefined?{worktree}:{})}
 }

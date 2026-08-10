@@ -1,9 +1,9 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process"
 import type { McpServerConfig, StoredConfig } from "./config.js"
 import type { ToolDefinition } from "./protocol.js"
-import type { ToolContext, ToolResult } from "./tools.js"
+import type { PolicyEngineContract } from "./policy-contracts.js"
+import type { ToolContext, ToolImplementation } from "./tool-contracts.js"
 import { DO_CODE_VERSION } from "./version.js"
-import type { PolicyEngine } from "./policy.js"
 
 type RpcResponse = { id?: number; result?: unknown; error?: { message?: string } }
 type McpTool = { name: string; description?: string; inputSchema?: ToolDefinition["function"]["parameters"] }
@@ -174,29 +174,26 @@ class HttpMcpClient implements McpClient {
   }
 }
 
-export type ExternalTool = {
-  definition: ToolDefinition
-  execute(args: unknown, context: ToolContext): Promise<ToolResult>
-}
+export type ExternalTool = ToolImplementation
 
 export class McpManager {
   private clients: McpClient[] = []
   readonly errors: string[] = []
 
-  constructor(private readonly workspace: string, private readonly servers: StoredConfig["mcpServers"] = {}, private readonly policy?: PolicyEngine) {}
+  constructor(private readonly workspace: string, private readonly servers: StoredConfig["mcpServers"] = {}, private readonly policy?: PolicyEngineContract) {}
 
   async load(): Promise<ExternalTool[]> {
-    const external: ExternalTool[] = []
-    for (const [serverName, server] of Object.entries(this.servers ?? {})) {
-      if (server.enabled === false) continue
+    const loads = Object.entries(this.servers ?? {}).map(async ([serverName, server]) => {
+      if (server.enabled === false) return undefined
       const endpoint = server.url ?? [server.command, ...(server.args ?? [])].filter(Boolean).join(" ")
       const evaluation = this.policy?.evaluate("mcp_server", { command: endpoint })
-      if (evaluation && evaluation.decision !== "allow") { this.errors.push(`${serverName}: Permission ${evaluation.decision}: ${evaluation.reason}`); continue }
+      if (evaluation && evaluation.decision !== "allow") return { error: `${serverName}: Permission ${evaluation.decision}: ${evaluation.reason}` }
       const client: McpClient = server.url ? new HttpMcpClient(serverName, server) : new StdioMcpClient(serverName, server, this.workspace)
       try {
         await client.start()
-        this.clients.push(client)
-        for (const tool of await client.tools()) {
+        const [tools, resources] = await Promise.all([client.tools(), client.resources().catch(() => [])])
+        const external: ExternalTool[] = []
+        for (const tool of tools) {
           const safeServer = serverName.replace(/[^a-zA-Z0-9_-]/g, "_")
           const safeTool = tool.name.replace(/[^a-zA-Z0-9_-]/g, "_")
           external.push({
@@ -208,7 +205,6 @@ export class McpManager {
             },
           })
         }
-        const resources = await client.resources().catch(() => [])
         if (resources.length) {
           const safeServer = serverName.replace(/[^a-zA-Z0-9_-]/g, "_")
           external.push({
@@ -225,10 +221,19 @@ export class McpManager {
             },
           })
         }
+        return { client, external }
       } catch (error) {
         client.close()
-        this.errors.push(`${serverName}: ${error instanceof Error ? error.message : String(error)}`)
+        return { error: `${serverName}: ${error instanceof Error ? error.message : String(error)}` }
       }
+    })
+    const results = await Promise.all(loads)
+    const external: ExternalTool[] = []
+    for (const result of results) {
+      if (!result) continue
+      if (result.error) this.errors.push(result.error)
+      if (result.client) this.clients.push(result.client)
+      if (result.external) external.push(...result.external)
     }
     return external
   }

@@ -106,7 +106,7 @@ function groupDetail(name: string, items: ToolSummaryItem[], language: DoCodeLan
   return ""
 }
 
-/** Qwen-style semantic summary: action first, terse target second, raw output hidden. */
+/** Semantic summary: action first, terse target second, raw output hidden. */
 export function buildToolGroupSummary(items: ToolSummaryItem[], language: DoCodeLanguage) {
   const groups = new Map<string, ToolSummaryItem[]>()
   for (const item of items) groups.set(item.name, [...(groups.get(item.name) ?? []), item])

@@ -1,9 +1,9 @@
 import { spawn, type ChildProcess } from "node:child_process"
 import { randomUUID } from "node:crypto"
 import type { IPty } from "node-pty"
-import type { ToolResult } from "./tools.js"
+import type { ShellSpawnSpec, ToolResult } from "./tool-contracts.js"
 
-export type ShellSpawnSpec = { executable: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv }
+export type { ShellSpawnSpec } from "./tool-contracts.js"
 
 type ProcessRecord = {
   id: string
@@ -21,6 +21,8 @@ type ProcessRecord = {
 export class BackgroundProcessManager {
   private readonly processes = new Map<string, ProcessRecord>()
 
+  constructor(private readonly maxCompleted = 100) {}
+
   start(command: string, spec: ShellSpawnSpec) {
     const id = `job_${randomUUID().slice(0, 8)}`
     const child = spawn(spec.executable, spec.args, { cwd: spec.cwd, env: spec.env, stdio: ["pipe", "pipe", "pipe"], detached: process.platform !== "win32" })
@@ -29,7 +31,7 @@ export class BackgroundProcessManager {
     child.stdout?.on("data", append)
     child.stderr?.on("data", append)
     child.on("error", (error) => { record.output = `${record.output}\n${error.message}`.trim() })
-    child.on("close", (code, signal) => { record.exitCode = code; record.signal = signal; record.finishedAt = new Date().toISOString() })
+    child.on("close", (code, signal) => { record.exitCode = code; record.signal = signal; record.finishedAt = new Date().toISOString(); this.pruneCompleted() })
     this.processes.set(id, record)
     return { id, pid: child.pid }
   }
@@ -48,7 +50,7 @@ export class BackgroundProcessManager {
     })
     const record: ProcessRecord = { id, command, mode: "pty", pty: terminal, output: "", startedAt: new Date().toISOString() }
     terminal.onData((chunk) => { record.output = (record.output + chunk).slice(-40_000) })
-    terminal.onExit(({ exitCode, signal }) => { record.exitCode = exitCode; record.signal = signal || null; record.finishedAt = new Date().toISOString() })
+    terminal.onExit(({ exitCode, signal }) => { record.exitCode = exitCode; record.signal = signal || null; record.finishedAt = new Date().toISOString(); this.pruneCompleted() })
     this.processes.set(id, record)
     return { id, pid: terminal.pid, mode: "pty" as const, columns, rows }
   }
@@ -110,5 +112,13 @@ export class BackgroundProcessManager {
       try { process.kill(-record.child.pid, "SIGTERM"); return } catch { /* process may have exited */ }
     }
     record.child?.kill("SIGTERM")
+  }
+
+  private pruneCompleted() {
+    let completed = [...this.processes.values()].filter((record) => record.finishedAt)
+    const limit = Math.max(0, this.maxCompleted)
+    if (completed.length <= limit) return
+    completed = completed.sort((left, right) => left.finishedAt!.localeCompare(right.finishedAt!))
+    for (const record of completed.slice(0, completed.length - limit)) this.processes.delete(record.id)
   }
 }

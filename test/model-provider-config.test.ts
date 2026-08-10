@@ -3,9 +3,9 @@ import { mkdtemp, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { effectiveReasoningEffort, effectiveThinkingMode, listModelPresets, loadStoredConfig, resolveRuntimeModelConfig } from "../src/config.js"
+import { defaultModelSupportsImages, effectiveReasoningEffort, effectiveThinkingMode, listModelPresets, loadStoredConfig, rememberRecentModel, resolveRuntimeModelConfig } from "../src/config.js"
 
-test("Qwen-style modelProviders resolve protocol, credentials and effort", async () => {
+test("model provider entries resolve protocol, credentials and effort", async () => {
   const directory=await mkdtemp(path.join(os.tmpdir(),"do-code-provider-"))
   const configPath=path.join(directory,"config.json")
   await writeFile(configPath,JSON.stringify({version:2,defaultModel:"ark/glm-5.2",modelProviders:{ark:[{id:"glm-5.2",baseUrl:"https://ark.cn-beijing.volces.com/api/coding/v3",envKey:"TEST_ARK_KEY",supportedEfforts:["low","high"]}]},providerProtocol:{ark:"openai-compatible"}}))
@@ -22,13 +22,52 @@ test("Qwen-style modelProviders resolve protocol, credentials and effort", async
     assert.equal(runtime.thinkingMode,"off")
     assert.equal(runtime.effectiveThinkingMode,"off")
     assert.equal(runtime.thinkingTransport,"reasoning-effort")
+     assert.equal(runtime.supportsImages,false)
   }finally{
     if(previousPath===undefined)delete process.env.DO_CODE_CONFIG_PATH;else process.env.DO_CODE_CONFIG_PATH=previousPath
     if(previousKey===undefined)delete process.env.TEST_ARK_KEY;else process.env.TEST_ARK_KEY=previousKey
   }
 })
 
-test("Qwen-style modelProviders preserve model request and stream idle timeouts", async () => {
+test("model provider entries preserve explicit image capability", async () => {
+  const directory=await mkdtemp(path.join(os.tmpdir(),"do-code-provider-images-"))
+  const configPath=path.join(directory,"config.json")
+  await writeFile(configPath,JSON.stringify({version:2,defaultModel:"test/vision",modelProviders:{test:[{id:"vision",baseUrl:"https://example.com/v1",envKey:"TEST_IMAGE_KEY",supportsImages:true}]},providerProtocol:{test:"openai-compatible"}}))
+  const previousPath=process.env.DO_CODE_CONFIG_PATH,previousKey=process.env.TEST_IMAGE_KEY
+  process.env.DO_CODE_CONFIG_PATH=configPath;process.env.TEST_IMAGE_KEY="secret"
+  try{
+    assert.equal((await resolveRuntimeModelConfig(directory)).supportsImages,true)
+  }finally{
+    if(previousPath===undefined)delete process.env.DO_CODE_CONFIG_PATH;else process.env.DO_CODE_CONFIG_PATH=previousPath
+    if(previousKey===undefined)delete process.env.TEST_IMAGE_KEY;else process.env.TEST_IMAGE_KEY=previousKey
+  }
+})
+
+test("model provider entries preserve explicit image rejection", async () => {
+  const directory=await mkdtemp(path.join(os.tmpdir(),"do-code-provider-text-only-"))
+  const configPath=path.join(directory,"config.json")
+  await writeFile(configPath,JSON.stringify({version:2,defaultModel:"test/text",modelProviders:{test:[{id:"text",baseUrl:"https://example.com/v1",envKey:"TEST_TEXT_KEY",supportsImages:false}]},providerProtocol:{test:"openai-compatible"}}))
+  const previousPath=process.env.DO_CODE_CONFIG_PATH,previousKey=process.env.TEST_TEXT_KEY
+  process.env.DO_CODE_CONFIG_PATH=configPath;process.env.TEST_TEXT_KEY="secret"
+  try{
+    assert.equal((await resolveRuntimeModelConfig(directory)).supportsImages,false)
+  }finally{
+    if(previousPath===undefined)delete process.env.DO_CODE_CONFIG_PATH;else process.env.DO_CODE_CONFIG_PATH=previousPath
+    if(previousKey===undefined)delete process.env.TEST_TEXT_KEY;else process.env.TEST_TEXT_KEY=previousKey
+  }
+})
+
+test("model image capability defaults follow known model families", () => {
+  assert.equal(defaultModelSupportsImages("gpt-5.6-sol"),true)
+  assert.equal(defaultModelSupportsImages("OpenAI/GPT-5.6-SOL"),true)
+  assert.equal(defaultModelSupportsImages("qwen3.8-max"),true)
+  assert.equal(defaultModelSupportsImages("qwen3.7-max"),false)
+  assert.equal(defaultModelSupportsImages("deepseek-v4-pro"),false)
+  assert.equal(defaultModelSupportsImages("unknown-proxy-model"),undefined)
+  assert.equal(defaultModelSupportsImages("doubao-seedream-4"),false)
+})
+
+test("model provider entries preserve request and stream idle timeouts", async () => {
   const directory=await mkdtemp(path.join(os.tmpdir(),"do-code-provider-timeout-"))
   const configPath=path.join(directory,"config.json")
   await writeFile(configPath,JSON.stringify({version:2,defaultModel:"test/model",modelProviders:{test:[{id:"model",baseUrl:"https://example.com/v1",envKey:"TEST_TIMEOUT_KEY",generationConfig:{timeoutMs:90000,streamIdleTimeoutMs:45000,maxRetries:2}}]},providerProtocol:{test:"openai-compatible"}}))
@@ -55,20 +94,23 @@ test("thinking mode resolves independently from effort and falls back to a suppo
   assert.equal(effectiveThinkingMode("on",["on","off"]),"on")
 })
 
-test("Qwen credential source reads the local Qwen settings without copying the secret", async () => {
-  const directory=await mkdtemp(path.join(os.tmpdir(),"do-code-qwen-provider-"))
-  const configPath=path.join(directory,"config.json"),qwenPath=path.join(directory,"qwen.json")
-  await writeFile(configPath,JSON.stringify({version:2,defaultModel:"ark/glm-5.2",modelProviders:{ark:[{id:"glm-5.2",baseUrl:"https://ark.example/v3",envKey:"ARK_CODING_PLAN_API_KEY",credential:{source:"qwen"}}]},providerProtocol:{ark:"openai-compatible"}}))
-  await writeFile(qwenPath,JSON.stringify({env:{ARK_CODING_PLAN_API_KEY:"qwen-secret"},modelProviders:{openai:[{id:"glm-5.2",baseUrl:"https://ark.example/v3"}]}}))
-  const previousConfig=process.env.DO_CODE_CONFIG_PATH,previousQwen=process.env.QWEN_CODE_CONFIG_PATH
-  process.env.DO_CODE_CONFIG_PATH=configPath;process.env.QWEN_CODE_CONFIG_PATH=qwenPath
+test("OpenCode-style model selection prefers explicit config, then recent, then provider order", async () => {
+  const directory=await mkdtemp(path.join(os.tmpdir(),"do-code-recent-model-"))
+  const configPath=path.join(directory,"config.json"),statePath=path.join(directory,"model.json")
+  const base={version:2,modelProviders:{test:[{id:"first",baseUrl:"https://example.com/v1",envKey:"TEST_RECENT_KEY"},{id:"recent",baseUrl:"https://example.com/v1",envKey:"TEST_RECENT_KEY"}]},providerProtocol:{test:"openai-compatible"}}
+  await writeFile(configPath,JSON.stringify(base))
+  const previousConfig=process.env.DO_CODE_CONFIG_PATH,previousState=process.env.DO_CODE_MODEL_STATE_PATH,previousKey=process.env.TEST_RECENT_KEY
+  process.env.DO_CODE_CONFIG_PATH=configPath;process.env.DO_CODE_MODEL_STATE_PATH=statePath;process.env.TEST_RECENT_KEY="secret"
   try{
-    const runtime=await resolveRuntimeModelConfig(directory)
-    assert.equal(runtime.apiKey,"qwen-secret")
-    assert.equal(runtime.baseUrl,"https://ark.example/v3")
-    assert.equal(runtime.modelId,"glm-5.2")
+    assert.equal((await resolveRuntimeModelConfig(directory)).preset,"test/first")
+    await rememberRecentModel({providerID:"test",modelID:"recent"})
+    assert.equal((await resolveRuntimeModelConfig(directory)).preset,"test/recent")
+    await writeFile(configPath,JSON.stringify({...base,defaultModel:"test/first"}))
+    assert.equal((await resolveRuntimeModelConfig(directory)).preset,"test/first")
+    assert.equal((await resolveRuntimeModelConfig(directory,"test/recent")).preset,"test/recent")
   }finally{
     if(previousConfig===undefined)delete process.env.DO_CODE_CONFIG_PATH;else process.env.DO_CODE_CONFIG_PATH=previousConfig
-    if(previousQwen===undefined)delete process.env.QWEN_CODE_CONFIG_PATH;else process.env.QWEN_CODE_CONFIG_PATH=previousQwen
+    if(previousState===undefined)delete process.env.DO_CODE_MODEL_STATE_PATH;else process.env.DO_CODE_MODEL_STATE_PATH=previousState
+    if(previousKey===undefined)delete process.env.TEST_RECENT_KEY;else process.env.TEST_RECENT_KEY=previousKey
   }
 })

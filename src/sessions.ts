@@ -1,6 +1,9 @@
-import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises"
+import { createHash } from "node:crypto"
+import { appendFile, cp, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises"
+import os from "node:os"
 import path from "node:path"
 import { contentText, type Message } from "./protocol.js"
+import { validateImageFile } from "./image-attachments.js"
 
 export type SavedSession = {
   id: string
@@ -19,8 +22,67 @@ export type LoadedSession = {
   events: unknown[]
 }
 
+export function projectDataRoot(workspace: string) {
+  const resolved = path.resolve(workspace)
+  const slug = path.basename(resolved).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "project"
+  const hash = createHash("sha256").update(resolved).digest("hex").slice(0, 12)
+  const dataRoot = process.env.DO_CODE_DATA_DIR ?? path.join(os.homedir(), ".local", "share", "do-code")
+  return path.join(dataRoot, "projects", `${slug}-${hash}`)
+}
+
 export function sessionsRoot(workspace: string) {
-  return path.join(workspace, ".do-code", "sessions")
+  return path.join(projectDataRoot(workspace), "sessions")
+}
+
+function legacySessionsRoot(workspace: string) {
+  return path.join(path.resolve(workspace), ".do-code", "sessions")
+}
+
+function errorCode(error: unknown) {
+  return error && typeof error === "object" && "code" in error ? String(error.code) : ""
+}
+
+async function migrateLegacySession(source: string, target: string) {
+  try {
+    await readFile(path.join(target, "session.json"))
+    return false
+  } catch {
+    // The target is absent or incomplete; continue with migration.
+  }
+  try {
+    await rename(source, target)
+    return true
+  } catch (error) {
+    if (errorCode(error) !== "EXDEV") return false
+  }
+  const temporary = `${target}.${process.pid}.${Date.now().toString(36)}.tmp`
+  await cp(source, temporary, { recursive: true })
+  try {
+    await rename(temporary, target)
+    await rm(source, { recursive: true, force: true })
+    return true
+  } catch {
+    await rm(temporary, { recursive: true, force: true })
+    return false
+  }
+}
+
+export async function prepareSessionStorage(workspace: string) {
+  const resolved = path.resolve(workspace)
+  const root = sessionsRoot(resolved)
+  await mkdir(root, { recursive: true })
+  const projectFile = path.join(projectDataRoot(resolved), "project.json")
+  await readFile(projectFile).catch(async () => {
+    await writeFileAtomic(projectFile, `${JSON.stringify({ workspace: resolved }, null, 2)}\n`)
+  })
+  const legacyRoot = legacySessionsRoot(resolved)
+  const entries = await readdir(legacyRoot, { withFileTypes: true }).catch(() => [])
+  await Promise.all(entries.filter((entry) => entry.isDirectory()).map(async (entry) => {
+    await migrateLegacySession(path.join(legacyRoot, entry.name), path.join(root, entry.name))
+  }))
+  const remaining = await readdir(legacyRoot).catch(() => [])
+  if (!remaining.length) await rm(legacyRoot).catch(() => undefined)
+  return root
 }
 
 export function sessionTitleFromMessages(messages: Message[]) {
@@ -44,8 +106,14 @@ export async function writeFileAtomic(file: string, content: string) {
   await rename(temporary, file)
 }
 
+export async function appendJsonLines(file: string, values: unknown[]) {
+  if (!values.length) return
+  await mkdir(path.dirname(file), { recursive: true })
+  await appendFile(file, `${values.map((value) => JSON.stringify(value)).join("\n")}\n`)
+}
+
 export async function listSessions(workspace: string): Promise<SavedSession[]> {
-  const root = sessionsRoot(workspace)
+  const root = await prepareSessionStorage(workspace)
   const entries = await readdir(root, { withFileTypes: true }).catch(() => [])
   const sessions = await Promise.all(entries.filter((entry) => entry.isDirectory()).map(async (entry) => {
     const directory = path.join(root, entry.name)
@@ -80,11 +148,31 @@ export async function loadSession(workspace: string, id?: string): Promise<Loade
   const sessions = await listSessions(workspace)
   const session = id ? sessions.find((item) => item.id === id) : sessions[0]
   if (!session) throw new Error(id ? `Session not found: ${id}` : "This project has no resumable sessions")
+  const messages = await readJsonLines<Message>(path.join(session.directory, "messages.jsonl"))
+  await validateSessionAttachments(session.directory, messages)
   return {
     session,
-    messages: await readJsonLines<Message>(path.join(session.directory, "messages.jsonl")),
+    messages,
     events: await readJsonLines<unknown>(path.join(session.directory, "events.jsonl")),
   }
+}
+
+async function validateSessionAttachments(sessionDirectory: string, messages: Message[]) {
+  const references = messages.flatMap((message) => Array.isArray(message.content)
+    ? message.content.filter((part) => part.type === "image").map((part) => part.path)
+    : [])
+  await Promise.all(references.map(async (reference) => {
+    if (path.isAbsolute(reference)) throw new Error(`Invalid session attachment path: ${reference}`)
+    const file = path.resolve(sessionDirectory, reference)
+    const relative = path.relative(sessionDirectory, file)
+    if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error(`Invalid session attachment path: ${reference}`)
+    try {
+      await validateImageFile(file)
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("Image file not found:")) throw new Error(`Session attachment is missing: ${reference}`)
+      throw new Error(`Invalid session attachment: ${reference}`)
+    }
+  }))
 }
 
 export async function renameSession(workspace: string, id: string, title: string) {
@@ -129,7 +217,7 @@ export async function exportSession(workspace: string, id: string, format: "md" 
     : markdownTranscript(loaded)
   const target = output
     ? path.resolve(workspace, output)
-    : path.join(workspace, ".do-code", "exports", `${id}.${format}`)
+    : path.join(projectDataRoot(workspace), "exports", `${id}.${format}`)
   await writeFileAtomic(target, content)
   return target
 }

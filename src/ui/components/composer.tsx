@@ -6,16 +6,20 @@ import { tuiTheme } from "../theme.js"
 export type ComposerProps = {
   running: boolean
   input: ReactNode
+  activity?: ReactNode
   suggestions?: ReactNode
+  attachments?: ReactNode
   status: ReactNode
   statusRight?: ReactNode
 }
 
 /** Stable input surface kept outside the scrollable transcript. */
-export function Composer({ running, input, suggestions, status, statusRight }: ComposerProps) {
+export function Composer({ running, input, activity, suggestions, attachments, status, statusRight }: ComposerProps) {
   return (
-    <Box flexDirection="column" flexGrow={0} flexShrink={0}>
+    <Box flexDirection="column" flexGrow={0} flexShrink={0} marginTop={1}>
       {suggestions ? <Box flexDirection="column" paddingLeft={3} paddingRight={1}>{suggestions}</Box> : null}
+      {attachments ? <Box flexDirection="column" paddingLeft={3} paddingRight={1}>{attachments}</Box> : null}
+      {activity ? <Box>{activity}</Box> : null}
       <Box
         borderStyle="round"
         borderTop

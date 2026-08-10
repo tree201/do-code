@@ -1,12 +1,14 @@
 import assert from "node:assert/strict"
 import { spawnSync } from "node:child_process"
-import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises"
+import { access, mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { importOpenCodeConfig, resolveRuntimeModelConfig } from "../src/config.js"
+import { resolveRuntimeModelConfig } from "../src/config.js"
 import { parseArgs } from "../src/cli-args.js"
-import { deleteSession, exportSession, listSessions, loadSession, renameSession, searchSessions, sessionsRoot } from "../src/sessions.js"
+import { deleteSession, exportSession, listSessions, loadSession, projectDataRoot, renameSession, searchSessions, sessionsRoot } from "../src/sessions.js"
+
+process.env.DO_CODE_DATA_DIR = await mkdtemp(path.join(os.tmpdir(), "do-code-data-"))
 
 test("production launcher uses the active Node runtime and starts the compiled CLI", async () => {
   const rootPackage = JSON.parse(await readFile(path.resolve("package.json"), "utf8")) as { bin: Record<string, string>; engines: { node: string } }
@@ -25,23 +27,6 @@ test("production launcher uses the active Node runtime and starts the compiled C
   assert.match(launched.stdout, /^0\.3\.0\s*$/)
 })
 
-test("imports OpenCode without copying its API key", async () => {
-  const root=await mkdtemp(path.join(os.tmpdir(),"do-code-config-"))
-  const openCode=path.join(root,"opencode.json"),doCode=path.join(root,"do-code.json")
-  await writeFile(openCode,JSON.stringify({provider:{"coding-plan":{models:{"glm-5.2":{}},options:{apiKey:"secret-value",baseURL:"https://ark.example/api/coding/v3"}}}}))
-  const previousOpenCode=process.env.OPENCODE_CONFIG_PATH,previousDoCode=process.env.DO_CODE_CONFIG_PATH
-  process.env.OPENCODE_CONFIG_PATH=openCode;process.env.DO_CODE_CONFIG_PATH=doCode
-  try{
-    const imported=await importOpenCodeConfig()
-    assert.equal(imported.runtime.modelId,"glm-5.2")
-    assert.doesNotMatch(await readFile(doCode,"utf8"),/secret-value/)
-    assert.equal((await resolveRuntimeModelConfig()).apiKey,"secret-value")
-  }finally{
-    if(previousOpenCode===undefined)delete process.env.OPENCODE_CONFIG_PATH;else process.env.OPENCODE_CONFIG_PATH=previousOpenCode
-    if(previousDoCode===undefined)delete process.env.DO_CODE_CONFIG_PATH;else process.env.DO_CODE_CONFIG_PATH=previousDoCode
-  }
-})
-
 test("lists and restores the latest project session",async()=>{
   const workspace=await mkdtemp(path.join(os.tmpdir(),"do-code-sessions-"))
   const directory=path.join(sessionsRoot(workspace),"session_new")
@@ -52,6 +37,58 @@ test("lists and restores the latest project session",async()=>{
   const restored=await loadSession(workspace)
   assert.equal(restored.session.id,"session_new")
   assert.deepEqual(restored.messages.map((message)=>message.role),["system","user"])
+})
+
+test("stores project sessions globally and migrates legacy project sessions", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-session-migrate-"))
+  const legacyDirectory = path.join(workspace, ".do-code", "sessions", "session_legacy")
+  await mkdir(legacyDirectory, { recursive: true })
+  await writeFile(path.join(legacyDirectory, "session.json"), JSON.stringify({ id: "session_legacy", workspace, updatedAt: "2026-08-06T01:00:00.000Z" }))
+  await writeFile(path.join(legacyDirectory, "messages.jsonl"), `${JSON.stringify({ role: "user", content: "legacy" })}\n`)
+
+  assert.equal(sessionsRoot(workspace).startsWith(workspace), false)
+  assert.equal((await listSessions(workspace))[0]?.id, "session_legacy")
+  await assert.rejects(() => access(legacyDirectory))
+  assert.equal(JSON.parse(await readFile(path.join(projectDataRoot(workspace), "project.json"), "utf8")).workspace, workspace)
+})
+
+test("keeps legacy sessions when the global session already exists", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-session-conflict-"))
+  const legacyDirectory = path.join(workspace, ".do-code", "sessions", "session_same")
+  const globalDirectory = path.join(sessionsRoot(workspace), "session_same")
+  await mkdir(legacyDirectory, { recursive: true })
+  await mkdir(globalDirectory, { recursive: true })
+  await writeFile(path.join(legacyDirectory, "session.json"), JSON.stringify({ id: "session_same", workspace, updatedAt: "2026-08-06T01:00:00.000Z" }))
+  await writeFile(path.join(globalDirectory, "session.json"), JSON.stringify({ id: "session_same", workspace, updatedAt: "2026-08-06T02:00:00.000Z" }))
+
+  await listSessions(workspace)
+  await access(legacyDirectory)
+})
+
+test("restores only valid relative image attachments", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-session-image-"))
+  const directory = path.join(sessionsRoot(workspace), "session_image")
+  await mkdir(path.join(directory, "attachments"), { recursive: true })
+  await writeFile(path.join(directory, "session.json"), JSON.stringify({ id: "session_image", workspace, model: "test", updatedAt: "2026-08-06T01:00:00.000Z" }))
+  await writeFile(path.join(directory, "attachments", "image.png"), Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 69, 78, 68, 174, 66, 96, 130]))
+  await writeFile(path.join(directory, "messages.jsonl"), `${JSON.stringify({ role: "user", content: [{ type: "image", path: "attachments/image.png", mimeType: "image/png" }] })}\n`)
+  assert.equal((await loadSession(workspace, "session_image")).messages.length, 1)
+
+  await writeFile(path.join(directory, "messages.jsonl"), `${JSON.stringify({ role: "user", content: [{ type: "image", path: "../outside.png", mimeType: "image/png" }] })}\n`)
+  await assert.rejects(() => loadSession(workspace, "session_image"), /Invalid session attachment path/)
+  await writeFile(path.join(directory, "messages.jsonl"), `${JSON.stringify({ role: "user", content: [{ type: "image", path: "attachments/missing.png", mimeType: "image/png" }] })}\n`)
+  await assert.rejects(() => loadSession(workspace, "session_image"), /Session attachment is missing/)
+})
+
+test("restores image attachments with text from the same prompt", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-session-image-text-"))
+  const directory = path.join(sessionsRoot(workspace), "session_image_text")
+  await mkdir(path.join(directory, "attachments"), { recursive: true })
+  await writeFile(path.join(directory, "session.json"), JSON.stringify({ id: "session_image_text", workspace, model: "test", updatedAt: "2026-08-06T01:00:00.000Z" }))
+  await writeFile(path.join(directory, "attachments", "image.png"), Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 69, 78, 68, 174, 66, 96, 130]))
+  await writeFile(path.join(directory, "messages.jsonl"), `${JSON.stringify({ role: "user", content: [{ type: "text", text: "describe this" }, { type: "image", path: "attachments/image.png", mimeType: "image/png", name: "image.png" }] })}\n`)
+  const loaded = await loadSession(workspace, "session_image_text")
+  assert.deepEqual(loaded.messages[0]?.content, [{ type: "text", text: "describe this" }, { type: "image", path: "attachments/image.png", mimeType: "image/png", name: "image.png" }])
 })
 
 test("parses continue and resume commands",()=>{
@@ -87,6 +124,7 @@ test("manages, searches, renames, exports and deletes project sessions", async (
   assert.equal((await renameSession(workspace, "session_manage", "登录修复完成")).title, "登录修复完成")
 
   const markdown = await exportSession(workspace, "session_manage", "md")
+  assert.equal(markdown.startsWith(projectDataRoot(workspace)), true)
   assert.match(await readFile(markdown, "utf8"), /## User[\s\S]*修复登录问题/)
   const json = await exportSession(workspace, "session_manage", "json")
   assert.equal(JSON.parse(await readFile(json, "utf8")).session.title, "登录修复完成")

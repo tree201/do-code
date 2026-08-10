@@ -10,5 +10,6 @@
 
 ## 开发与发布
 
+- [本地自开发流程](local-development.md)：稳定版开发、源码版即时验证与本地激活。
 - [个人开源发布流程](releasing.md)：npm、GitHub Release 与 Trusted Publishing。
 - [第三方声明](THIRD_PARTY_NOTICES.md)。

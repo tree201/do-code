@@ -86,6 +86,16 @@ do-code run --yes --output-format stream-json "Fix the failing test and verify i
 
 Use `do-code acp` for the ACP standard input/output protocol. See the [Headless / JSONL protocol](docs/headless-protocol.md).
 
+### Image input
+
+Attach up to four PNG, JPEG, GIF, or WebP images with repeated `--image` in headless mode:
+
+```bash
+do-code run --image screenshots/bug.png --image screenshots/diagram.webp "Describe these images"
+```
+
+In the interactive TUI, type `@path/to/image.png` or use `/paste-image` to import an image from the system clipboard. Use `/remove-image <index|name>` to remove a pending attachment. Each image is limited to 10 MB and the prompt total is limited to 20 MB. Imported files are copied to `~/.local/share/do-code/projects/<project-key>/sessions/<session-id>/attachments/`; persisted messages contain only relative references such as `attachments/image_xxx.png`, never Base64 data or the original absolute path. Set `DO_CODE_DATA_DIR` to override the global data root. Existing project-local `.do-code/sessions/` entries are migrated when sessions are next accessed.
+
 ## Safety and data
 
 The default **Ask** mode requests confirmation for high-risk actions. **Auto** handles ordinary workspace changes automatically. **Full Access** is intended only for trusted workspaces or CI.

@@ -24,7 +24,7 @@ test("headless flags accept stdin-only runs and expose stable exit codes", () =>
   assert.equal(streamEnvelope("run-1", 0, "system.init", {}).protocolVersion, 1)
 })
 
-test("headless session reports Qwen-style task turn exhaustion as max_steps", async () => {
+test("headless session reports task turn exhaustion as max_steps", async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-max-turns-"))
   const model: ChatModel = {
     async complete() {

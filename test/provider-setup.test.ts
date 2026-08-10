@@ -4,14 +4,27 @@ import os from "node:os"
 import path from "node:path"
 import test from "node:test"
 import { loadStoredConfig, resolveRuntimeModelConfig } from "../src/config.js"
-import { buildProviderInstall, installProvider } from "../src/provider-setup.js"
+import { buildProviderInstall, customProviderId, installProvider } from "../src/provider-setup.js"
 
-test("Qwen-style provider setup expands a built-in provider into model entries",()=>{
+test("provider setup expands a built-in provider into model entries",()=>{
   const plan=buildProviderInstall({providerId:"ark-coding-plan",apiKey:"secret",modelIds:["glm-5.2","kimi-k2.6"]})
   assert.equal(plan.baseUrl,"https://ark.cn-beijing.volces.com/api/coding/v3")
   assert.equal(plan.envKey,"ARK_CODING_PLAN_API_KEY")
   assert.deepEqual(plan.models.map(model=>model.id),["glm-5.2","kimi-k2.6"])
   assert.equal(plan.models[0]?.thinkingTransport,"reasoning-effort")
+})
+
+test("custom providers derive a stable valid ID from the Base URL", () => {
+  assert.equal(customProviderId("https://AI.ToweringX.dpdns.org/v1/"), "ai.toweringx.dpdns.org")
+  assert.equal(customProviderId("http://localhost:11434/v1"), "localhost-11434")
+  const plan = buildProviderInstall({
+    providerId: "custom",
+    protocol: "openai-compatible",
+    baseUrl: "https://ai.toweringx.dpdns.org/v1",
+    apiKey: "secret",
+    modelIds: ["gpt-5.6-terra"],
+  })
+  assert.equal(plan.providerId, "ai.toweringx.dpdns.org")
 })
 
 test("provider install stores the secret locally and produces a usable runtime config",async()=>{

@@ -28,7 +28,6 @@ test("v2 configuration migrates v1 and merges user and project layers", async ()
     assert.equal(runtime.modelId,"model-b")
     assert.equal(runtime.apiKey,"secret")
     assert.equal(runtime.contextWindow,64000)
-    assert.equal(migrateConfig({version:1,model:{source:"opencode"}}).version,2)
   }finally{
     if(previousUser===undefined)delete process.env.DO_CODE_CONFIG_PATH;else process.env.DO_CODE_CONFIG_PATH=previousUser
     if(previousSystem===undefined)delete process.env.DO_CODE_SYSTEM_CONFIG_PATH;else process.env.DO_CODE_SYSTEM_CONFIG_PATH=previousSystem
@@ -168,6 +167,41 @@ test("MCP HTTP servers expose tools and resources", async () => {
     assert.deepEqual(await tools[0]!.execute({ value: "hello-http" }, { workspace, approveShell: async () => false }), { ok: true, output: "hello-http" })
     assert.match((await tools[1]!.execute({}, { workspace, approveShell: async () => false })).output, /docs:\/\/guide/)
     assert.equal((await tools[2]!.execute({ uri: "docs://guide" }, { workspace, approveShell: async () => false })).output, "Resource body")
+  } finally {
+    manager.close()
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
+  }
+})
+
+test("MCP servers initialize concurrently while preserving configuration order", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-v03-mcp-parallel-"))
+  const initializing = new Set<string>()
+  const pending: Array<() => void> = []
+  const server = createServer(async (request, response) => {
+    let body = ""
+    for await (const chunk of request) body += chunk.toString()
+    const rpc = JSON.parse(body) as { id?: number; method: string }
+    response.setHeader("content-type", "application/json")
+    if (rpc.id === undefined) { response.statusCode = 202; response.end(); return }
+    const name = request.url?.includes("second") ? "second" : "first"
+    if (rpc.method === "initialize") {
+      initializing.add(name)
+      pending.push(() => response.end(JSON.stringify({ jsonrpc: "2.0", id: rpc.id, result: {} })))
+      if (initializing.size === 2) pending.splice(0).forEach((finish) => finish())
+      return
+    }
+    const result = rpc.method === "tools/list" ? { tools: [{ name: "echo", inputSchema: { type: "object", properties: {} } }] } : { resources: [] }
+    response.end(JSON.stringify({ jsonrpc: "2.0", id: rpc.id, result }))
+  })
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+  const address = server.address()
+  assert.ok(address && typeof address === "object")
+  const base = `http://127.0.0.1:${address.port}`
+  const manager = new McpManager(workspace, { first: { url: `${base}/first` }, second: { url: `${base}/second` } })
+  try {
+    const tools = await manager.load()
+    assert.deepEqual([...initializing], ["first", "second"])
+    assert.deepEqual(tools.map((tool) => tool.definition.function.name), ["mcp__first__echo", "mcp__second__echo"])
   } finally {
     manager.close()
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))

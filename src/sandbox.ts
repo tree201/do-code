@@ -2,9 +2,10 @@ import { spawn } from "node:child_process"
 import { existsSync, realpathSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
-import type { SandboxNetworkMode, StoredConfig } from "./config.js"
-import type { ToolResult } from "./tools.js"
-import type { ShellSpawnSpec } from "./background-processes.js"
+import type { StoredConfig } from "./config.js"
+import type { SandboxNetworkMode } from "./policy-contracts.js"
+import type { ShellSpawnSpec, ToolResult } from "./tool-contracts.js"
+import { BoundedOutput } from "./bounded-output.js"
 
 // Adapted from the strict allow-list design used by Gemini CLI and the
 // canonical-path handling used by Qwen Code (both Apache-2.0 projects).
@@ -144,15 +145,15 @@ export function createSandboxShellRunner(workspace: string, sandbox: StoredConfi
     const spec = createSandboxShellSpawnSpec(workspace, sandbox, command, requestedNetwork)
     return await new Promise((resolve) => {
       const child = spawn(spec.executable, spec.args, { cwd: spec.cwd, env: spec.env, stdio: ["ignore", "pipe", "pipe"], ...(signal ? { signal } : {}) })
-      let output = ""
+      const output = new BoundedOutput()
       let settled = false
       const finish = (result: ToolResult) => { if (settled) return; settled = true; clearTimeout(timer); resolve(result) }
       const timer = setTimeout(() => { child.kill("SIGTERM"); finish({ ok: false, output: `Command timed out after ${timeoutMs}ms` }) }, timeoutMs)
-      const append = (chunk: Buffer) => { const value = chunk.toString(); output += value; onOutput?.(value) }
+      const append = (chunk: Buffer) => { const value = chunk.toString(); output.append(value); onOutput?.(value) }
       child.stdout.on("data", append)
       child.stderr.on("data", append)
       child.on("error", (error) => finish({ ok: false, output: error.message }))
-      child.on("close", (code) => finish({ ok: code === 0, output: output.trim() || `Command exited with code ${code}` }))
+      child.on("close", (code) => finish({ ok: code === 0, output: output.value().trim() || `Command exited with code ${code}` }))
     })
   }
 }

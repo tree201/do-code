@@ -2,6 +2,7 @@ import { spawn } from "node:child_process"
 import type { HookEvent, SandboxNetworkMode, StoredConfig } from "./config.js"
 import type { PolicyEngine } from "./policy.js"
 import type { ShellSpawnSpec } from "./background-processes.js"
+import { BoundedOutput } from "./bounded-output.js"
 
 export type HookResult = { event: HookEvent; command: string; ok: boolean; output: string }
 
@@ -28,12 +29,12 @@ export class HookRunner {
         env: { ...spec.env, DO_CODE_HOOK_EVENT: event, DO_CODE_WORKSPACE: this.workspace },
         stdio: ["pipe", "pipe", "pipe"],
       })
-      let output = ""
+      const output = new BoundedOutput()
       const timer = setTimeout(() => child.kill("SIGTERM"), this.timeoutMs)
-      child.stdout.on("data", (chunk: Buffer) => { output += chunk.toString() })
-      child.stderr.on("data", (chunk: Buffer) => { output += chunk.toString() })
+      child.stdout.on("data", (chunk: Buffer) => { output.append(chunk) })
+      child.stderr.on("data", (chunk: Buffer) => { output.append(chunk) })
       child.on("error", (error) => { clearTimeout(timer); resolve({ event, command, ok: false, output: error.message }) })
-      child.on("close", (code) => { clearTimeout(timer); resolve({ event, command, ok: code === 0, output: output.trim() }) })
+      child.on("close", (code) => { clearTimeout(timer); resolve({ event, command, ok: code === 0, output: output.value().trim() }) })
       child.stdin.end(`${JSON.stringify(payload)}\n`)
     })
   }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { applyCompletion, builtinCommandCompletions, completionsForEditor } from "../src/ui/completion.js"
+import { applyCompletion, buildWorkspaceCompletionIndex, builtinCommandCompletions, completionsForEditor } from "../src/ui/completion.js"
 import { t } from "../src/ui/i18n.js"
 import {
   backspaceEditor,
@@ -56,6 +56,15 @@ test("completion provides slash commands and workspace file references", () => {
   assert.equal(completionsForEditor(createEditor("/resu"), [])?.items[0]?.submit, true)
 })
 
+test("file completion works directly after Chinese text without matching email addresses", () => {
+  const files = ["README.md", "src/main.ts"]
+  const completion = completionsForEditor(createEditor("请输入@"), files)
+  assert.equal(completion?.items[0]?.label, "@src/")
+  assert.equal(applyCompletion(createEditor("请输入@"), files).value, "请输入@src/")
+  assert.equal(completionsForEditor(createEditor("name@"), files), null)
+  assert.equal(completionsForEditor(createEditor("name@example"), files), null)
+})
+
 test("completion supports executable second-level command choices", () => {
   const argumentsByCommand = {
     "/model": [
@@ -67,6 +76,14 @@ test("completion supports executable second-level command choices", () => {
   assert.deepEqual(choices?.items.map((item) => item.label), ["ark/glm-5.2", "ark/doubao"])
   assert.equal(applyCompletion(createEditor("/model ar"), [], 1, [], argumentsByCommand).value, "/model ark/doubao")
   assert.equal(choices?.items[0]?.submit, true)
+})
+
+test("model selection uses the dedicated dialog instead of model list completion", () => {
+  const editor = createEditor("/model ")
+  const argumentCompletions = {
+    "/effort": [{ label: "low", description: "Low", insert: "low", submit: true }],
+  }
+  assert.equal(completionsForEditor(editor, [], [], argumentCompletions), null)
 })
 
 test("file completion hides do-code artifacts and prioritizes workspace roots", () => {
@@ -81,6 +98,13 @@ test("file completion hides do-code artifacts and prioritizes workspace roots", 
   const completion = completionsForEditor(createEditor("@"), files)
   assert.deepEqual(completion?.items.map((item) => item.label), ["@src/", "@package.json", "@README.md", "@src/ui/", "@src/main.ts", "@src/ui/app.ts"])
   assert.ok(completion?.items.every((item) => !item.label.includes(".do-code") && !item.label.includes("node_modules")))
+})
+
+test("workspace completion index is reusable across editor queries", () => {
+  const files = ["src/main.ts", "src/ui/app.tsx", "README.md"]
+  const index = buildWorkspaceCompletionIndex(files)
+  assert.equal(completionsForEditor(createEditor("@s"), files, [], {}, "en", index)?.items[0]?.label, "@src/")
+  assert.match(completionsForEditor(createEditor("@src/"), files, [], {}, "en", index)?.items[0]?.label ?? "", /^@src\//)
 })
 
 test("Chinese completion explains every built-in command and workspace file action", () => {

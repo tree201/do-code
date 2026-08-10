@@ -2,6 +2,8 @@
 
 Thanks for helping improve do-code.
 
+For the local stable/source dual-command workflow, see [docs/local-development.md](docs/local-development.md).
+
 ## Before opening a pull request
 
 1. Open an issue first for large features or changes to the agent policy.

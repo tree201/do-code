@@ -1,5 +1,7 @@
 import stringWidth from "string-width"
 
+const GRAPHEME_SEGMENTER = new Intl.Segmenter(undefined, { granularity: "grapheme" })
+
 export function displayWidth(value: string) {
   return stringWidth(value)
 }
@@ -13,9 +15,8 @@ export function truncateTerminal(value: string, width: number, suffix = "â€¦") {
   if (displayWidth(value) <= width) return value
   const suffixWidth = displayWidth(suffix)
   const target = Math.max(0, width - suffixWidth)
-  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" })
   let output = ""
-  for (const { segment } of segmenter.segment(value)) {
+  for (const { segment } of GRAPHEME_SEGMENTER.segment(value)) {
     if (displayWidth(output + segment) > target) break
     output += segment
   }
@@ -27,7 +28,7 @@ export function truncateTerminalStart(value: string, width: number, prefix = "â€
   if (displayWidth(value) <= width) return value
   const prefixWidth = displayWidth(prefix)
   const target = Math.max(0, width - prefixWidth)
-  const segments = [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(value)].map(({ segment }) => segment)
+  const segments = [...GRAPHEME_SEGMENTER.segment(value)].map(({ segment }) => segment)
   let output = ""
   for (let index = segments.length - 1; index >= 0; index--) {
     const segment = segments[index] ?? ""
@@ -40,13 +41,12 @@ export function truncateTerminalStart(value: string, width: number, prefix = "â€
 /** Wrap text by terminal display cells so Chinese and emoji do not split incorrectly. */
 export function wrapTerminalLines(value: string, width: number) {
   const target = Math.max(1, width)
-  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" })
   const output: string[] = []
   for (const sourceLine of value.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n")) {
     if (!sourceLine) { output.push(""); continue }
     let line = ""
     let lineWidth = 0
-    for (const { segment } of segmenter.segment(sourceLine)) {
+    for (const { segment } of GRAPHEME_SEGMENTER.segment(sourceLine)) {
       const segmentWidth = displayWidth(segment)
       if (line && lineWidth + segmentWidth > target) {
         output.push(line)

@@ -15,6 +15,16 @@ export type ProviderInstallInput = {
   maxOutputTokens?: number
 }
 
+export function customProviderId(baseUrl: string) {
+  try {
+    const url = new URL(baseUrl.trim())
+    const host = url.hostname.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "")
+    const port = url.port ? `-${url.port}` : ""
+    if (host) return `${host}${port}`
+  } catch {}
+  return "custom-provider"
+}
+
 async function readUserConfig(file = doCodeConfigPath()) {
   try { return migrateConfig(JSON.parse(await readFile(file, "utf8")), file) }
   catch (error) {
@@ -42,7 +52,7 @@ export function buildProviderInstall(input: ProviderInstallInput) {
   if (!/^https?:\/\//.test(baseUrl)) throw new Error("接口地址必须是有效的 HTTP(S) URL")
   const protocol = input.protocol ?? definition.protocol
   if (!(definition.protocolOptions ?? [definition.protocol]).includes(protocol)) throw new Error("该 Provider 不支持所选协议")
-  const providerId = definition.id === "custom" ? input.customProviderId?.trim() ?? "" : definition.id
+  const providerId = definition.id === "custom" ? input.customProviderId?.trim() || customProviderId(baseUrl) : definition.id
   if (!/^[a-z0-9][a-z0-9._-]*$/i.test(providerId)) throw new Error("Provider ID 只能包含字母、数字、点、下划线和连字符")
   const requested = [...new Set((input.modelIds ?? definition.models?.map((item) => item.id) ?? []).map((item) => item.trim()).filter(Boolean))]
   if (!requested.length) throw new Error("至少选择一个模型")

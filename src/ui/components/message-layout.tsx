@@ -23,7 +23,7 @@ export function MessageRow({
   color,
   ariaLabel,
   marginTop = 0,
-  marginBottom = 1,
+  marginBottom = 0,
 }: MessageRowProps) {
   return (
     <Box flexDirection="row" marginTop={marginTop} marginBottom={marginBottom}>
@@ -38,20 +38,18 @@ export function MessageRow({
 }
 
 /** A continuation keeps the conversation body baseline without repeating a role marker. */
-export function MessageContinuation({ children, marginBottom = 0 }: { children: ReactNode; marginBottom?: number }) {
-  return <Box flexDirection="column" paddingLeft={MESSAGE_PREFIX_WIDTH} marginBottom={marginBottom}>{children}</Box>
+export function MessageContinuation({ children, marginTop = 0, marginBottom = 0 }: { children: ReactNode; marginTop?: number; marginBottom?: number }) {
+  return <Box flexDirection="column" paddingLeft={MESSAGE_PREFIX_WIDTH} marginTop={marginTop} marginBottom={marginBottom}>{children}</Box>
 }
 
-/** Codex-style turn boundary: a quiet full-width surface reserved for user input. */
+/** Codex-style turn boundary with stable vertical padding at every content height. */
 export function UserMessageRow({ children, width }: { children: ReactNode; width: number }) {
   return (
     <Box
       width={Math.max(1, width)}
       flexDirection="row"
-      minHeight={3}
-      alignItems="center"
       backgroundColor={tuiTheme.userMessageBackground}
-      marginBottom={1}
+      paddingY={1}
       paddingRight={1}
       aria-label="User:"
     >
@@ -66,10 +64,12 @@ export function UserMessageRow({ children, width }: { children: ReactNode; width
 export function StatusMessage({
   kind,
   children,
-  marginBottom = 1,
+  marginTop = 0,
+  marginBottom = 0,
 }: {
   kind: "info" | "success" | "warning" | "error"
   children: ReactNode
+  marginTop?: number
   marginBottom?: number
 }) {
   const appearance = {
@@ -79,7 +79,7 @@ export function StatusMessage({
     error: { color: tuiTheme.danger, ariaLabel: "Error:" },
   }[kind]
   return (
-    <MessageRow prefix={STATUS_DOT} color={appearance.color} ariaLabel={appearance.ariaLabel} marginBottom={marginBottom}>
+    <MessageRow prefix={STATUS_DOT} color={appearance.color} ariaLabel={appearance.ariaLabel} marginTop={marginTop} marginBottom={marginBottom}>
       {children}
     </MessageRow>
   )

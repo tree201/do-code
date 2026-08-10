@@ -11,7 +11,7 @@ export function DialogManager({ children }: { children: ReactNode }) {
   )
 }
 
-/** Consistent Gemini-style transient control surface. */
+/** Consistent transient control surface. */
 export function DialogSurface({ children, color = tuiTheme.accent }: { children?: ReactNode; color?: string }) {
   return (
     <Box flexDirection="column" borderStyle="round" borderColor={color} paddingX={1} marginTop={1}>

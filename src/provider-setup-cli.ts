@@ -1,6 +1,6 @@
 import { createInterface, emitKeypressEvents } from "node:readline"
 import { stdin, stdout } from "node:process"
-import { installProvider, type ProviderInstallInput } from "./provider-setup.js"
+import { customProviderId, installProvider, type ProviderInstallInput } from "./provider-setup.js"
 import { providerDefinition, providerRegistry, type ProviderDefinition } from "./provider-registry.js"
 import type { ProviderProtocol } from "./config.js"
 
@@ -59,13 +59,13 @@ export async function runProviderSetupWizard() {
   if (!definition) throw new Error("Provider 序号无效")
   const input: ProviderInstallInput = { providerId: definition.id, apiKey: "" }
   if (definition.id === "custom") {
-    input.customProviderId = await question("Provider ID（例如 my-provider）：")
     stdout.write("  1) OpenAI-compatible\n  2) Anthropic\n  3) Gemini\n")
     const protocols: ProviderProtocol[] = ["openai-compatible", "anthropic", "gemini"]
     const protocol = protocols[Number(await question("选择协议 [1-3]：")) - 1]
     if (!protocol) throw new Error("协议序号无效")
     input.protocol = protocol
     input.baseUrl = await question("接口地址（Base URL）：")
+    input.customProviderId = customProviderId(input.baseUrl)
   } else if (Array.isArray(definition.baseUrl)) {
     stdout.write(`\n${definition.baseUrl.map((item, index) => `  ${index + 1}) ${item.label} — ${item.url}`).join("\n")}\n`)
     const regionIndex = Number(await question(`选择区域 [1-${definition.baseUrl.length}，默认 1]：`) || "1") - 1

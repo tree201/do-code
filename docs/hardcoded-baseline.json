@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "paths": [
+    "src/agent.ts",
+    "src/completion-verification.ts",
+    "src/cli-args.ts",
+    "src/cli.ts",
+    "src/config.ts",
+    "src/error-reports.ts",
+    "src/hooks.ts",
+    "src/model.ts",
+    "src/policy.ts",
+    "src/session.ts",
+    "src/protocol.ts",
+    "src/sandbox.ts",
+    "src/tools.ts",
+    "src/tool-presentation.ts",
+    "src/ui/activity-summary.ts",
+    "src/ui/approval-model.ts",
+    "src/ui/chat-app.tsx",
+    "src/ui/completion.ts",
+    "src/ui/i18n.ts",
+    "src/ui/live-transcript-reducer.ts",
+    "src/ui/live-transcript.ts",
+    "src/ui/session-transcript.ts",
+    "src/ui/theme.ts",
+    "src/ui/tool-summary.ts",
+    "src/ui/transcript-model.ts"
+  ]
+}

@@ -1,31 +1,42 @@
 import { readFile, stat } from "node:fs/promises"
-import { resolveInside } from "./tools.js"
+import path from "node:path"
+import { importImageAttachment, MAX_IMAGE_COUNT, MAX_IMAGE_TOTAL_BYTES, validateImageFile } from "./image-attachments.js"
 import type { UserContent } from "./protocol.js"
+import { resolveInside } from "./workspace-paths.js"
 
 const MAX_REFERENCED_FILE_BYTES = 100_000
 const MAX_REFERENCED_TOTAL_BYTES = 300_000
-const MAX_IMAGE_BYTES = 10_000_000
-const MAX_IMAGE_TOTAL_BYTES = 20_000_000
-const IMAGE_TYPES: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp" }
+const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"])
 
-export async function expandPromptContent(prompt: string, workspace: string): Promise<UserContent> {
+export async function expandPromptContent(prompt: string, workspace: string, attachmentDirectory?: string): Promise<UserContent> {
   const references = [...prompt.matchAll(/(?:^|\s)@([^\s@]+)/g)].map((match) => match[1]!).filter(Boolean)
   const unique = [...new Set(references)]
   if (!unique.length) return prompt
   const textSections: string[] = []
-  const images: Array<{ type: "image_url"; image_url: { url: string; detail: "auto" } }> = []
-  let textTotal = 0, imageTotal = 0
+  const images: Array<{ type: "image"; mimeType: "image/png" | "image/jpeg" | "image/gif" | "image/webp"; path: string; name: string }> = []
+  let textTotal = 0
+  let imageTotal = 0
   for (const reference of unique) {
+    const sessionAttachment = attachmentDirectory ? sessionAttachmentReference(reference, attachmentDirectory) : null
+    if (sessionAttachment) {
+      if (images.length >= MAX_IMAGE_COUNT) throw new Error(`A prompt can contain at most ${MAX_IMAGE_COUNT} images`)
+      const image = await validateImageFile(sessionAttachment.file)
+      if (imageTotal + image.size > MAX_IMAGE_TOTAL_BYTES) throw new Error("Image attachments exceed the 20 MB total limit")
+      imageTotal += image.size
+      images.push({ type: "image", mimeType: image.mimeType, path: sessionAttachment.path, name: path.basename(sessionAttachment.path) })
+      continue
+    }
     const target = (() => { try { return resolveInside(workspace, reference) } catch { return null } })()
     if (!target) continue
     const info = await stat(target).catch(() => null)
     if (!info?.isFile()) continue
-    const mime = IMAGE_TYPES[pathExtension(reference)]
-    if (mime) {
-      if (info.size > MAX_IMAGE_BYTES || imageTotal + info.size > MAX_IMAGE_TOTAL_BYTES || images.length >= 4) continue
-      const data = await readFile(target)
-      imageTotal += data.byteLength
-      images.push({ type: "image_url", image_url: { url: `data:${mime};base64,${data.toString("base64")}`, detail: "auto" } })
+    if (IMAGE_EXTENSIONS.has(path.extname(reference).toLowerCase())) {
+      if (images.length >= MAX_IMAGE_COUNT) throw new Error(`A prompt can contain at most ${MAX_IMAGE_COUNT} images`)
+      if (!attachmentDirectory) throw new Error("Image attachments require a session attachment directory")
+      const imported = await importImageAttachment(target, attachmentDirectory)
+      if (imageTotal + imported.size > MAX_IMAGE_TOTAL_BYTES) throw new Error("Image attachments exceed the 20 MB total limit")
+      imageTotal += imported.size
+      images.push({ type: "image", mimeType: imported.mimeType, path: path.posix.join("attachments", imported.name), name: path.basename(reference) })
       continue
     }
     if (info.size > MAX_REFERENCED_FILE_BYTES || textTotal + info.size > MAX_REFERENCED_TOTAL_BYTES) continue
@@ -38,9 +49,14 @@ export async function expandPromptContent(prompt: string, workspace: string): Pr
   return images.length ? [{ type: "text", text }, ...images] : text
 }
 
-function pathExtension(value: string) {
-  const normalized = value.toLowerCase()
-  return Object.keys(IMAGE_TYPES).find((extension) => normalized.endsWith(extension)) ?? ""
+function sessionAttachmentReference(reference: string, attachmentDirectory: string) {
+  const normalized = reference.replaceAll("\\", "/")
+  if (!normalized.startsWith("attachments/")) return null
+  const sessionDirectory = path.dirname(attachmentDirectory)
+  const file = path.resolve(sessionDirectory, normalized)
+  const relative = path.relative(sessionDirectory, file)
+  if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error(`Invalid session attachment path: ${reference}`)
+  return { file, path: normalized }
 }
 
 export async function expandFileReferences(prompt: string, workspace: string) {

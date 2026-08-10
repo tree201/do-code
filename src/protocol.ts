@@ -25,6 +25,7 @@ export type ToolCall = {
 
 export type UserContentPart =
   | { type: "text"; text: string }
+  | { type: "image"; mimeType: "image/png" | "image/jpeg" | "image/gif" | "image/webp"; path: string; name?: string }
   | { type: "image_url"; image_url: { url: string; detail?: "auto" | "low" | "high" } }
 
 export type UserContent = string | UserContentPart[]
@@ -53,7 +54,9 @@ export type ModelRequestOptions = {
   signal?: AbortSignal
   onContentDelta?: (delta: string) => void
   onReasoningDelta?: (delta: string) => void
+  onRetry?: (attempt: number, delayMs: number, message?: string) => void
   maxOutputTokens?: number
+  sessionDirectory?: string
 }
 
 export interface ChatModel {
@@ -103,6 +106,7 @@ type AgentEventBase = {
 export type AgentEvent = AgentEventBase & (
   | { type: "turn.started"; input: string }
   | { type: "step.started"; step: number }
+  | { type: "model.retrying"; step: number; attempt: number; delayMs: number; message?: string }
   | { type: "message.delta"; step: number; delta: string }
   | { type: "reasoning.delta"; step: number; characters: number; totalCharacters: number }
   | { type: "tool.started"; step: number; callId: string; name: string; args: unknown }
