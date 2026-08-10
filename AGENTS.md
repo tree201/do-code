@@ -11,12 +11,16 @@
 ## Implementation and verification
 
 - Add or update regression tests for behavior changes.
-- Run focused tests while iterating when useful.
-- Before declaring a code change complete, run:
+- Use layered verification to keep iteration fast without reducing coverage:
+  1. While editing, run only the smallest directly relevant tests.
+  2. When the behavior stabilizes, run the affected module's regression tests and `npm run verify:fast`.
+  3. Before final delivery or commit, run `npm run verify:local` once as the full quality gate.
+- If the full suite fails, rerun only the failing test file while diagnosing it; do not repeatedly restart the entire suite after each small fix.
+- Never skip meaningful coverage, weaken assertions, suppress failures, or claim success to save time.
+- For Ink tests, register `view.unmount()` with `t.after()` before assertions so failures cannot leave timers or views running. Use `visibleFrame()` for user-visible text assertions and raw frames only when testing ANSI styling.
+- Source verification does not update stable `do-code`. After verified changes that the user expects to use through `do-code`, run:
 
   ```bash
-  npm run typecheck
-  npm test
   npm run build:agent
   ```
 
