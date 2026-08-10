@@ -90,12 +90,20 @@ export function routeDialogInput(rawInput: string, input: string, key: ChatInput
     return true
   }
   if (dialog.kind === "question") {
-    if (key.escape) transcript.finishQuestion("User cancelled the question")
-    else if (dialog.request.options.length && key.upArrow) state.setActiveDialog({ ...dialog, selectedIndex: Math.max(0, dialog.selectedIndex - 1) })
-    else if (dialog.request.options.length && key.downArrow) state.setActiveDialog({ ...dialog, selectedIndex: Math.min(dialog.request.options.length - 1, dialog.selectedIndex + 1) })
-    else if (key.return) { const answer = dialog.request.options.length ? dialog.request.options[dialog.selectedIndex] : dialog.draft.trim(); if (answer) transcript.finishQuestion(answer) }
-    else if (!dialog.request.options.length && (key.backspace || key.delete)) state.setActiveDialog({ ...dialog, draft: Array.from(dialog.draft).slice(0, -1).join("") })
-    else if (!dialog.request.options.length && !key.ctrl && !key.meta && !key.super && input) state.setActiveDialog({ ...dialog, draft: dialog.draft + input })
+    const otherIndex = dialog.request.options.findIndex((option) => option.startsWith("Other —"))
+    if (key.escape) {
+      if (dialog.customAnswer && dialog.returnToOptions) state.setActiveDialog({ ...dialog, selectedIndex: otherIndex, draft: "", customAnswer: false, returnToOptions: false })
+      else transcript.finishQuestion("User cancelled the question")
+    } else if (!dialog.customAnswer && key.upArrow) state.setActiveDialog({ ...dialog, selectedIndex: Math.max(0, dialog.selectedIndex - 1) })
+    else if (!dialog.customAnswer && key.downArrow) state.setActiveDialog({ ...dialog, selectedIndex: Math.min(dialog.request.options.length - 1, dialog.selectedIndex + 1) })
+    else if (key.return) {
+      if (dialog.customAnswer) {
+        const answer = dialog.draft.trim()
+        if (answer) transcript.finishQuestion(answer)
+      } else if (otherIndex >= 0 && dialog.selectedIndex === otherIndex) state.setActiveDialog({ ...dialog, draft: "", customAnswer: true, returnToOptions: true })
+      else transcript.finishQuestion(dialog.request.options[dialog.selectedIndex] ?? "")
+    } else if (dialog.customAnswer && (key.backspace || key.delete)) state.setActiveDialog({ ...dialog, draft: Array.from(dialog.draft).slice(0, -1).join("") })
+    else if (dialog.customAnswer && !key.ctrl && !key.meta && !key.super && input) state.setActiveDialog({ ...dialog, draft: dialog.draft + input })
     return true
   }
   if (dialog.kind === "session-picker") {

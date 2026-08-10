@@ -33,6 +33,7 @@ test("agent questions separate title, prompt, options, and localized controls", 
     options: ["代码结构重构", "运行性能优化", "打包体积优化"],
     selectedIndex: 1,
     draft: "",
+    customAnswer: false,
     language: "zh",
   })))
   t.after(() => view.unmount())
@@ -224,14 +225,22 @@ test("agent interactions record the question before the answer without exposing 
   const view = render(React.createElement(ChatApp, props))
   t.after(() => view.unmount())
   await tick()
-  const pendingAnswer = questionBridge.request("[Direction] Choose one", ["Structure", "Performance"])
+  const pendingAnswer = questionBridge.request("[Direction] Choose one", ["Structure", "Performance", "Other — Enter a different answer"])
+  await tick()
+  view.stdin.write("\u001b[B")
+  await tick()
+  view.stdin.write("\u001b[B")
   await tick()
   view.stdin.write("\r")
-  assert.equal(await pendingAnswer, "Structure")
+  await tick()
+  assert.match(visibleFrame(view), /Type an answer · Enter Send · Esc Back/)
+  view.stdin.write("Accessibility")
+  view.stdin.write("\r")
+  assert.equal(await pendingAnswer, "Accessibility")
   await tick()
   const frame = visibleFrame(view)
   assert.equal(frame.match(/Ask: \[Direction\] Choose one/g)?.length, 1)
-  assert.equal(frame.match(/Answer: Structure/g)?.length, 1)
-  assert.ok(frame.indexOf("Ask: [Direction] Choose one") < frame.indexOf("Answer: Structure"))
+  assert.equal(frame.match(/Answer: Accessibility/g)?.length, 1)
+  assert.ok(frame.indexOf("Ask: [Direction] Choose one") < frame.indexOf("Answer: Accessibility"))
   assert.doesNotMatch(frame, /ask_user/)
 })

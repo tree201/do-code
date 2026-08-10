@@ -10,7 +10,7 @@ export type ActiveDialog =
   | { kind: "model" }
   | { kind: "permission-menu"; selectedIndex: number }
   | { kind: "plan-review"; request: PlanReviewRequest; selectedIndex: number }
-  | { kind: "question"; request: UserQuestion; selectedIndex: number; draft: string }
+  | { kind: "question"; request: UserQuestion; selectedIndex: number; draft: string; customAnswer: boolean; returnToOptions: boolean }
   | { kind: "session-picker"; items: SavedSession[]; selectedIndex: number; query: string }
   | { kind: "viewer"; items: TranscriptItem[]; offset: number }
 
