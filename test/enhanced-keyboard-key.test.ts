@@ -21,10 +21,12 @@ test("normalizes enhanced Ctrl+Enter encodings", () => {
   }
 })
 
-test("normalizes Kitty Escape without leaking a control character", () => {
-  const normalized = normalizeEnhancedKeyboardKey("[27;1u", emptyKey)
-  assert.equal(normalized.input, "")
-  assert.equal(normalized.key.escape, true)
+test("normalizes Kitty Escape with or without the leading Escape byte", () => {
+  for (const rawInput of ["[27;1u", "\u001b[27;1u"]) {
+    const normalized = normalizeEnhancedKeyboardKey(rawInput, emptyKey)
+    assert.equal(normalized.input, "")
+    assert.equal(normalized.key.escape, true)
+  }
 })
 
 test("normalizes Kitty Shift+Tab without inserting a control character", () => {
