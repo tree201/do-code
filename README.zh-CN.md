@@ -97,7 +97,7 @@ do-code sessions export <session-id> md ./session.md
 
 ### 配置档与扩展
 
-Agent profile 可选择 model、approval mode、instructions、step limit 和 tool allow/deny lists。使用 `do-code agents` 查看，通过 `do-code --agent <name>` 选择。Markdown commands 和 skills，以及已配置的 MCP tools 与 resources，可通过 `/extensions` 或 `do-code extensions` 检查。
+Agent profile 可选择 model、approval mode、instructions、step limit 和 tool allow/deny lists。使用 `do-code agents` 查看，通过 `do-code --agent <name>` 选择。使用 `/extensions` 浏览 Markdown commands 和 skills；使用 `do-code extensions` 汇总查看 commands、skills 与已配置的 MCP servers。
 
 ### 脚本与 CI
 

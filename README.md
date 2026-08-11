@@ -97,7 +97,7 @@ Layered `AGENTS.md` instructions follow the workspace hierarchy; inspect or relo
 
 ### Profiles and extensions
 
-Agent profiles can select a model, approval mode, instructions, step limit, and tool allow/deny lists. Inspect them with `do-code agents` and select one with `do-code --agent <name>`. Markdown commands and skills, plus configured MCP tools and resources, are available through `/extensions` or `do-code extensions`.
+Agent profiles can select a model, approval mode, instructions, step limit, and tool allow/deny lists. Inspect them with `do-code agents` and select one with `do-code --agent <name>`. Browse Markdown commands and skills with `/extensions`; use `do-code extensions` for a summary of commands, skills, and configured MCP servers.
 
 ### Scripts and CI
 
