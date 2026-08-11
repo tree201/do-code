@@ -24,11 +24,12 @@ export type DialogInputHandler = (input: string, key: ChatInputKey) => void
 export function useChatAppState(props: ChatAppProps, initialWidth: number, initialHeight: number) {
   const [terminalWidth, setTerminalWidth] = useState(initialWidth)
   const [terminalHeight, setTerminalHeight] = useState(initialHeight)
+  const unconfiguredModel = props.model === t("zh", "Unconfigured model")
   const initialItems: TranscriptItem[] = [
     { id: 0, kind: "header", workspace: props.workspace, model: props.model, sessionId: props.sessionId, restored: props.restored, ...(props.agent ? { agent: props.agent } : {}) },
-    ...(props.model === "未配置模型" ? [{ id: 1, kind: "info" as const, text: props.language === "zh" ? "尚未配置模型。输入 /auth 配置模型服务；也可以先查看帮助或退出。" : "No model is configured. Use /auth to configure a provider, or continue exploring the interface." }] : []),
+    ...(unconfiguredModel ? [{ id: 1, kind: "info" as const, text: t(props.language ?? "en", "No model is configured. Use /auth to configure a provider, or continue exploring the interface.") }] : []),
     ...(props.restored ? restoredSessionItems(props.sessionTitle ?? props.sessionId, props.initialMessages, props.initialEvents, props.language ?? "en") : [])
-      .map((item, index) => ({ ...item, id: index + (props.model === "未配置模型" ? 2 : 1) } as TranscriptItem)),
+      .map((item, index) => ({ ...item, id: index + (unconfiguredModel ? 2 : 1) } as TranscriptItem)),
   ]
   const { snapshot: transcript, owner: transcriptOwner } = useTranscriptOwner(initialItems)
   const { items, activeTool, activityEpoch, reasoningCharacters, pendingToolGroup, liveAssistant } = transcript
@@ -66,11 +67,22 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
   const argumentCompletions = useMemo<ArgumentCompletions>(() => ({
     [EFFORT_COMMAND]: (["low", "medium", "high", "xhigh", "max"] as ReasoningEffort[]).map((effort) => ({ label: effort, description: t(activeLanguage, effort === activeEffort ? "Current reasoning effort" : "Switch reasoning effort"), insert: effort, submit: true })),
     [THINKING_COMMAND]: (["auto", "on", "off"] as ThinkingMode[]).map((mode) => ({ label: mode, description: t(activeLanguage, mode === activeThinkingMode ? "Current thinking mode" : mode === "auto" ? "Let the model decide when to think" : mode === "on" ? "Force thinking on" : "Turn thinking off"), insert: mode, submit: true })),
-    [LANGUAGE_COMMAND]: localeDefinitions.map((language) => ({ label: language.id, description: t(activeLanguage, `Set interface and output language to ${language.englishName}`), insert: language.id, submit: true })),
+    [LANGUAGE_COMMAND]: localeDefinitions.map((language) => ({ label: language.id, description: t(activeLanguage, "Set interface and output language to {language}", { language: t(activeLanguage, language.englishName) }), insert: language.id, submit: true })),
     [APPROVAL_MODE_COMMAND]: (["ask", "auto", "full-access"] as ApprovalMode[]).map((mode) => ({ label: mode, description: approvalModeNotice(mode, activeLanguage).split("\n").slice(1).join(" "), insert: mode, submit: true })),
-    [MEMORY_COMMAND]: ["list", "show", "reload"].map((value) => ({ label: value, description: t(activeLanguage, `${value} project instructions`), insert: value, submit: true })),
-    [REWIND_COMMAND]: ["both", "chat", "files"].map((value) => ({ label: value, description: t(activeLanguage, `Rewind ${value}`), insert: value, submit: true })),
-    [EXPORT_COMMAND]: ["md", "json"].map((value) => ({ label: value, description: t(activeLanguage, `Export the session as ${value}`), insert: value, submit: true })),
+    [MEMORY_COMMAND]: [
+      { value: "list", description: "List loaded AGENTS.md instruction files" },
+      { value: "show", description: "Show loaded project instructions" },
+      { value: "reload", description: "Reload instructions from disk" },
+    ].map(({ value, description }) => ({ label: value, description: t(activeLanguage, description), insert: value, submit: true })),
+    [REWIND_COMMAND]: [
+      { value: "both", description: "Rewind conversation and files" },
+      { value: "chat", description: "Rewind conversation only" },
+      { value: "files", description: "Restore files only" },
+    ].map(({ value, description }) => ({ label: value, description: t(activeLanguage, description), insert: value, submit: true })),
+    [EXPORT_COMMAND]: [
+      { value: "md", description: "Export the session as Markdown" },
+      { value: "json", description: "Export the session as JSON" },
+    ].map(({ value, description }) => ({ label: value, description: t(activeLanguage, description), insert: value, submit: true })),
     [REMOVE_IMAGE_COMMAND]: attachedImages.map((image, index) => ({ label: String(index + 1), description: image.name, insert: String(index + 1), submit: true })),
   }), [activeEffort, activeLanguage, activeThinkingMode, attachedImages])
   const completion = useMemo(() => completionsForEditor(editor, workspaceFiles, customCompletions, argumentCompletions, activeLanguage, workspaceCompletionIndex), [activeLanguage, argumentCompletions, customCompletions, editor, workspaceCompletionIndex, workspaceFiles])

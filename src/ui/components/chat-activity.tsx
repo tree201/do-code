@@ -45,7 +45,7 @@ export function RunningStatus({ activityEpoch, activeTool, reasoningCharacters, 
   return <Spinner key={`activity-${activityEpoch}`} label={label} language={language} />
 }
 
-export function QueuedMessages({ messages }: { messages: string[] }) {
+export function QueuedMessages({ messages, language }: { messages: string[]; language: DoCodeLanguage }) {
   if (!messages.length) return null
-  return <StatusMessage kind="info" marginBottom={0}><Text dimColor>{messages.length} queued (↑ to edit the latest)</Text>{messages.slice(0, 3).map((message, index) => <Text key={`${index}-${message}`} dimColor>{index + 1}. {preview(message.replace(/\s+/g, " "), 100)}</Text>)}{messages.length > 3 ? <Text dimColor>…and {messages.length - 3} more</Text> : null}</StatusMessage>
+  return <StatusMessage kind="info" marginBottom={0}><Text dimColor>{t(language, "{count} queued (↑ to edit the latest)", { count: messages.length })}</Text>{messages.slice(0, 3).map((message, index) => <Text key={`${index}-${message}`} dimColor>{index + 1}. {preview(message.replace(/\s+/g, " "), 100)}</Text>)}{messages.length > 3 ? <Text dimColor>{t(language, "…and {count} more", { count: messages.length - 3 })}</Text> : null}</StatusMessage>
 }

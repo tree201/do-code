@@ -1,6 +1,6 @@
 import type { DoCodeLanguage } from "../config.js"
 import { localeDefinition, localeDefinitions } from "../locale-registry.js"
-import { catalogCoverageTranslations, cliAndProviderSetupTranslations } from "./i18n-catalogs.js"
+import { catalogCoverageTranslations, cliAndProviderSetupTranslations, commandDescriptionTranslations } from "./i18n-catalogs.js"
 
 const zh: Record<string, string> = {
   "Show available commands": "查看可用命令",
@@ -237,8 +237,10 @@ Object.assign(zh, {
 
 
 
-for (const [key, translations] of Object.entries(cliAndProviderSetupTranslations)) {
-  for (const [catalog, translation] of [[zh, translations[0]], [ja, translations[1]], [ko, translations[2]], [es, translations[3]], [fr, translations[4]]] as const) catalog[key] = translation
+for (const translations of [cliAndProviderSetupTranslations, commandDescriptionTranslations]) {
+  for (const [key, row] of Object.entries(translations)) {
+    for (const [catalog, translation] of [[zh, row[0]], [ja, row[1]], [ko, row[2]], [es, row[3]], [fr, row[4]]] as const) catalog[key] = translation
+  }
 }
 
 Object.assign(zh, {

@@ -24,6 +24,29 @@ const groupLabels: Record<ProviderDefinition["group"], string> = {
   custom: "Custom",
 }
 
+const providerTranslations: Record<string, { label: string; description: string }> = {
+  "ark-coding-plan": { label: "Volcengine Ark Coding Plan", description: "Volcengine Ark plan models for coding agents" },
+  "coding-plan": { label: "Alibaba ModelStudio Coding Plan", description: "Individual developer plan with weekly quota" },
+  "alibaba-standard": { label: "Alibaba ModelStudio Standard API", description: "Use an existing pay-as-you-go ModelStudio API Key" },
+  "token-plan": { label: "Alibaba ModelStudio Token Plan", description: "Team and enterprise plan with a dedicated endpoint" },
+  deepseek: { label: "DeepSeek API", description: "Official DeepSeek API" },
+  minimax: { label: "MiniMax API", description: "Official MiniMax API" },
+  zai: { label: "Z.AI API", description: "Z.AI Standard API or Coding Plan" },
+  modelscope: { label: "ModelScope", description: "ModelScope API-Inference" },
+  custom: { label: "Custom Provider", description: "Connect a local model, proxy, or a service not built in yet" },
+}
+
+const regionTranslations: Record<string, string> = {
+  "中国（北京）": "China (Beijing)",
+  "新加坡（国际）": "Singapore (International)",
+  新加坡: "Singapore",
+  "美国（弗吉尼亚）": "United States (Virginia)",
+  "中国（香港）": "China (Hong Kong)",
+  中国: "China",
+  国际: "International",
+  "标准 API": "Standard API",
+}
+
 function appendInput(value: string, input: string) {
   return value + input.replace(/[\x00-\x1f\x7f]/g, "")
 }
@@ -222,19 +245,23 @@ export function AuthDialog({ currentModel, language, onSubmit, onClose, discover
               : t(language, "Models")
 
   const modelWindowStart = selectableModels.length ? Math.max(0, Math.min(modelIndex - 7, selectableModels.length - 8)) : 0
+  const providerText = provider ? providerTranslations[provider.id] : undefined
   return <DialogManager><DialogSurface>
-    <Text bold>{provider && step !== "provider" ? `${provider.label} · ` : ""}{stepTitle}</Text>
+    <Text bold>{provider && step !== "provider" ? `${t(language, providerText?.label ?? provider.label)} · ` : ""}{stepTitle}</Text>
     {step === "provider" ? <Box marginTop={1} flexDirection="column">
-      {providerRegistry.map((item, index) => <React.Fragment key={item.id}>
-        {index === 0 || providerRegistry[index - 1]?.group !== item.group ? <Text bold dimColor>{t(language, groupLabels[item.group])}</Text> : null}
-        <Text inverse={providerIndex === index} color={providerIndex === index ? tuiTheme.accent : tuiTheme.border}>
-          {providerIndex === index ? "›" : " "} {item.label}  <Text dimColor={providerIndex !== index}>{item.description}</Text>
-        </Text>
-      </React.Fragment>)}
+      {providerRegistry.map((item, index) => {
+        const text = providerTranslations[item.id]
+        return <React.Fragment key={item.id}>
+          {index === 0 || providerRegistry[index - 1]?.group !== item.group ? <Text bold dimColor>{t(language, groupLabels[item.group])}</Text> : null}
+          <Text inverse={providerIndex === index} color={providerIndex === index ? tuiTheme.accent : tuiTheme.border}>
+            {providerIndex === index ? "›" : " "} {t(language, text?.label ?? item.label)}  <Text dimColor={providerIndex !== index}>{t(language, text?.description ?? item.description)}</Text>
+          </Text>
+        </React.Fragment>
+      })}
     </Box> : null}
-    {step === "protocol" ? <Box marginTop={1} flexDirection="column">{protocols.map((item, index) => <Text key={item.value} inverse={protocolIndex === index} color={protocolIndex === index ? tuiTheme.accent : tuiTheme.border}>{protocolIndex === index ? "›" : " "} {item.label}</Text>)}</Box> : null}
+    {step === "protocol" ? <Box marginTop={1} flexDirection="column">{protocols.map((item, index) => <Text key={item.value} inverse={protocolIndex === index} color={protocolIndex === index ? tuiTheme.accent : tuiTheme.border}>{protocolIndex === index ? "›" : " "} {t(language, item.label)}</Text>)}</Box> : null}
     {step === "base-url" ? <Box marginTop={1}><InputLine value={baseUrl} placeholder="https://api.example.com/v1" /></Box> : null}
-    {step === "region" && Array.isArray(provider?.baseUrl) ? <Box marginTop={1} flexDirection="column">{provider.baseUrl.map((region, index) => <Text key={region.id} inverse={regionIndex === index} color={regionIndex === index ? tuiTheme.accent : tuiTheme.border}>{regionIndex === index ? "›" : " "} {region.label}  <Text dimColor={regionIndex !== index}>{region.url}</Text></Text>)}</Box> : null}
+    {step === "region" && Array.isArray(provider?.baseUrl) ? <Box marginTop={1} flexDirection="column">{provider.baseUrl.map((region, index) => <Text key={region.id} inverse={regionIndex === index} color={regionIndex === index ? tuiTheme.accent : tuiTheme.border}>{regionIndex === index ? "›" : " "} {t(language, regionTranslations[region.label] ?? region.label)}  <Text dimColor={regionIndex !== index}>{region.url}</Text></Text>)}</Box> : null}
     {step === "api-key" ? <Box marginTop={1}><InputLine value={apiKey} secret placeholder={provider?.apiKeyPlaceholder ?? "sk-..."} /></Box> : null}
     {step === "models" && selectableModels.length ? <Box marginTop={1} flexDirection="column">
       <Text dimColor>{t(language, "Space toggles a model; Enter installs the selection.")}</Text>
