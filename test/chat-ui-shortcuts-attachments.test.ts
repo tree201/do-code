@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { stripVTControlCharacters } from "node:util"
 import test from "node:test"
 import React from "react"
 import { render } from "ink-testing-library"
@@ -115,18 +116,18 @@ test("Ctrl+V keeps an image attachment separate from text and ignores leaked Ent
   await tick()
   assert.doesNotMatch(view.lastFrame() ?? "", /Importing clipboard image|Current task is running/)
   await tick(); await tick(); await tick(); await tick(); await tick()
-  assert.match(view.lastFrame() ?? "", /draft \[Image #1\]/)
+  assert.match(stripVTControlCharacters(view.lastFrame() ?? ""), /draft \[Image #1\]/)
   assert.doesNotMatch(view.lastFrame() ?? "", /draft @attachments\/image_clipboard\.png/)
   assert.doesNotMatch(view.lastFrame() ?? "", /\[1\] image_clipboard\.png/)
   view.stdin.write("\r")
   await tick(); await tick()
-  assert.match(view.lastFrame() ?? "", /draft \[Image #1\]/)
+  assert.match(stripVTControlCharacters(view.lastFrame() ?? ""), /draft \[Image #1\]/)
   view.stdin.write("继续")
   await tick(); await tick()
-  assert.match(view.lastFrame() ?? "", /draft \[Image #1\] 继续/)
+  assert.match(stripVTControlCharacters(view.lastFrame() ?? ""), /draft \[Image #1\] 继续/)
   view.stdin.write("\u007f")
   await tick(); await tick()
-  assert.match(view.lastFrame() ?? "", /draft \[Image #1\] 继/)
+  assert.match(stripVTControlCharacters(view.lastFrame() ?? ""), /draft \[Image #1\] 继/)
   view.stdin.write("\u007f")
   await tick(); await tick()
   view.stdin.write("\u007f")

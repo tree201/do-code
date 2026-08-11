@@ -234,15 +234,16 @@ test("composer retains bottom padding when the cursor first soft-wraps", (t) => 
   assert.ok(lines.slice(0, statusLine).filter((line) => line.trim() === "").length >= 3)
 })
 
-test("composer input keeps image labels and cursor highlighting", (t) => {
+test("composer input keeps blue image labels and cursor highlighting", (t) => {
   const value = `before ${IMAGE_ATTACHMENT_TOKEN} after`
-  const cursor = 7
-  const view = render(React.createElement(Text, null, composerInputContent(value, cursor)))
-  t.after(() => view.unmount())
+  const ordinary = render(React.createElement(Text, null, composerInputContent(value, 0)))
+  const selected = render(React.createElement(Text, null, composerInputContent(value, 7)))
+  t.after(() => { ordinary.unmount(); selected.unmount() })
 
-  const frame = view.lastFrame() ?? ""
-  assert.match(stripVTControlCharacters(frame), /before\s+\[Image #1\]\s+after/)
-  assert.match(frame, /\u001b\[7m\s+\[Image #1\]\s+\u001b\[27m/)
+  const ordinaryFrame = ordinary.lastFrame() ?? ""
+  assert.match(stripVTControlCharacters(ordinaryFrame), /before\s+\[Image #1\]\s+after/)
+  assert.match(ordinaryFrame, /\u001b\[36m\s+\[Image #1\]\s+\u001b\[39m/)
+  assert.match(selected.lastFrame() ?? "", /\u001b\[7m\s+\[Image #1\]\s+\u001b\[27m/)
 })
 
 test("composer owns two visual rows above the complete input control surface", () => {

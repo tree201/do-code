@@ -29,8 +29,11 @@ export function composerInputContent(value: string, cursor: number): ReactNode[]
       continue
     }
     flushText()
-    const label = part === IMAGE_ATTACHMENT_TOKEN ? ` [Image #${++imageIndex}] ` : part
-    content.push(<Text key={index} inverse={index === cursor}>{label}</Text>)
+    const isImage = part === IMAGE_ATTACHMENT_TOKEN
+    const label = isImage ? ` [Image #${++imageIndex}] ` : part
+    content.push(isImage && index !== cursor
+      ? <Text key={index} color={tuiTheme.accent}>{label}</Text>
+      : <Text key={index} inverse={index === cursor}>{label}</Text>)
   }
   flushText()
   if (cursor === parts.length) content.push(<Text key="cursor" inverse> </Text>)
