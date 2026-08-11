@@ -47,7 +47,7 @@ export async function createInteractiveSessionStore(options: {
 
   const performSave = async (force = false) => {
     const messages = options.conversation().history()
-    if (!force && !persisted && !messages.length && !durableEvents.length) return
+    if (!force && !persisted && !messages.length && !durableEvents.length) return false
     const runtime = runtimeState()
     activeSession = runtime.session
     const title = activeSession.title ?? sessionTitleFromMessages(messages)
@@ -63,10 +63,11 @@ export async function createInteractiveSessionStore(options: {
     persistedMessages = [...messages]
     persistedDurableEvents = durableEvents.length
     persisted = true
+    return true
   }
   const save = async (force = false) => {
     const operation = saveQueue.then(() => performSave(force))
-    saveQueue = operation.catch(() => undefined)
+    saveQueue = operation.then(() => undefined, () => undefined)
     return await operation
   }
   const resume = async (id: string) => {

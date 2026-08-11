@@ -116,17 +116,18 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
     conversation={conversation} approvalBridge={approvalBridge} questionBridge={questionBridge} planReviewBridge={planReviewBridge} policy={policy}
     attachEventSink={(sink) => { eventSink = sink }} runtimeStore={runtimeStore}
     runShellShortcut={async (command) => await executeTool(SHELL_TOOL, { command }, { workspace: args.workspace, policy, approvalMode: runtimeStore.getSnapshot().approvalMode, isPlanMode: () => runtimeStore.getSnapshot().planMode, approveTool: async (request) => await approvalBridge.request(request), approveShell: async (requested) => await approvalBridge.request(approvalRequest(SHELL_TOOL, { command: requested }, policy.evaluate(SHELL_TOOL, { command: requested }))), runShell: shellRunner, shellSpawnSpec: spawnSpec })}
-    listSessions={async () => await listSessions(args.workspace)} resumeSession={store.resume} renameCurrentSession={store.rename} exportCurrentSession={store.exportCurrent} save={store.save}
+    listSessions={async () => await listSessions(args.workspace)} resumeSession={store.resume} renameCurrentSession={store.rename} exportCurrentSession={store.exportCurrent} save={async () => { await store.save() }}
     reportError={async (error, operation, category, context) => await reportError({ error, operation, ...(category ? { category } : {}), workspace: args.workspace, sessionId: store.session().id, model: store.modelConfig().preset, context: { input: context, approvalMode: args.approvalMode, maxSteps: args.maxSteps, stats: conversation.stats(), messages: conversation.history().slice(-30), events: store.events().slice(-150) } })}
     modelPresets={listModelPresets(config)} promptExtensions={extensions} language={initialLanguage} openTranscriptViewer={renderer.openTranscriptViewer} forwardTranscriptViewerInput={renderer.forwardViewerInput} renderRevision={renderer.revision()}
     pasteImage={pasteImage} pasteImagePaths={pasteImagePaths}
   />
   renderer = createInteractiveRenderer(createApp)
   const instance = renderer.start()
+  let resumable = false
   try {
-    await instance.waitUntilExit(); await store.save(); await hookRunner.fire("sessionEnd", { sessionId: store.session().id }); mcpManager.close()
+    await instance.waitUntilExit(); resumable = await store.save(); await hookRunner.fire("sessionEnd", { sessionId: store.session().id }); mcpManager.close()
   } finally {
     renderer.stop()
   }
-  process.stdout.write(`\n${t(runtimeStore.getSnapshot().language, "Resume this session:")}\n  do-code resume ${runtimeStore.getSnapshot().session.id}\n`)
+  if (resumable) process.stdout.write(`\n${t(runtimeStore.getSnapshot().language, "Resume this session:")}\n  do-code resume ${runtimeStore.getSnapshot().session.id}\n`)
 }
