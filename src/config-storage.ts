@@ -3,6 +3,7 @@ import path from "node:path"
 import type { ProviderConfig, ReasoningEffort, ResolvedConfig, StoredConfig, ThinkingMode } from "./config-contracts.js"
 import { doCodeConfigPath, doCodeModelStatePath, projectConfigPath, systemConfigPath } from "./config-paths.js"
 import { migrateConfig } from "./config-schema.js"
+import { prepareProjectData } from "./sessions.js"
 
 const EMPTY_CONFIG: StoredConfig = { version: 2 }
 type RecentModel = { providerID: string; modelID: string }
@@ -43,6 +44,7 @@ export function mergeConfig(base: StoredConfig, overlay: StoredConfig): StoredCo
 }
 
 export async function loadStoredConfig(workspace = process.cwd()): Promise<ResolvedConfig> {
+  await prepareProjectData(workspace)
   const layers = [systemConfigPath(), doCodeConfigPath(), projectConfigPath(workspace)]
   let config: StoredConfig = { ...EMPTY_CONFIG }
   const sources: string[] = []

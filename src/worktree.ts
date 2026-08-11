@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process"
 import { mkdir } from "node:fs/promises"
 import path from "node:path"
+import { projectDataPath } from "./sessions.js"
 
 function git(args: string[], cwd: string) {
   return new Promise<string>((resolve, reject) => {
@@ -16,7 +17,7 @@ function git(args: string[], cwd: string) {
 export async function createWorktree(workspace: string, requestedName?: string) {
   const root = await git(["rev-parse", "--show-toplevel"], workspace)
   const name = (requestedName || `task-${Date.now().toString(36)}`).replace(/[^a-zA-Z0-9._-]/g, "-")
-  const directory = path.join(root, ".do-code", "worktrees", name)
+  const directory = projectDataPath(root, "worktrees", name)
   await mkdir(path.dirname(directory), { recursive: true })
   await git(["worktree", "add", "--detach", directory, "HEAD"], root)
   return { root, name, directory }

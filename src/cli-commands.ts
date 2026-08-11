@@ -97,7 +97,7 @@ async function errorsCommand(args: Args) {
   const stored = await loadStoredConfig(args.workspace)
   const language = args.language ?? stored.language ?? "en"
   if (args.errorAction === "show") return console.log(formatErrorReport(await loadErrorReport(args.errorId!, args.workspace), language))
-  const reports = await listErrorReports()
+  const reports = await listErrorReports(args.workspace)
   if (!reports.length) return console.log(t(language, "No error reports yet."))
   for (const report of reports) console.log(`${report.id}\t${report.createdAt}\t${report.category}\t${report.operation}\t${report.message.replace(/\s+/g, " ").slice(0, 100)}`)
 }

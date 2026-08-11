@@ -94,7 +94,7 @@ Attach up to four PNG, JPEG, GIF, or WebP images with repeated `--image` in head
 do-code run --image screenshots/bug.png --image screenshots/diagram.webp "Describe these images"
 ```
 
-In the interactive TUI, type `@path/to/image.png` or use `/paste-image` to import an image from the system clipboard. Use `/remove-image <index|name>` to remove a pending attachment. Each image is limited to 10 MB and the prompt total is limited to 20 MB. Imported files are copied to `~/.local/share/do-code/projects/<project-key>/sessions/<session-id>/attachments/`; persisted messages contain only relative references such as `attachments/image_xxx.png`, never Base64 data or the original absolute path. Set `DO_CODE_DATA_DIR` to override the global data root. Existing project-local `.do-code/sessions/` entries are migrated when sessions are next accessed.
+In the interactive TUI, type `@path/to/image.png` or use `/paste-image` to import an image from the system clipboard. Use `/remove-image <index|name>` to remove a pending attachment. Each image is limited to 10 MB and the prompt total is limited to 20 MB. Imported files are copied to `~/.local/share/do-code/projects/<project-key>/sessions/<session-id>/attachments/`; persisted messages contain only relative references such as `attachments/image_xxx.png`, never Base64 data or the original absolute path. Set `DO_CODE_DATA_DIR` to override the global data root. Existing project-local `.do-code` data is migrated to the user-managed project directory when the project is next accessed.
 
 ## Safety and data
 

@@ -25,8 +25,9 @@ test("configuration paths honor explicit environment overrides", () => {
   }
 })
 
-test("project configuration path is rooted at the resolved workspace", () => {
-  assert.equal(projectConfigPath("./workspace"), path.join(path.resolve("./workspace"), ".do-code", "config.json"))
+test("project configuration path is user-managed and keyed by the resolved workspace", () => {
+  assert.equal(projectConfigPath("./workspace").startsWith(path.resolve("./workspace")), false)
+  assert.equal(projectConfigPath("./workspace"), projectConfigPath(`${path.resolve("./workspace")}/.`))
 })
 
 test("locale registry drives aliases, configuration validation, and model instructions", () => {

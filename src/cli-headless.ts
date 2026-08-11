@@ -6,7 +6,7 @@ import type { Args } from "./cli-args.js"
 import { resolveHeadlessTask } from "./cli-task.js"
 import { createChatModel } from "./model.js"
 import { runAgentSession, type AgentTraceEvent } from "./session.js"
-import { prepareSessionStorage, sessionsRoot } from "./sessions.js"
+import { prepareSessionStorage, projectDataPath, sessionsRoot } from "./sessions.js"
 import { approvalRequest, createPolicyEngine, type ApprovalChoice, type ToolApprovalRequest } from "./policy.js"
 import { exitCodeForResult, streamEnvelope, traceEnvelope, HEADLESS_PROTOCOL_VERSION, type StreamEnvelope } from "./headless.js"
 import { toolDefinitions } from "./tools.js"
@@ -59,7 +59,7 @@ export async function runHeadless(args: Args, resolvedConfig: ResolvedConfig, ag
   const externalTools = await mcpManager.load()
   const shellRunner = async (...runnerArgs: Parameters<ReturnType<typeof createSandboxShellRunner>>) => await createSandboxShellRunner(args.workspace, activeSandbox())(...runnerArgs)
   await hookRunner.fire("sessionStart", { mode: "headless", task, model: modelConfig.preset })
-  const artifactDirectory = args.artifactDirectory ?? path.resolve(args.workspace, ".do-code/agent-runs", runId)
+  const artifactDirectory = args.artifactDirectory ?? projectDataPath(args.workspace, "agent-runs", runId)
   const frozenConfig = {
     schemaVersion: 1,
     runId,
