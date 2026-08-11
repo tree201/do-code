@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
 import { mkdtemp } from "node:fs/promises"
+import { stripVTControlCharacters } from "node:util"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
@@ -13,7 +14,7 @@ function terminalText(terminal: HeadlessXterm.Terminal) {
   return lines.join("\n")
 }
 
-test("Esc interrupts an active delegated model request and restores the composer", { timeout: 20_000 }, async () => {
+test("Esc interrupts an active delegated model request and restores the composer", { timeout: 20_000 }, async (t) => {
   let requests = 0
   let delegatedRequestClosed = false
   let child: pty.IPty | undefined
@@ -31,6 +32,11 @@ test("Esc interrupts an active delegated model request and restores the composer
     setTimeout(() => child?.write("\u001b"), 250)
   })
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+  t.after(async () => {
+    child?.kill()
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+    terminal.dispose()
+  })
   const address = server.address()
   assert.ok(address && typeof address === "object")
   const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-delegation-pty-"))
@@ -49,7 +55,7 @@ test("Esc interrupts an active delegated model request and restores the composer
       sent = true
       setTimeout(() => child?.write("delegate then stop\r"), 150)
     }
-    if (!resumedInput && raw.includes("The current task was interrupted.")) {
+    if (!resumedInput && /The current task was interrupted\.|当前任务已中断。/.test(stripVTControlCharacters(raw))) {
       resumedInput = true
       setTimeout(() => child?.write("after-delegate-abort"), 200)
       setTimeout(() => child?.kill(), 800)
@@ -60,15 +66,10 @@ test("Esc interrupts an active delegated model request and restores the composer
     child?.onExit(({ exitCode }) => { clearTimeout(timer); resolve(exitCode) })
   })
   await writes
-  await new Promise<void>((resolve) => server.close(() => resolve()))
-  try {
-    const screen = terminalText(terminal)
-    assert.equal(requests, 2)
-    assert.equal(delegatedRequestClosed, true)
-    assert.equal(resumedInput, true)
-    assert.match(screen, /The current task was interrupted\./)
-    assert.match(screen, /after-delegate-abort/)
-  } finally {
-    terminal.dispose()
-  }
+  const screen = terminalText(terminal)
+  assert.equal(requests, 2)
+  assert.equal(delegatedRequestClosed, true)
+  assert.equal(resumedInput, true)
+  assert.match(screen, /The current task was interrupted\.|当前任务已中断。/)
+  assert.match(screen, /after-delegate-abort/)
 })
