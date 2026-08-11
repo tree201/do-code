@@ -39,9 +39,13 @@ export function helpDialogLines(language: DoCodeLanguage, width: number) {
   })
 }
 
+export function helpDialogRows(height: number) {
+  return Math.max(5, height - 8)
+}
+
 export function HelpDialog({ language, width, height, offset }: { language: DoCodeLanguage; width: number; height: number; offset: number }) {
   const lines = helpDialogLines(language, width)
-  const rows = Math.max(5, Math.min(20, height - 8))
+  const rows = helpDialogRows(height)
   const maximum = Math.max(0, lines.length - rows)
   const start = Math.min(maximum, Math.max(0, offset))
   const visible = lines.slice(start, start + rows)

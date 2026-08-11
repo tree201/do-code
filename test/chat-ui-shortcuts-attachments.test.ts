@@ -6,7 +6,7 @@ import { render } from "ink-testing-library"
 import { AgentConversation } from "../src/agent.js"
 import { classifyPastedImagePaths } from "../src/image-attachments.js"
 import type { ChatModel } from "../src/protocol.js"
-import { ApprovalBridge, ChatApp, HelpDialog, helpDialogLines, isHelpShortcut, isReasoningEffortShortcut, nextReasoningEffort, type ChatAppProps } from "../src/ui/chat-app.js"
+import { ApprovalBridge, ChatApp, HelpDialog, helpDialogLines, helpDialogRows, isHelpShortcut, isReasoningEffortShortcut, nextReasoningEffort, type ChatAppProps } from "../src/ui/chat-app.js"
 import { displayWidth } from "../src/ui/terminal-text.js"
 import { tick, visibleFrame } from "./support/chat-ui.js"
 import { createRuntimeStore } from "../src/ui/runtime-store.js"
@@ -35,21 +35,25 @@ test("Ctrl+H is recognized from Ink's backspace key event", () => {
 
 test("help dialog uses two columns on wide terminals and one column when narrow", (t) => {
   const narrowView = render(React.createElement(HelpDialog, { language: "zh", width: 80, height: 24, offset: 0 }))
-  const wideView = render(React.createElement(HelpDialog, { language: "zh", width: 160, height: 24, offset: 0 }))
+  const wideView = render(React.createElement(HelpDialog, { language: "zh", width: 160, height: 32, offset: 0 }))
   t.after(() => { narrowView.unmount(); wideView.unmount() })
   const narrow = visibleFrame(narrowView)
   const wide = visibleFrame(wideView)
   assert.match(narrow, /快捷键与操作帮助/)
   assert.match(narrow, /常用命令/)
   assert.doesNotMatch(narrow, /常用命令.*会话与工作区/)
-  assert.match(wide, /快捷键与操作帮助/)
+  assert.match(wide, /快捷键与操作帮助\s+1-22\/22/)
   assert.match(wide, /常用命令\s+会话与工作区/)
-  assert.match(wide, /\/status.*查看工作区、模型和会话状态/)
+  assert.match(wide, /输入快捷方式/)
+  assert.match(wide, /Ctrl\+Enter/)
 
   const narrowLines = helpDialogLines("zh", 80)
   const wideLines = helpDialogLines("zh", 160)
+  assert.equal(helpDialogRows(32), 24)
   assert.ok(wideLines.some((line) => /常用命令\s+会话与工作区/.test(line)))
+  assert.ok(wideLines.some((line) => /Ctrl\+Enter.*插入换行/.test(line)))
   assert.ok(wideLines.length < narrowLines.length)
+  assert.ok(wideLines.length <= helpDialogRows(32))
   assert.ok(wideLines.every((line) => displayWidth(line) <= 156))
 })
 
