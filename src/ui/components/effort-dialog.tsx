@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { Box, Text } from "ink"
 import type { DoCodeLanguage, ReasoningEffort, RuntimeModelConfig } from "../../config.js"
 import { t } from "../i18n.js"
@@ -20,6 +20,7 @@ export function EffortDialog({ efforts, currentEffort, defaultEffort, language, 
   const [error, setError] = useState("")
   const [applying, setApplying] = useState(false)
   const [persist, setPersist] = useState(false)
+  const persistRef = useRef(false)
   const effectiveIndex = Math.min(selectedIndex, Math.max(0, efforts.length - 1))
 
   const handleInput = useCallback((input: string, key: ChatInputKey) => {
@@ -34,7 +35,8 @@ export function EffortDialog({ efforts, currentEffort, defaultEffort, language, 
       return
     }
     if (key.tab && onPersist) {
-      setPersist((value) => !value)
+      persistRef.current = !persistRef.current
+      setPersist(persistRef.current)
       return
     }
     if (key.return || /(?:\r\n|\r|\n)$/.test(input)) {
@@ -43,14 +45,14 @@ export function EffortDialog({ efforts, currentEffort, defaultEffort, language, 
       setApplying(true)
       setError("")
       void onSelect(selected).then(async () => {
-        if (persist) await onPersist?.(selected)
+        if (persistRef.current) await onPersist?.(selected)
         onClose()
       }).catch((caught) => {
         setError(caught instanceof Error ? caught.message : String(caught))
         setApplying(false)
       })
     }
-  }, [applying, effectiveIndex, efforts, onClose, onPersist, onSelect, persist])
+  }, [applying, effectiveIndex, efforts, onClose, onPersist, onSelect])
 
   useEffect(() => {
     registerInputHandler?.(handleInput)

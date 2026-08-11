@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Box, Text } from "ink"
 import type { DoCodeLanguage, RuntimeModelConfig } from "../../config.js"
 import { t } from "../i18n.js"
@@ -24,6 +24,7 @@ export function ModelDialog({ models, currentModel, language, onSelect, onPersis
   const [error, setError] = useState("")
   const [switching, setSwitching] = useState(false)
   const [persist, setPersist] = useState(false)
+  const persistRef = useRef(false)
   const effectiveIndex = Math.min(selectedIndex, Math.max(0, filtered.length - 1))
   const windowStart = Math.max(0, Math.min(effectiveIndex - 5, filtered.length - 10))
 
@@ -39,7 +40,8 @@ export function ModelDialog({ models, currentModel, language, onSelect, onPersis
       return
     }
     if (key.tab && onPersist) {
-      setPersist((value) => !value)
+      persistRef.current = !persistRef.current
+      setPersist(persistRef.current)
       return
     }
     if (key.return || /(?:\r\n|\r|\n)$/.test(input)) {
@@ -48,7 +50,7 @@ export function ModelDialog({ models, currentModel, language, onSelect, onPersis
       setSwitching(true)
       setError("")
       void onSelect(selected).then(async () => {
-        if (persist) await onPersist?.(selected)
+        if (persistRef.current) await onPersist?.(selected)
         onClose()
       }).catch((caught) => {
         setError(caught instanceof Error ? caught.message : String(caught))
@@ -67,7 +69,7 @@ export function ModelDialog({ models, currentModel, language, onSelect, onPersis
       setSelectedIndex(0)
       setError("")
     }
-  }, [effectiveIndex, filtered.length, onClose, onPersist, onSelect, persist, switching])
+  }, [effectiveIndex, filtered.length, onClose, onPersist, onSelect, switching])
 
   useEffect(() => {
     registerInputHandler?.(handleInput)

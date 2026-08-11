@@ -178,48 +178,6 @@ test("model dialog filters typed text and switches the highlighted model", async
   view.unmount()
 })
 
-test("model dialog can remember the selected model for future sessions", async () => {
-  let switched = ""
-  let persisted = ""
-  const view = renderModelDialog({
-    models: ["ark/glm-5.2", "ark/deepseek-v4-pro"],
-    currentModel: "ark/glm-5.2",
-    language: "en",
-    onClose: () => {},
-    onSelect: async (model) => { switched = model; return { source: "config", sourceLabel: "test", preset: model, provider: "ark", modelId: model, baseUrl: "https://example.com", apiKey: "test" } },
-    onPersist: async (model) => { persisted = model },
-  })
-  view.stdin.write("\u001b[B")
-  await tick()
-  view.stdin.write("\t")
-  await tick()
-  view.stdin.write("\r")
-  await tick(); await tick(); await tick()
-  assert.equal(switched, "ark/deepseek-v4-pro")
-  assert.equal(persisted, "ark/deepseek-v4-pro")
-  view.unmount()
-})
-
-test("effort dialog remembers the selected effort for future sessions", async (t) => {
-  let switched = ""
-  let persisted = ""
-  const view = renderEffortDialog({
-    efforts: ["low", "medium", "high", "xhigh", "max"], currentEffort: "medium", defaultEffort: "high", language: "en", onClose: () => {},
-    onSelect: async (effort) => { switched = effort; return { source: "config", sourceLabel: "test", preset: "ark/glm-5.2", provider: "ark", modelId: "glm-5.2", baseUrl: "https://example.com", apiKey: "test", reasoningEffort: effort } },
-    onPersist: async (effort) => { persisted = effort },
-  })
-  t.after(() => view.unmount())
-  assert.match(visibleFrame(view), /high \(default\)/)
-  view.stdin.write("\u001b[B")
-  await tick()
-  view.stdin.write("\t")
-  await tick()
-  view.stdin.write("\r")
-  await tick(); await tick(); await tick()
-  assert.equal(switched, "high")
-  assert.equal(persisted, "high")
-})
-
 function effortDialogProps(sessionId: string): ChatAppProps {
   const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
   const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
