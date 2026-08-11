@@ -59,7 +59,7 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
     return next
   }
   runtimeStore = createRuntimeStore({
-    session: store.session(), modelConfig, modelPresets: listModelPresets(config), approvalMode: initialApprovalMode, planMode: false, language: initialLanguage,
+    session: store.session(), modelConfig, modelPresets: listModelPresets(config), ...(config.defaultReasoningEffort ? { defaultReasoningEffort: config.defaultReasoningEffort } : {}), approvalMode: initialApprovalMode, planMode: false, language: initialLanguage,
   }, {
     switchModel: switchRuntimeModel,
     persistDefaultModel: async (preset) => { await saveDefaultModel(preset) },

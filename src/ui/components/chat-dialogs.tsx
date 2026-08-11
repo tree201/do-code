@@ -2,6 +2,7 @@ import React from "react"
 import { Box, Text } from "ink"
 import { AuthDialog } from "./auth-dialog.js"
 import { ModelDialog } from "./model-dialog.js"
+import { EffortDialog } from "./effort-dialog.js"
 import { ApprovalDialog } from "./approval-dialog.js"
 import { HelpDialog } from "./help-dialog.js"
 import { PermissionModeDialog } from "./permission-mode-dialog.js"
@@ -20,6 +21,7 @@ export function ChatDialogs({ props, state }: { props: ChatAppProps; state: Chat
     {dialog.kind === "help" ? <HelpDialog language={state.activeLanguage} width={state.terminalWidth} height={state.terminalHeight} offset={dialog.offset} /> : null}
     {dialog.kind === "auth" && state.runtimeStore.canConfigureAuth ? <AuthDialog currentModel={state.activeModel} language={state.activeLanguage} onClose={() => state.setActiveDialog({ kind: "none" })} onSubmit={state.runtimeStore.configureAuth} registerInputHandler={(handler) => { state.dialogInputHandlers.current.auth = handler }} /> : null}
     {dialog.kind === "model" && state.runtimeStore.canSwitchModel ? <ModelDialog models={state.activeModelPresets} currentModel={state.activeModel} language={state.activeLanguage} onClose={() => state.setActiveDialog({ kind: "none" })} onSelect={state.runtimeStore.switchModel} registerInputHandler={(handler) => { state.dialogInputHandlers.current.model = handler }} {...(state.runtimeStore.canPersistDefaultModel ? { onPersist: state.runtimeStore.persistDefaultModel } : {})} /> : null}
+    {dialog.kind === "effort" && state.runtimeStore.canSwitchEffort ? <EffortDialog efforts={["low", "medium", "high", "xhigh", "max"]} currentEffort={state.activeEffort === "default" ? "medium" : state.activeEffort} language={state.activeLanguage} onClose={() => state.setActiveDialog({ kind: "none" })} onSelect={state.runtimeStore.switchEffort} registerInputHandler={(handler) => { state.dialogInputHandlers.current.effort = handler }} {...(state.activeDefaultEffort ? { defaultEffort: state.activeDefaultEffort } : {})} {...(state.runtimeStore.canPersistDefaultReasoningEffort ? { onPersist: state.runtimeStore.persistDefaultReasoningEffort } : {})} /> : null}
     {dialog.kind === "approval" ? <ApprovalDialog request={dialog.request} selectedIndex={dialog.selectedIndex} language={state.activeLanguage} width={state.terminalWidth} /> : null}
     {dialog.kind === "question" ? <QuestionDialog question={dialog.request.question} options={dialog.request.options} selectedIndex={dialog.selectedIndex} draft={dialog.draft} customAnswer={dialog.customAnswer} language={state.activeLanguage} /> : null}
     {dialog.kind === "plan-review" ? <PlanReviewDialog plan={dialog.request.plan} selectedIndex={dialog.selectedIndex} language={state.activeLanguage} width={state.terminalWidth} /> : null}

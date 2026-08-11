@@ -7,6 +7,7 @@ export type RuntimeSnapshot = {
   session: SavedSession
   modelConfig: RuntimeModelConfig
   modelPresets: string[]
+  defaultReasoningEffort?: ReasoningEffort
   approvalMode: ApprovalMode
   planMode: boolean
   language: DoCodeLanguage
@@ -59,6 +60,7 @@ export function createRuntimeStore(initial: RuntimeSnapshot, commands: RuntimeCo
     async persistDefaultReasoningEffort(effort: ReasoningEffort) {
       if (!commands.persistDefaultReasoningEffort) throw new Error("Saving the default reasoning effort is unavailable")
       await commands.persistDefaultReasoningEffort(effort)
+      publish({ defaultReasoningEffort: effort })
     },
     canPersistDefaultReasoningEffort: Boolean(commands.persistDefaultReasoningEffort),
     async persistDefaultThinkingMode(thinking: ThinkingMode) {
