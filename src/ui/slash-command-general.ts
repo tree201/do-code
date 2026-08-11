@@ -50,20 +50,32 @@ export function executeGeneralSlashCommand(input: string, context: SlashCommandC
     }).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Model switch failed"), error, "model.switch", { preset, persist })).finally(() => { state.updateRunning(false); state.setActiveTool(null) })
     return true
   }
-  if (input === EFFORT_COMMAND) { state.append({ kind: "info", text: t(state.activeLanguage, "Reasoning effort: {effort}\nAvailable: low, medium, high, xhigh, max\nUsage: /effort <level>", { effort: state.activeEffort }) }); return true }
+  if (input === EFFORT_COMMAND) { state.append({ kind: "info", text: t(state.activeLanguage, "Reasoning effort: {effort}\nAvailable: low, medium, high, xhigh, max\nUsage: /effort <level> [--persist]", { effort: state.activeEffort }) }); return true }
   if (commandWithArgument(input, EFFORT_COMMAND)) {
-    const effort = parseReasoningEffort(commandArgument(input, EFFORT_COMMAND))
-    if (!effort) state.append({ kind: "error", text: t(state.activeLanguage, "Usage: /effort low|medium|high|xhigh|max") })
+    const argument = commandArgument(input, EFFORT_COMMAND)
+    const persist = /(?:^|\s)--persist\s*$/.test(argument)
+    const effort = parseReasoningEffort(argument.replace(/(?:^|\s)--persist\s*$/, ""))
+    if (!effort) state.append({ kind: "error", text: t(state.activeLanguage, "Usage: /effort low|medium|high|xhigh|max [--persist]") })
     else if (!state.runtimeStore.canSwitchEffort) state.append({ kind: "error", text: t(state.activeLanguage, "This client does not support reasoning effort switching.") })
-    else void state.runtimeStore.switchEffort(effort).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Effort switch failed"), error, "effort.switch", { effort }))
+    else void state.runtimeStore.switchEffort(effort).then(async () => {
+      if (!persist) return
+      await state.runtimeStore.persistDefaultReasoningEffort(effort)
+      state.append({ kind: "info", text: t(state.activeLanguage, "{effort} is now the default reasoning effort for future sessions.", { effort }) })
+    }).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Effort switch failed"), error, "effort.switch", { effort, persist }))
     return true
   }
-  if (input === THINKING_COMMAND) { state.append({ kind: "info", text: t(state.activeLanguage, "Thinking mode: {mode}\nAvailable: auto, on, off\nUsage: /thinking <mode>", { mode: state.activeThinkingMode }) }); return true }
+  if (input === THINKING_COMMAND) { state.append({ kind: "info", text: t(state.activeLanguage, "Thinking mode: {mode}\nAvailable: auto, on, off\nUsage: /thinking <mode> [--persist]", { mode: state.activeThinkingMode }) }); return true }
   if (commandWithArgument(input, THINKING_COMMAND)) {
-    const mode = parseThinkingMode(commandArgument(input, THINKING_COMMAND))
-    if (!mode) state.append({ kind: "error", text: t(state.activeLanguage, "Usage: /thinking auto|on|off") })
+    const argument = commandArgument(input, THINKING_COMMAND)
+    const persist = /(?:^|\s)--persist\s*$/.test(argument)
+    const mode = parseThinkingMode(argument.replace(/(?:^|\s)--persist\s*$/, ""))
+    if (!mode) state.append({ kind: "error", text: t(state.activeLanguage, "Usage: /thinking auto|on|off [--persist]") })
     else if (!state.runtimeStore.canSwitchThinking) state.append({ kind: "error", text: t(state.activeLanguage, "This client does not support thinking mode switching.") })
-    else void state.runtimeStore.switchThinking(mode).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Thinking mode switch failed"), error, "thinking.switch", { mode }))
+    else void state.runtimeStore.switchThinking(mode).then(async () => {
+      if (!persist) return
+      await state.runtimeStore.persistDefaultThinkingMode(mode)
+      state.append({ kind: "info", text: t(state.activeLanguage, "{mode} is now the default thinking mode for future sessions.", { mode }) })
+    }).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Thinking mode switch failed"), error, "thinking.switch", { mode, persist }))
     return true
   }
   if (input === EXTENSIONS_COMMAND) { state.append({ kind: "info", text: props.promptExtensions?.length ? props.promptExtensions.map((item) => `/${item.name}  [${item.kind} · ${item.source}] ${item.description}`).join("\n") : t(state.activeLanguage, "No custom commands or skills are loaded.") }); return true }

@@ -1,5 +1,5 @@
-import React, { useState } from "react"
-import { Box, Text, useInput } from "ink"
+import React, { useEffect, useState } from "react"
+import { Box, Text } from "ink"
 import type { DoCodeLanguage, ProviderProtocol, RuntimeModelConfig } from "../../config.js"
 import { customProviderId, type ProviderInstallInput } from "../../provider-setup.js"
 import { discoverProviderModels } from "../../provider-model-discovery.js"
@@ -7,6 +7,7 @@ import { providerRegistry, type ProviderDefinition } from "../../provider-regist
 import { t } from "../i18n.js"
 import { DialogManager, DialogSurface } from "./dialog-manager.js"
 import { tuiTheme } from "../theme.js"
+import type { ChatInputKey } from "../input-routing-types.js"
 
 type AuthStep = "provider" | "protocol" | "base-url" | "region" | "api-key" | "models"
 
@@ -36,12 +37,13 @@ function InputLine({ value, secret = false, placeholder }: { value: string; secr
   return <Text><Text color={tuiTheme.accent}>› </Text>{shown || <Text dimColor>{placeholder}</Text>}<Text inverse> </Text></Text>
 }
 
-export function AuthDialog({ currentModel, language, onSubmit, onClose, discoverModels = discoverProviderModels }: {
+export function AuthDialog({ currentModel, language, onSubmit, onClose, discoverModels = discoverProviderModels, registerInputHandler }: {
   currentModel: string
   language: DoCodeLanguage
   onSubmit: (input: ProviderInstallInput) => Promise<RuntimeModelConfig>
   onClose: () => void
   discoverModels?: typeof discoverProviderModels
+  registerInputHandler?: (handler: ((input: string, key: ChatInputKey) => void) | undefined) => void
 }) {
   const currentProvider = currentModel.includes("/") ? currentModel.split("/", 1)[0] : ""
   const matchedProviderIndex = providerRegistry.findIndex((provider) => provider.id === currentProvider)
@@ -146,7 +148,8 @@ export function AuthDialog({ currentModel, language, onSubmit, onClose, discover
     }
   }
 
-  useInput((input, key) => {
+  useEffect(() => {
+    const handleInput = (input: string, key: ChatInputKey) => {
     if (submitting || discovering) return
     const submittedText = input.replace(/(?:\r\n|\r|\n)+$/, "")
     const hasReturn = key.return || submittedText !== input
@@ -206,7 +209,10 @@ export function AuthDialog({ currentModel, language, onSubmit, onClose, discover
       update(appendInput(current, input))
       setError("")
     }
-  }, { isActive: true })
+    }
+    registerInputHandler?.(handleInput)
+    return () => registerInputHandler?.(undefined)
+  }, [apiKey, baseUrl, customModels, discoverModels, discovering, goBack, modelIndex, onClose, provider, protocolIndex, registerInputHandler, selectableModels.length, step, submitting, submitInstall, language])
 
   const stepTitle = step === "provider" ? t(language, "Connect a Provider")
     : step === "protocol" ? t(language, "Protocol")

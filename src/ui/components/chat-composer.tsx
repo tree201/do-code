@@ -1,4 +1,5 @@
 import React from "react"
+import type { ReactNode } from "react"
 import { Text } from "ink"
 import { IMAGE_ATTACHMENT_TOKEN } from "../attachment-model.js"
 import { composerStatusText } from "../chat-presentation.js"
@@ -11,13 +12,33 @@ import { Composer } from "./composer.js"
 import type { ChatAppProps } from "../chat-app-types.js"
 import type { ChatAppState } from "../hooks/use-chat-app-state.js"
 
-function ComposerInput({ state }: { state: ChatAppState }) {
-  const parts = graphemes(state.editor.value)
+export function composerInputContent(value: string, cursor: number): ReactNode[] {
+  const content: ReactNode[] = []
+  const parts = graphemes(value)
+  let text = ""
   let imageIndex = 0
-  return <Text>{parts.map((part, index) => {
+  const flushText = () => {
+    if (!text) return
+    content.push(text)
+    text = ""
+  }
+
+  for (const [index, part] of parts.entries()) {
+    if (part !== IMAGE_ATTACHMENT_TOKEN && index !== cursor) {
+      text += part
+      continue
+    }
+    flushText()
     const label = part === IMAGE_ATTACHMENT_TOKEN ? ` [Image #${++imageIndex}] ` : part
-    return <Text key={`${index}-${label}`} inverse={index === state.editor.cursor}>{label}</Text>
-  })}{state.editor.cursor === parts.length ? <Text inverse> </Text> : null}
+    content.push(<Text key={index} inverse={index === cursor}>{label}</Text>)
+  }
+  flushText()
+  if (cursor === parts.length) content.push(<Text key="cursor" inverse> </Text>)
+  return content
+}
+
+function ComposerInput({ state }: { state: ChatAppState }) {
+  return <Text>{composerInputContent(state.editor.value, state.editor.cursor)}
     {!state.editor.value ? <Text dimColor> {t(state.activeLanguage, state.running ? "Current task is running; press Enter to queue a message" : "Enter a task or @file path")}</Text> : null}
   </Text>
 }
