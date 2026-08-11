@@ -17,6 +17,7 @@ export function normalizeEnhancedKeyboardKey(rawInput: string, inkKey: ChatInput
   const codepoint = Number(kitty?.[1] ?? modifyOtherKeys?.[2])
   const input = decodeCodepoint(codepoint)
   if (!input || !Number.isInteger(modifier) || modifier < 1) return { input: rawInput, key: { ...inkKey } }
+  const normalizedInput = input.toLowerCase()
 
   const modifierBits = modifier - 1
   const key = {
@@ -29,5 +30,5 @@ export function normalizeEnhancedKeyboardKey(rawInput: string, inkKey: ChatInput
   if (codepoint === 9) key.tab = true
   if (codepoint === 13) key.return = true
   if (codepoint === 27) key.escape = true
-  return { input: codepoint === 9 || codepoint === 13 || codepoint === 27 ? codepoint === 13 ? "\r" : "" : input, key }
+  return { input: codepoint === 9 || codepoint === 13 || codepoint === 27 ? codepoint === 13 ? "\r" : "" : key.ctrl ? normalizedInput : input, key }
 }
