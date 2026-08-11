@@ -1,16 +1,18 @@
-import React, { useMemo, useState } from "react"
-import { Box, Text, useInput } from "ink"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
+import { Box, Text } from "ink"
 import type { DoCodeLanguage, RuntimeModelConfig } from "../../config.js"
 import { DialogManager, DialogSurface } from "./dialog-manager.js"
 import { tuiTheme } from "../theme.js"
+import type { ChatInputKey } from "../input-routing-types.js"
 
-export function ModelDialog({ models, currentModel, language, onSelect, onPersist, onClose }: {
+export function ModelDialog({ models, currentModel, language, onSelect, onPersist, onClose, registerInputHandler }: {
   models: string[]
   currentModel: string
   language: DoCodeLanguage
   onSelect: (model: string) => Promise<RuntimeModelConfig>
   onPersist?: (model: string) => Promise<void>
   onClose: () => void
+  registerInputHandler?: (handler: ((input: string, key: ChatInputKey) => void) | undefined) => void
 }) {
   const zh = language === "zh"
   const [query, setQuery] = useState("")
@@ -25,7 +27,7 @@ export function ModelDialog({ models, currentModel, language, onSelect, onPersis
   const effectiveIndex = Math.min(selectedIndex, Math.max(0, filtered.length - 1))
   const windowStart = Math.max(0, Math.min(effectiveIndex - 5, filtered.length - 10))
 
-  useInput((input, key) => {
+  const handleInput = useCallback((input: string, key: ChatInputKey) => {
     if (switching) return
     if (key.escape || key.ctrl && input.toLowerCase() === "c") return onClose()
     if (key.upArrow) {
@@ -65,7 +67,12 @@ export function ModelDialog({ models, currentModel, language, onSelect, onPersis
       setSelectedIndex(0)
       setError("")
     }
-  }, { isActive: true })
+  }, [effectiveIndex, filtered.length, onClose, onPersist, onSelect, persist, switching])
+
+  useEffect(() => {
+    registerInputHandler?.(handleInput)
+    return () => registerInputHandler?.(undefined)
+  }, [handleInput, registerInputHandler])
 
   return <DialogManager><DialogSurface>
     <Text bold>{zh ? "选择模型" : "Select Model"}</Text>

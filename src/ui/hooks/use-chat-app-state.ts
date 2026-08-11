@@ -17,6 +17,9 @@ import { useTranscriptOwner } from "./use-transcript-owner.js"
 import { useComposerOwner } from "./use-composer-owner.js"
 import { useTurnOwner } from "./use-turn-owner.js"
 import { APPROVAL_MODE_COMMAND, EFFORT_COMMAND, EXPORT_COMMAND, LANGUAGE_COMMAND, MEMORY_COMMAND, REMOVE_IMAGE_COMMAND, REWIND_COMMAND, THINKING_COMMAND } from "../shortcut-command-policy.js"
+import type { ChatInputKey } from "../input-routing-types.js"
+
+export type DialogInputHandler = (input: string, key: ChatInputKey) => void
 
 export function useChatAppState(props: ChatAppProps, initialWidth: number, initialHeight: number) {
   const [terminalWidth, setTerminalWidth] = useState(initialWidth)
@@ -44,6 +47,7 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
   const [memoryCount, setMemoryCount] = useState(0)
   const [trusted, setTrusted] = useState(false)
   const [contextPercent, setContextPercent] = useState(0)
+  const dialogInputHandlers = useRef<{ auth?: DialogInputHandler | undefined; model?: DialogInputHandler | undefined }>({})
   const activeModel = runtime.modelConfig.preset
   const activeModelPresets = runtime.modelPresets
   const activeEffort: ReasoningEffort | "default" = runtime.modelConfig.reasoningEffort ?? "default"
@@ -89,7 +93,7 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
     pendingToolGroup, liveAssistant, transcriptOwner, activeDialog, setActiveDialog, getActiveDialog,
     history, setHistory, historyIndex, setHistoryIndex, historyDraft, setHistoryDraft, workspaceFiles, setWorkspaceFiles, completionIndex, setCompletionIndex,
     sessionPickerItems, sessionPickerIndex, sessionPickerQuery, memoryCount, setMemoryCount,
-    trusted, setTrusted, contextPercent, setContextPercent, queuedInputs, setQueuedInputs, activeModel, activeModelPresets, attachedImages,
+    trusted, setTrusted, contextPercent, setContextPercent, dialogInputHandlers, queuedInputs, setQueuedInputs, activeModel, activeModelPresets, attachedImages,
     updateAttachedImages, activeEffort,
     activeThinkingMode, activeLanguage, activeApprovalMode, activePlanMode, viewerItems,
     viewerOffset, externalViewerActiveRef, exitConfirmation, armExitConfirmation, clearExitConfirmation,

@@ -21,6 +21,12 @@ test("normalizes enhanced Ctrl+Enter encodings", () => {
   }
 })
 
+test("normalizes Kitty Escape without leaking a control character", () => {
+  const normalized = normalizeEnhancedKeyboardKey("[27;1u", emptyKey)
+  assert.equal(normalized.input, "")
+  assert.equal(normalized.key.escape, true)
+})
+
 test("preserves ordinary Ink input", () => {
   const key = { shift: true } as ChatInputKey
   const normalized = normalizeEnhancedKeyboardKey("A", key)
