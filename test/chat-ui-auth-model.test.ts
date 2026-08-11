@@ -155,6 +155,28 @@ test("model dialog filters typed text and switches the highlighted model", async
   view.unmount()
 })
 
+test("model dialog can remember the selected model for future sessions", async () => {
+  let switched = ""
+  let persisted = ""
+  const view = render(React.createElement(ModelDialog, {
+    models: ["ark/glm-5.2", "ark/deepseek-v4-pro"],
+    currentModel: "ark/glm-5.2",
+    language: "en",
+    onClose: () => {},
+    onSelect: async (model) => { switched = model; return { source: "config", sourceLabel: "test", preset: model, provider: "ark", modelId: model, baseUrl: "https://example.com", apiKey: "test" } },
+    onPersist: async (model) => { persisted = model },
+  }))
+  view.stdin.write("\u001b[B")
+  await tick()
+  view.stdin.write("\t")
+  await tick()
+  view.stdin.write("\r")
+  await tick(); await tick(); await tick()
+  assert.equal(switched, "ark/deepseek-v4-pro")
+  assert.equal(persisted, "ark/deepseek-v4-pro")
+  view.unmount()
+})
+
 test("models installed by auth are immediately available to the model switcher", async () => {
   const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
   const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })

@@ -68,6 +68,14 @@ export async function saveMigratedConfig(workspace = process.cwd()) {
   return file
 }
 
+export async function saveDefaultModel(model: string) {
+  const file = doCodeConfigPath()
+  const existing = await readConfigJson(file)
+  const stored = existing === null ? { ...EMPTY_CONFIG } : migrateConfig(existing, file)
+  await writeStoredConfig(file, { ...stored, defaultModel: model })
+  return file
+}
+
 export async function loadRecentModels() {
   const value = await readConfigJson(doCodeModelStatePath()).catch(() => null)
   if (!value || typeof value !== "object" || !Array.isArray((value as { recent?: unknown }).recent)) return []

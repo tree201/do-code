@@ -4,11 +4,12 @@ import type { DoCodeLanguage, RuntimeModelConfig } from "../../config.js"
 import { DialogManager, DialogSurface } from "./dialog-manager.js"
 import { tuiTheme } from "../theme.js"
 
-export function ModelDialog({ models, currentModel, language, onSelect, onClose }: {
+export function ModelDialog({ models, currentModel, language, onSelect, onPersist, onClose }: {
   models: string[]
   currentModel: string
   language: DoCodeLanguage
   onSelect: (model: string) => Promise<RuntimeModelConfig>
+  onPersist?: (model: string) => Promise<void>
   onClose: () => void
 }) {
   const zh = language === "zh"
@@ -20,6 +21,7 @@ export function ModelDialog({ models, currentModel, language, onSelect, onClose 
   const [selectedIndex, setSelectedIndex] = useState(() => Math.max(0, models.indexOf(currentModel)))
   const [error, setError] = useState("")
   const [switching, setSwitching] = useState(false)
+  const [persist, setPersist] = useState(false)
   const effectiveIndex = Math.min(selectedIndex, Math.max(0, filtered.length - 1))
   const windowStart = Math.max(0, Math.min(effectiveIndex - 5, filtered.length - 10))
 
@@ -34,12 +36,19 @@ export function ModelDialog({ models, currentModel, language, onSelect, onClose 
       setSelectedIndex((index) => filtered.length ? (Math.min(index, filtered.length - 1) + 1) % filtered.length : 0)
       return
     }
+    if (key.tab && onPersist) {
+      setPersist((value) => !value)
+      return
+    }
     if (key.return || /(?:\r\n|\r|\n)$/.test(input)) {
       const selected = filtered[effectiveIndex]
       if (!selected) return
       setSwitching(true)
       setError("")
-      void onSelect(selected).then(onClose).catch((caught) => {
+      void onSelect(selected).then(async () => {
+        if (persist) await onPersist?.(selected)
+        onClose()
+      }).catch((caught) => {
         setError(caught instanceof Error ? caught.message : String(caught))
         setSwitching(false)
       })
@@ -73,6 +82,7 @@ export function ModelDialog({ models, currentModel, language, onSelect, onClose 
       {filtered.length > 10 ? <Text dimColor>{windowStart + 1}-{Math.min(filtered.length, windowStart + 10)} / {filtered.length}</Text> : null}
     </Box>
     {error ? <Box marginTop={1}><Text color={tuiTheme.danger}>{error}</Text></Box> : null}
-    <Box marginTop={1}><Text dimColor>{switching ? (zh ? "正在切换模型..." : "Switching model...") : (zh ? "输入筛选 · ↑↓ 选择 · Enter 切换 · Esc 关闭" : "Type to filter · ↑↓ Select · Enter Switch · Esc Close")}</Text></Box>
+    {onPersist ? <Box marginTop={1}><Text color={persist ? tuiTheme.success : tuiTheme.border}>{persist ? "●" : "○"} {zh ? "将模型记住，用于后续新会话" : "Remember model for future sessions"}</Text></Box> : null}
+    <Box marginTop={1}><Text dimColor>{switching ? (zh ? "正在切换模型..." : "Switching model...") : (zh ? "输入筛选 · ↑↓ 选择 · Tab 记住 · Enter 切换 · Esc 关闭" : "Type to filter · ↑↓ Select · Tab Remember · Enter Switch · Esc Close")}</Text></Box>
   </DialogSurface></DialogManager>
 }

@@ -14,6 +14,7 @@ export type RuntimeSnapshot = {
 
 export type RuntimeCommands = {
   switchModel?: (preset: string, effort?: ReasoningEffort, thinking?: ThinkingMode) => Promise<RuntimeModelConfig>
+  persistDefaultModel?: (preset: string) => Promise<void>
   restoreModel?: (preset: string, effort?: ReasoningEffort, thinking?: ThinkingMode) => Promise<RuntimeModelConfig>
   switchEffort?: (effort: ReasoningEffort) => Promise<RuntimeModelConfig>
   switchThinking?: (thinking: ThinkingMode) => Promise<RuntimeModelConfig>
@@ -48,6 +49,11 @@ export function createRuntimeStore(initial: RuntimeSnapshot, commands: RuntimeCo
       if (!commands.switchModel) throw new Error("Model switching is unavailable")
       return applyModelConfig(await commands.switchModel(preset, snapshot.modelConfig.reasoningEffort, snapshot.modelConfig.thinkingMode))
     },
+    async persistDefaultModel(preset: string) {
+      if (!commands.persistDefaultModel) throw new Error("Saving the default model is unavailable")
+      await commands.persistDefaultModel(preset)
+    },
+    canPersistDefaultModel: Boolean(commands.persistDefaultModel),
     async switchEffort(effort: ReasoningEffort) {
       if (commands.switchEffort) return applyModelConfig(await commands.switchEffort(effort))
       if (!commands.switchModel) throw new Error("Reasoning effort switching is unavailable")
