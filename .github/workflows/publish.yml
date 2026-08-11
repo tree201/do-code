@@ -30,6 +30,8 @@ jobs:
           fi
       - run: npm run build:agent
       - run: npm test
+        env:
+          FORCE_COLOR: "1"
       - run: npm run typecheck
       - name: Verify the Git tag matches package version
         if: github.event_name == 'push'
