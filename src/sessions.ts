@@ -30,12 +30,20 @@ export function projectDataRoot(workspace: string) {
   return path.join(dataRoot, "projects", `${slug}-${hash}`)
 }
 
+export function projectDataPath(workspace: string, ...segments: string[]) {
+  return path.join(projectDataRoot(workspace), ...segments)
+}
+
 export function sessionsRoot(workspace: string) {
-  return path.join(projectDataRoot(workspace), "sessions")
+  return projectDataPath(workspace, "sessions")
+}
+
+function legacyProjectDataRoot(workspace: string) {
+  return path.join(path.resolve(workspace), ".do-code")
 }
 
 function legacySessionsRoot(workspace: string) {
-  return path.join(path.resolve(workspace), ".do-code", "sessions")
+  return path.join(legacyProjectDataRoot(workspace), "sessions")
 }
 
 function errorCode(error: unknown) {
@@ -67,21 +75,63 @@ async function migrateLegacySession(source: string, target: string) {
   }
 }
 
-export async function prepareSessionStorage(workspace: string) {
+async function migrateLegacyEntry(source: string, target: string) {
+  try {
+    await readFile(target)
+    return false
+  } catch { /* target is absent */ }
+  try {
+    await rename(source, target)
+    return true
+  } catch (error) {
+    if (errorCode(error) !== "EXDEV") return false
+  }
+  const temporary = `${target}.${process.pid}.${Date.now().toString(36)}.tmp`
+  await cp(source, temporary, { recursive: true })
+  try {
+    await rename(temporary, target)
+    await rm(source, { recursive: true, force: true })
+    return true
+  } catch {
+    await rm(temporary, { recursive: true, force: true })
+    return false
+  }
+}
+
+export async function prepareProjectData(workspace: string) {
   const resolved = path.resolve(workspace)
-  const root = sessionsRoot(resolved)
+  const root = projectDataRoot(resolved)
   await mkdir(root, { recursive: true })
-  const projectFile = path.join(projectDataRoot(resolved), "project.json")
+  const projectFile = path.join(root, "project.json")
   await readFile(projectFile).catch(async () => {
     await writeFileAtomic(projectFile, `${JSON.stringify({ workspace: resolved }, null, 2)}\n`)
   })
-  const legacyRoot = legacySessionsRoot(resolved)
+  const legacyRoot = legacyProjectDataRoot(resolved)
   const entries = await readdir(legacyRoot, { withFileTypes: true }).catch(() => [])
-  await Promise.all(entries.filter((entry) => entry.isDirectory()).map(async (entry) => {
-    await migrateLegacySession(path.join(legacyRoot, entry.name), path.join(root, entry.name))
-  }))
+  for (const entry of entries) {
+    const source = path.join(legacyRoot, entry.name)
+    const target = path.join(root, entry.name)
+    if (entry.name === "sessions" && entry.isDirectory()) {
+      await mkdir(target, { recursive: true })
+      const sessions = await readdir(source, { withFileTypes: true }).catch(() => [])
+      await Promise.all(sessions.filter((session) => session.isDirectory()).map(async (session) => {
+        await migrateLegacySession(path.join(source, session.name), path.join(target, session.name))
+      }))
+      const remainingSessions = await readdir(source).catch(() => [])
+      if (!remainingSessions.length) await rm(source).catch(() => undefined)
+      continue
+    }
+    await migrateLegacyEntry(source, target)
+  }
   const remaining = await readdir(legacyRoot).catch(() => [])
-  if (!remaining.length) await rm(legacyRoot).catch(() => undefined)
+  if (!remaining.length) await rm(legacyRoot, { recursive: true, force: true }).catch(() => undefined)
+  return root
+}
+
+export async function prepareSessionStorage(workspace: string) {
+  const root = sessionsRoot(workspace)
+  await prepareProjectData(workspace)
+  await mkdir(root, { recursive: true })
   return root
 }
 

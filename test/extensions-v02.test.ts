@@ -8,20 +8,22 @@ import { loadStoredConfig, migrateConfig, normalizeLanguage, resolveAgentProfile
 import { expandPromptExtension, loadPromptExtensions } from "../src/extension-registry.js"
 import { HookRunner } from "../src/hooks.js"
 import { McpManager } from "../src/mcp.js"
+import { projectConfigPath } from "../src/config-paths.js"
+import { projectDataPath } from "../src/sessions.js"
 import { createSandboxShellRunner, createSandboxShellSpawnSpec } from "../src/sandbox.js"
 
 test("v2 configuration migrates v1 and merges user and project layers", async () => {
   const root=await mkdtemp(path.join(os.tmpdir(),"do-code-v02-config-"))
   const user=path.join(root,"user.json"),system=path.join(root,"missing-system.json"),project=path.join(root,"project")
-  await mkdir(path.join(project,".do-code"),{recursive:true})
-  await writeFile(user,JSON.stringify({version:2,defaultModel:"one/a",providers:{one:{baseUrl:"https://one.example/v1",apiKeyEnv:"ONE_KEY",models:{a:{modelId:"model-a"}}}}}))
-  await writeFile(path.join(project,".do-code","config.json"),JSON.stringify({version:2,defaultModel:"two/b",providers:{two:{baseUrl:"https://two.example/v1",apiKeyEnv:"TWO_KEY",models:{b:{modelId:"model-b",contextWindow:64000}}}}}))
-  const previousUser=process.env.DO_CODE_CONFIG_PATH,previousSystem=process.env.DO_CODE_SYSTEM_CONFIG_PATH,previousKey=process.env.TWO_KEY
-  process.env.DO_CODE_CONFIG_PATH=user;process.env.DO_CODE_SYSTEM_CONFIG_PATH=system;process.env.TWO_KEY="secret"
+  const previousUser=process.env.DO_CODE_CONFIG_PATH,previousSystem=process.env.DO_CODE_SYSTEM_CONFIG_PATH,previousData=process.env.DO_CODE_DATA_DIR,previousKey=process.env.TWO_KEY
+  process.env.DO_CODE_CONFIG_PATH=user;process.env.DO_CODE_SYSTEM_CONFIG_PATH=system;process.env.DO_CODE_DATA_DIR=path.join(root,"data");process.env.TWO_KEY="secret"
   try{
+    await mkdir(path.dirname(projectConfigPath(project)),{recursive:true})
+    await writeFile(user,JSON.stringify({version:2,defaultModel:"one/a",providers:{one:{baseUrl:"https://one.example/v1",apiKeyEnv:"ONE_KEY",models:{a:{modelId:"model-a"}}}}}))
+    await writeFile(projectConfigPath(project),JSON.stringify({version:2,defaultModel:"two/b",providers:{two:{baseUrl:"https://two.example/v1",apiKeyEnv:"TWO_KEY",models:{b:{modelId:"model-b",contextWindow:64000}}}}}))
     const config=await loadStoredConfig(project)
     assert.equal(config.defaultModel,"two/b")
-    assert.deepEqual(config.sources,[user,path.join(project,".do-code","config.json")])
+    assert.deepEqual(config.sources,[user,projectConfigPath(project)])
     assert.deepEqual(Object.keys(config.providers??{}).sort(),["one","two"])
     const runtime=await resolveRuntimeModelConfig(project)
     assert.equal(runtime.preset,"two/b")
@@ -31,6 +33,7 @@ test("v2 configuration migrates v1 and merges user and project layers", async ()
   }finally{
     if(previousUser===undefined)delete process.env.DO_CODE_CONFIG_PATH;else process.env.DO_CODE_CONFIG_PATH=previousUser
     if(previousSystem===undefined)delete process.env.DO_CODE_SYSTEM_CONFIG_PATH;else process.env.DO_CODE_SYSTEM_CONFIG_PATH=previousSystem
+    if(previousData===undefined)delete process.env.DO_CODE_DATA_DIR;else process.env.DO_CODE_DATA_DIR=previousData
     if(previousKey===undefined)delete process.env.TWO_KEY;else process.env.TWO_KEY=previousKey
   }
 })
@@ -83,8 +86,8 @@ test("project commands override user commands and skills expand arguments",async
   process.env.HOME=path.join(root,"home")
   try{
     const userCommand=path.join(process.env.HOME,".config","do-code","commands")
-    const projectCommand=path.join(workspace,".do-code","commands")
-    const skill=path.join(workspace,".do-code","skills","review")
+    const projectCommand=projectDataPath(workspace,"commands")
+    const skill=projectDataPath(workspace,"skills","review")
     await mkdir(userCommand,{recursive:true});await mkdir(projectCommand,{recursive:true});await mkdir(skill,{recursive:true})
     await writeFile(path.join(userCommand,"fix.md"),"user $ARGUMENTS")
     await writeFile(path.join(projectCommand,"fix.md"),"---\ndescription: project fix\n---\nproject $ARGUMENTS")

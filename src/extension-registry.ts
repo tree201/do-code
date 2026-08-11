@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
+import { projectDataRoot, prepareProjectData } from "./sessions.js"
 
 export type PromptExtension = {
   name: string
@@ -47,9 +48,10 @@ async function loadEntries(directory: string, source: PromptExtension["source"],
 }
 
 export async function loadPromptExtensions(workspace: string): Promise<PromptExtension[]> {
+  await prepareProjectData(workspace)
   const roots = [
     [path.join(os.homedir(), ".config", "do-code"), "user"],
-    [path.join(workspace, ".do-code"), "project"],
+    [projectDataRoot(workspace), "project"],
   ] as const
   const all: PromptExtension[] = []
   for (const [root, source] of roots) {

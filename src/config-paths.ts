@@ -1,5 +1,6 @@
 import os from "node:os"
 import path from "node:path"
+import { projectDataPath } from "./sessions.js"
 
 const DO_CODE_CONFIG_PATH = "DO_CODE_CONFIG_PATH"
 const DO_CODE_SYSTEM_CONFIG_PATH = "DO_CODE_SYSTEM_CONFIG_PATH"
@@ -10,7 +11,11 @@ export function doCodeConfigPath() {
 }
 
 export function projectConfigPath(workspace: string) {
-  return path.join(path.resolve(workspace), ".do-code", "config.json")
+  return projectDataPath(workspace, "config.json")
+}
+
+export function projectConfigDirectory(workspace: string) {
+  return projectDataPath(workspace)
 }
 
 export function systemConfigPath() {

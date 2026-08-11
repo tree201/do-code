@@ -9,6 +9,7 @@ import {
 } from "./policy-classification.js"
 import type { ApprovalChoice, ApprovalMode, PermissionRule, PolicyEvaluation } from "./policy-contracts.js"
 import { readPermissionRules, systemPermissionFile, userPermissionFile } from "./policy-store.js"
+import { projectDataPath, prepareProjectData } from "./sessions.js"
 
 export class PolicyEngine {
   private readonly sessionRules: PermissionRule[] = []
@@ -88,11 +89,13 @@ export class PolicyEngine {
 }
 
 export async function createPolicyEngine(workspace: string, mode: ApprovalMode, options: { headless?: boolean; configDirectory?: string } = {}) {
+  const resolved = path.resolve(workspace)
+  await prepareProjectData(resolved)
   const userFile = userPermissionFile(options.configDirectory)
   const [system, user, project] = await Promise.all([
     readPermissionRules(systemPermissionFile(), "system"),
     readPermissionRules(userFile, "user"),
-    readPermissionRules(path.join(path.resolve(workspace), ".do-code", "permissions.json"), "project"),
+    readPermissionRules(projectDataPath(resolved, "permissions.json"), "project"),
   ])
-  return new PolicyEngine(path.resolve(workspace), mode, [...system, ...user, ...project], options.headless ?? false, userFile)
+  return new PolicyEngine(resolved, mode, [...system, ...user, ...project], options.headless ?? false, userFile)
 }

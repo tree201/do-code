@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises"
 import path from "node:path"
+import { projectDataPath, prepareProjectData } from "./sessions.js"
 import { resolveInside } from "./workspace-paths.js"
 
 export type Checkpoint = {
@@ -19,11 +20,12 @@ export class CheckpointManager {
   readonly blobDirectory: string
 
   constructor(readonly workspace: string, namespace = "current") {
-    this.directory = path.join(workspace, ".do-code", "checkpoints", namespace.replace(/[^a-zA-Z0-9._-]/g, "_"))
+    this.directory = projectDataPath(workspace, "checkpoints", namespace.replace(/[^a-zA-Z0-9._-]/g, "_"))
     this.blobDirectory = path.join(this.directory, "blobs")
   }
 
   async create(tool: string, requested: string, messageCount = 0) {
+    await prepareProjectData(this.workspace)
     const target = resolveInside(this.workspace, requested)
     let existed = true
     let content: Buffer | undefined
@@ -44,6 +46,7 @@ export class CheckpointManager {
   }
 
   async list() {
+    await prepareProjectData(this.workspace)
     let files: string[] = []
     try { files = await readdir(this.directory) } catch { return [] }
     const checkpoints: Checkpoint[] = []

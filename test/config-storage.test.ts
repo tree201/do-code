@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
+import { projectConfigPath } from "../src/config-paths.js"
 import { modelProvidersPublic } from "../src/config-catalog.js"
 import { loadStoredConfig, mergeConfig, saveDefaultModel, saveDefaultReasoningEffort, saveDefaultThinkingMode, saveMigratedConfig } from "../src/config-storage.js"
 
@@ -42,13 +43,15 @@ test("loading and migrated persistence retain ordered sources without storing me
 
   const previousUser = process.env.DO_CODE_CONFIG_PATH
   const previousSystem = process.env.DO_CODE_SYSTEM_CONFIG_PATH
+  const previousData = process.env.DO_CODE_DATA_DIR
   process.env.DO_CODE_CONFIG_PATH = user
   process.env.DO_CODE_SYSTEM_CONFIG_PATH = system
+  process.env.DO_CODE_DATA_DIR = path.join(root, "data")
   try {
     const loaded = await loadStoredConfig(workspace)
     assert.equal(loaded.language, "zh")
     assert.equal(loaded.defaultModel, "project/model")
-    assert.deepEqual(loaded.sources, [system, user, project])
+    assert.deepEqual(loaded.sources, [system, user, projectConfigPath(workspace)])
 
     assert.equal(await saveMigratedConfig(workspace), user)
     const persisted = JSON.parse(await readFile(user, "utf8")) as Record<string, unknown>
@@ -60,6 +63,8 @@ test("loading and migrated persistence retain ordered sources without storing me
     else process.env.DO_CODE_CONFIG_PATH = previousUser
     if (previousSystem === undefined) delete process.env.DO_CODE_SYSTEM_CONFIG_PATH
     else process.env.DO_CODE_SYSTEM_CONFIG_PATH = previousSystem
+    if (previousData === undefined) delete process.env.DO_CODE_DATA_DIR
+    else process.env.DO_CODE_DATA_DIR = previousData
   }
 })
 

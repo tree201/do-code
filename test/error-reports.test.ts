@@ -16,8 +16,8 @@ test("error reports are addressable by id and redact configured secrets", async 
     const report = await reportError({ error: new Error("request used super-secret-key"), workspace, operation: "test.operation", sessionId: "session_1", model: "fake", context: { authorization: "Bearer super-secret-key" } })
     assert.match(report.id, /^err_\d{8}_[a-f0-9]{8}$/)
     assert.equal((await loadErrorReport(report.id, workspace)).operation, "test.operation")
-    assert.equal((await listErrorReports())[0]?.id, report.id)
-    assert.doesNotMatch(await readFile(path.join(errorReportsRoot(), `${report.id}.json`), "utf8"), /super-secret-key/)
+    assert.equal((await listErrorReports(workspace))[0]?.id, report.id)
+    assert.doesNotMatch(await readFile(path.join(errorReportsRoot(workspace), `${report.id}.json`), "utf8"), /super-secret-key/)
   } finally {
     if (previousRoot === undefined) delete process.env.DO_CODE_ERROR_DIR; else process.env.DO_CODE_ERROR_DIR = previousRoot
     if (previousKey === undefined) delete process.env.MODEL_API_KEY; else process.env.MODEL_API_KEY = previousKey
