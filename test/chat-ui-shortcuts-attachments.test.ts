@@ -84,7 +84,7 @@ test("interactive Ctrl+H opens and closes help without changing the draft", asyn
   view.unmount()
 })
 
-test("interactive /help opens the grouped dialog without adding transcript output", async (t) => {
+test("interactive /help opens the grouped dialog and plain Escape closes it", async (t) => {
   const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
   const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
   const view = render(React.createElement(ChatApp, {

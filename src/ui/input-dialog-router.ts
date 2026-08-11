@@ -12,6 +12,7 @@ import type { TranscriptController } from "./hooks/use-transcript-controller.js"
 
 export function routeDialogInput(rawInput: string, input: string, key: ChatInputKey, props: ChatAppProps, state: ChatAppState, transcript: TranscriptController, sessions: SessionActions) {
   const dialog = state.getActiveDialog()
+  const isEscape = key.escape || rawInput === "\u001b" || input === "\u001b"
   const isHelpToggle = isHelpShortcut(input, key)
   const isViewerToggle = key.ctrl && (input.toLowerCase() === "t" || rawInput === "\u0014")
   if (state.externalViewerActiveRef.current) {
@@ -32,7 +33,7 @@ export function routeDialogInput(rawInput: string, input: string, key: ChatInput
     const lines = helpDialogLines(state.activeLanguage, state.terminalWidth)
     const rows = helpDialogRows(state.terminalHeight)
     const maximum = Math.max(0, lines.length - rows)
-    if (isHelpToggle || key.escape) state.setActiveDialog({ kind: "none" })
+    if (isHelpToggle || isEscape) state.setActiveDialog({ kind: "none" })
     else if (key.upArrow) updateDialog(state, "help", (current) => ({ ...current, offset: Math.max(0, current.offset - 1) }))
     else if (key.downArrow) updateDialog(state, "help", (current) => ({ ...current, offset: Math.min(maximum, current.offset + 1) }))
     else if (key.pageUp) updateDialog(state, "help", (current) => ({ ...current, offset: Math.max(0, current.offset - rows) }))

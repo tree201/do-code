@@ -51,7 +51,7 @@ export function HelpDialog({ language, width, height, offset }: { language: DoCo
   const visible = lines.slice(start, start + rows)
   return (
     <DialogManager><DialogSurface>
-      <Text bold color={tuiTheme.accent}>{t(language, "Keyboard shortcuts and help")}<Text dimColor>  {lines.length ? `${start + 1}-${Math.min(lines.length, start + rows)}/${lines.length}` : "0/0"}</Text></Text>
+      <Text bold color={tuiTheme.brand}>{t(language, "Keyboard shortcuts and help")}<Text dimColor>  {lines.length ? `${start + 1}-${Math.min(lines.length, start + rows)}/${lines.length}` : "0/0"}</Text></Text>
       <Box flexDirection="column" marginTop={1} height={rows} overflow="hidden">
         {visible.map((line, index) => <Text key={`${start + index}-${line}`} wrap="truncate-end">{line || " "}</Text>)}
       </Box>
