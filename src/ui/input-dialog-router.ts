@@ -3,8 +3,7 @@ import type { PlanReviewDecision } from "../tools.js"
 import { approvalModeNotice } from "./chat-presentation.js"
 import { canOpenHelp, canOpenTranscriptViewer } from "./dialog-coordinator.js"
 import { isHelpShortcut } from "./shortcut-command-policy.js"
-import { shortcutHelpText } from "./components/help-dialog.js"
-import { wrapTerminalLines } from "./terminal-text.js"
+import { helpDialogLines } from "./components/help-dialog.js"
 import type { ChatInputKey } from "./input-routing-types.js"
 import type { ChatAppProps } from "./chat-app-types.js"
 import type { ChatAppState } from "./hooks/use-chat-app-state.js"
@@ -30,7 +29,7 @@ export function routeDialogInput(rawInput: string, input: string, key: ChatInput
   }
   if (dialog.kind === "auth") return true
   if (dialog.kind === "help") {
-    const lines = wrapTerminalLines(shortcutHelpText(state.activeLanguage), Math.max(20, state.terminalWidth - 4))
+    const lines = helpDialogLines(state.activeLanguage, state.terminalWidth)
     const rows = Math.max(5, Math.min(20, state.terminalHeight - 8))
     const maximum = Math.max(0, lines.length - rows)
     if (isHelpToggle || key.escape) state.setActiveDialog({ kind: "none" })

@@ -14,7 +14,7 @@ export { createPausableOutput, type PausableOutput } from "./pausable-output.js"
 export { canRunSlashCommandDuringTask, isHelpShortcut, isReasoningEffortShortcut } from "./shortcut-command-policy.js"
 
 export { ApprovalDialog } from "./components/approval-dialog.js"
-export { HelpDialog, shortcutHelpText } from "./components/help-dialog.js"
+export { HelpDialog, helpDialogLines, shortcutHelpText } from "./components/help-dialog.js"
 export { PermissionModeDialog } from "./components/permission-mode-dialog.js"
 export { PlanReviewDialog } from "./components/plan-review-dialog.js"
 export { QuestionDialog } from "./components/question-dialog.js"

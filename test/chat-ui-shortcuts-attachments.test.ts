@@ -6,7 +6,8 @@ import { render } from "ink-testing-library"
 import { AgentConversation } from "../src/agent.js"
 import { classifyPastedImagePaths } from "../src/image-attachments.js"
 import type { ChatModel } from "../src/protocol.js"
-import { ApprovalBridge, ChatApp, HelpDialog, isHelpShortcut, isReasoningEffortShortcut, nextReasoningEffort, type ChatAppProps } from "../src/ui/chat-app.js"
+import { ApprovalBridge, ChatApp, HelpDialog, helpDialogLines, isHelpShortcut, isReasoningEffortShortcut, nextReasoningEffort, type ChatAppProps } from "../src/ui/chat-app.js"
+import { displayWidth } from "../src/ui/terminal-text.js"
 import { tick, visibleFrame } from "./support/chat-ui.js"
 import { createRuntimeStore } from "../src/ui/runtime-store.js"
 
@@ -32,18 +33,24 @@ test("Ctrl+H is recognized from Ink's backspace key event", () => {
   assert.equal(isHelpShortcut("h", { backspace: true }), false)
 })
 
-test("help dialog renders localized grouped commands", (t) => {
-  const zhView = render(React.createElement(HelpDialog, { language: "zh", width: 80, height: 24, offset: 0 }))
-  const enView = render(React.createElement(HelpDialog, { language: "en", width: 80, height: 24, offset: 0 }))
-  t.after(() => { zhView.unmount(); enView.unmount() })
-  const zh = visibleFrame(zhView)
-  const en = visibleFrame(enView)
-  assert.match(zh, /快捷键与操作帮助/)
-  assert.match(zh, /常用命令/)
-  assert.match(zh, /\/status.*查看工作区、模型和会话状态/)
-  assert.match(en, /Keyboard shortcuts and help/)
-  assert.match(en, /Common commands/)
-  assert.match(en, /\/status.*Show workspace, model, and session status/)
+test("help dialog uses two columns on wide terminals and one column when narrow", (t) => {
+  const narrowView = render(React.createElement(HelpDialog, { language: "zh", width: 80, height: 24, offset: 0 }))
+  const wideView = render(React.createElement(HelpDialog, { language: "zh", width: 160, height: 24, offset: 0 }))
+  t.after(() => { narrowView.unmount(); wideView.unmount() })
+  const narrow = visibleFrame(narrowView)
+  const wide = visibleFrame(wideView)
+  assert.match(narrow, /快捷键与操作帮助/)
+  assert.match(narrow, /常用命令/)
+  assert.doesNotMatch(narrow, /常用命令.*会话与工作区/)
+  assert.match(wide, /快捷键与操作帮助/)
+  assert.match(wide, /常用命令\s+会话与工作区/)
+  assert.match(wide, /\/status.*查看工作区、模型和会话状态/)
+
+  const narrowLines = helpDialogLines("zh", 80)
+  const wideLines = helpDialogLines("zh", 160)
+  assert.ok(wideLines.some((line) => /常用命令\s+会话与工作区/.test(line)))
+  assert.ok(wideLines.length < narrowLines.length)
+  assert.ok(wideLines.every((line) => displayWidth(line) <= 156))
 })
 
 test("interactive Ctrl+H opens and closes help without changing the draft", async () => {
