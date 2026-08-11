@@ -5,6 +5,8 @@ import React from "react"
 import { render } from "ink-testing-library"
 import { Box, Text } from "ink"
 import { formatElapsedTime, TranscriptLine, WelcomeHeader } from "../src/ui/chat-app.js"
+import { IMAGE_ATTACHMENT_TOKEN } from "../src/ui/attachment-model.js"
+import { composerInputContent } from "../src/ui/components/chat-composer.js"
 import { Composer } from "../src/ui/components/composer.js"
 import { RunningStatus } from "../src/ui/components/chat-activity.js"
 import { TranscriptBlock } from "../src/ui/components/transcript-block.js"
@@ -214,6 +216,33 @@ test("composer reflows without duplicating its input surface", () => {
   assert.match(frame.split("\n").find((line) => line.includes("输入任务或 @文件路径")) ?? "", /\u001b\[36m.*›/)
   assert.ok(plainFrame.split("\n").every((line) => displayWidth(line) <= 32))
   view.unmount()
+})
+
+test("composer retains bottom padding when the cursor first soft-wraps", (t) => {
+  const input = "123456789012345678"
+  const view = render(React.createElement(Box, { width: 20 }, React.createElement(Composer, {
+    running: false,
+    input: React.createElement(Text, null, composerInputContent(input, input.length)),
+    status: "model · 0%",
+  })))
+  t.after(() => view.unmount())
+
+  const lines = stripVTControlCharacters(view.lastFrame() ?? "").split("\n")
+  const statusLine = lines.findIndex((line) => line.includes("model · 0%"))
+  assert.equal(lines[statusLine - 1]?.trim(), "")
+  assert.match(lines[statusLine - 2] ?? "", /8/)
+  assert.ok(lines.slice(0, statusLine).filter((line) => line.trim() === "").length >= 3)
+})
+
+test("composer input keeps image labels and cursor highlighting", (t) => {
+  const value = `before ${IMAGE_ATTACHMENT_TOKEN} after`
+  const cursor = 7
+  const view = render(React.createElement(Text, null, composerInputContent(value, cursor)))
+  t.after(() => view.unmount())
+
+  const frame = view.lastFrame() ?? ""
+  assert.match(stripVTControlCharacters(frame), /before\s+\[Image #1\]\s+after/)
+  assert.match(frame, /\u001b\[7m\s+\[Image #1\]\s+\u001b\[27m/)
 })
 
 test("composer owns two visual rows above the complete input control surface", () => {
