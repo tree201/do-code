@@ -84,7 +84,7 @@ test("interactive Ctrl+H opens and closes help without changing the draft", asyn
   view.unmount()
 })
 
-test("interactive /help opens the grouped dialog and plain Escape closes it", async (t) => {
+test("interactive /help closes for a complete Kitty Escape sequence", async (t) => {
   const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
   const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
   const view = render(React.createElement(ChatApp, {
@@ -99,7 +99,7 @@ test("interactive /help opens the grouped dialog and plain Escape closes it", as
   await tick(); await tick()
   assert.match(view.lastFrame() ?? "", /Keyboard shortcuts and help/)
   assert.match(view.lastFrame() ?? "", /Common commands/)
-  view.stdin.write("\u001b")
+  view.stdin.write("\u001b[27;1u")
   await tick(); await tick()
   assert.doesNotMatch(view.lastFrame() ?? "", /Keyboard shortcuts and help|Common commands/)
   assert.equal(conversation.history().length, 0)

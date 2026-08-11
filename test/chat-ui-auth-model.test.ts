@@ -207,7 +207,7 @@ test("effort uses one dialog entry with or without trailing spaces", async (t) =
   view.stdin.write("/effort\r")
   await tick(); await tick()
   assert.match(view.lastFrame() ?? "", /Select Reasoning Effort/)
-  view.stdin.write("[27;1u")
+  view.stdin.write("\u001b[27;1u")
   await tick(); await tick()
   assert.doesNotMatch(view.lastFrame() ?? "", /Select Reasoning Effort/)
 
