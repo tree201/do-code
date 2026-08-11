@@ -155,10 +155,26 @@ Object.assign(fr, {
   "Read and edit the current workspace and run ordinary commands; ask before network or outside-workspace access.": "Lire et modifier l’espace de travail actuel et exécuter les commandes ordinaires ; demander avant l’accès réseau ou hors de l’espace de travail.", "Automatically run ordinary edits, commands, and network access; ask only for potentially unsafe actions.": "Exécuter automatiquement les modifications, commandes et accès réseau ; demander uniquement pour les opérations potentiellement dangereuses.", "Edit files outside the workspace and access the network without ordinary approval prompts. Use with caution.": "Modifier des fichiers hors de l’espace de travail et accéder au réseau sans demandes d’autorisation ordinaires. À utiliser avec prudence.",
 })
 
+Object.assign(zh, {
+  "low risk": "低风险", "medium risk": "中等风险", "high risk": "高风险", "critical risk": "严重风险", "Edit {target}": "修改 {target}", "Allow this file change?": "允许修改这个文件吗？", "Modify workspace files": "修改工作区文件", "Allow these workspace changes?": "允许应用这些文件修改吗？", "Run command": "运行命令", "Allow this command?": "允许运行这个命令吗？", "Access network": "访问网络", "Allow this network request?": "允许这次网络访问吗？", "Run {tool}": "运行 {tool}", "Allow this action?": "允许执行这个操作吗？",
+})
+Object.assign(ja, {
+  "low risk": "低リスク", "medium risk": "中リスク", "high risk": "高リスク", "critical risk": "重大なリスク", "Edit {target}": "{target} を編集", "Allow this file change?": "このファイルの変更を許可しますか？", "Modify workspace files": "ワークスペースのファイルを変更", "Allow these workspace changes?": "これらのワークスペース変更を許可しますか？", "Run command": "コマンドを実行", "Allow this command?": "このコマンドの実行を許可しますか？", "Access network": "ネットワークにアクセス", "Allow this network request?": "このネットワーク要求を許可しますか？", "Run {tool}": "{tool} を実行", "Allow this action?": "この操作を許可しますか？",
+})
+Object.assign(ko, {
+  "low risk": "낮은 위험", "medium risk": "중간 위험", "high risk": "높은 위험", "critical risk": "심각한 위험", "Edit {target}": "{target} 편집", "Allow this file change?": "이 파일 변경을 허용할까요?", "Modify workspace files": "작업 공간 파일 수정", "Allow these workspace changes?": "이 작업 공간 변경을 허용할까요?", "Run command": "명령 실행", "Allow this command?": "이 명령 실행을 허용할까요?", "Access network": "네트워크 액세스", "Allow this network request?": "이 네트워크 요청을 허용할까요?", "Run {tool}": "{tool} 실행", "Allow this action?": "이 작업을 허용할까요?",
+})
+Object.assign(es, {
+  "low risk": "riesgo bajo", "medium risk": "riesgo medio", "high risk": "riesgo alto", "critical risk": "riesgo crítico", "Edit {target}": "Editar {target}", "Allow this file change?": "¿Permitir este cambio de archivo?", "Modify workspace files": "Modificar archivos del espacio de trabajo", "Allow these workspace changes?": "¿Permitir estos cambios del espacio de trabajo?", "Run command": "Ejecutar comando", "Allow this command?": "¿Permitir este comando?", "Access network": "Acceder a la red", "Allow this network request?": "¿Permitir esta solicitud de red?", "Run {tool}": "Ejecutar {tool}", "Allow this action?": "¿Permitir esta acción?",
+})
+Object.assign(fr, {
+  "low risk": "risque faible", "medium risk": "risque moyen", "high risk": "risque élevé", "critical risk": "risque critique", "Edit {target}": "Modifier {target}", "Allow this file change?": "Autoriser cette modification de fichier ?", "Modify workspace files": "Modifier les fichiers de l’espace de travail", "Allow these workspace changes?": "Autoriser ces modifications de l’espace de travail ?", "Run command": "Exécuter la commande", "Allow this command?": "Autoriser cette commande ?", "Access network": "Accéder au réseau", "Allow this network request?": "Autoriser cette requête réseau ?", "Run {tool}": "Exécuter {tool}", "Allow this action?": "Autoriser cette action ?",
+})
+
 const catalogs: Record<string, Record<string, string>> = { zh, ja, ko, es, fr }
 
-export function t(language: DoCodeLanguage, value: string) {
-  return catalogs[language]?.[value] ?? value
+export function t(language: DoCodeLanguage, value: string, values: Record<string, string | number> = {}) {
+  return (catalogs[language]?.[value] ?? value).replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? `{${key}}`))
 }
 
 export function languageDisplay(language: DoCodeLanguage, locale: DoCodeLanguage = language) {

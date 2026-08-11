@@ -56,7 +56,7 @@ export type AgentProfileConfig = {
   tools?: { allow?: string[]; deny?: string[] }
 }
 
-export type DoCodeLanguage = string
+export type DoCodeLanguage = "en" | "zh" | "ja" | "ko" | "es" | "fr"
 
 export type StoredConfig = {
   version: 2
