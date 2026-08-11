@@ -22,7 +22,8 @@ export function normalizeEnhancedKeyboardKey(rawInput: string, inkKey: ChatInput
     ctrl: Boolean(modifierBits & 4),
     super: Boolean(modifierBits & 8),
   }
+  if (codepoint === 9) key.tab = true
   if (codepoint === 13) key.return = true
   if (codepoint === 27) key.escape = true
-  return { input: codepoint === 13 ? "\r" : codepoint === 27 ? "" : input, key }
+  return { input: codepoint === 9 || codepoint === 13 || codepoint === 27 ? codepoint === 13 ? "\r" : "" : input, key }
 }
