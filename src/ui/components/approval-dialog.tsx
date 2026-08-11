@@ -3,6 +3,7 @@ import { Box, Text } from "ink"
 import type { DoCodeLanguage } from "../../config.js"
 import type { ToolApprovalRequest } from "../../policy.js"
 import { approvalEditDiff, approvalLabels } from "../approval-model.js"
+import { t } from "../i18n.js"
 import { ActivityDiff } from "./activity-diff.js"
 import { DialogManager, DialogSurface } from "./dialog-manager.js"
 import { tuiTheme } from "../theme.js"
@@ -15,12 +16,9 @@ export function ApprovalDialog({ request, selectedIndex, language, width }: {
   language: DoCodeLanguage
   width: number
 }) {
-  const zh = language === "zh"
   const labels = approvalLabels(request, language)
   const diff = approvalEditDiff(request)
-  const choices = zh
-    ? ["允许一次", "本次会话允许", "始终允许此操作", "拒绝"]
-    : ["Allow once", "Allow for this session", "Always allow this action", "Deny"]
+  const choices = ["Allow once", "Allow for this session", "Always allow this action", "Deny"].map((choice) => t(language, choice))
   const detail = request.tool === EDIT_FILE_TOOL ? "" : request.detail
   return (
     <DialogManager><DialogSurface color={request.dangerous ? tuiTheme.danger : tuiTheme.border}>
@@ -39,7 +37,7 @@ export function ApprovalDialog({ request, selectedIndex, language, width }: {
           return <Text key={choice} bold={selected} color={color}>{selected ? "›" : " "} {index + 1}. {choice}</Text>
         })}
       </Box>
-      <Box marginTop={1}><Text dimColor>{zh ? "↑↓ 选择 · Enter 确认 · Esc 拒绝" : "↑↓ Select · Enter Confirm · Esc Deny"}</Text></Box>
+      <Box marginTop={1}><Text dimColor>{t(language, "↑↓ Select · Enter Confirm · Esc Deny")}</Text></Box>
     </DialogSurface></DialogManager>
   )
 }

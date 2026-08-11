@@ -48,6 +48,23 @@ test("agent questions separate title, prompt, options, and localized controls", 
   assert.ok(lines.every((line) => displayWidth(line) <= 60))
 })
 
+test("new locales translate common question and plan dialogs", (t) => {
+  const cases = [
+    ["ja", "入力が必要です", "提案された計画"],
+    ["ko", "입력이 필요합니다", "제안된 계획"],
+    ["es", "El agente necesita tu respuesta", "Plan propuesto"],
+    ["fr", "L’agent a besoin de votre réponse", "Plan proposé"],
+  ] as const
+  for (const [language, questionTitle, planTitle] of cases) {
+    const question = render(React.createElement(QuestionDialog, { question: "Choose", options: ["One"], selectedIndex: 0, draft: "", customAnswer: false, language }))
+    const plan = render(React.createElement(PlanReviewDialog, { plan: { title: "Plan", summary: "", steps: [], files: [], verification: [], risks: [] }, selectedIndex: 0, language }))
+    t.after(() => question.unmount())
+    t.after(() => plan.unmount())
+    assert.match(visibleFrame(question), new RegExp(questionTitle))
+    assert.match(visibleFrame(plan), new RegExp(planTitle))
+  }
+})
+
 test("file approval uses a localized restrained Codex-style diff", (t) => {
   const view = render(React.createElement(Box, { width: 72 }, React.createElement(ApprovalDialog, {
     request: {
