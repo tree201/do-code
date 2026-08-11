@@ -1,18 +1,35 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import React from "react"
+import React, { useCallback, useRef } from "react"
 import { render } from "ink-testing-library"
+import { useInput } from "ink"
 import { AgentConversation } from "../src/agent.js"
 import type { ChatModel } from "../src/protocol.js"
 import { ApprovalBridge, ChatApp, type ChatAppProps } from "../src/ui/chat-app.js"
 import { AuthDialog } from "../src/ui/components/auth-dialog.js"
 import { ModelDialog } from "../src/ui/components/model-dialog.js"
 import { tick, visibleFrame, waitForFrame } from "./support/chat-ui.js"
+import type { ChatInputKey } from "../src/ui/input-routing-types.js"
+
+function DialogInputHarness({ children }: { children: (registerInputHandler: (handler: ((input: string, key: ChatInputKey) => void) | undefined) => void) => React.ReactNode }) {
+  const handler = useRef<((input: string, key: ChatInputKey) => void) | undefined>(undefined)
+  const registerInputHandler = useCallback((next: typeof handler.current) => { handler.current = next }, [])
+  useInput((input, key) => handler.current?.(input, key as ChatInputKey))
+  return children(registerInputHandler)
+}
+
+function renderAuthDialog(props: Omit<React.ComponentProps<typeof AuthDialog>, "registerInputHandler">) {
+  return render(React.createElement(DialogInputHarness, { children: (registerInputHandler) => React.createElement(AuthDialog, { ...props, registerInputHandler }) }))
+}
+
+function renderModelDialog(props: Omit<React.ComponentProps<typeof ModelDialog>, "registerInputHandler">) {
+  return render(React.createElement(DialogInputHarness, { children: (registerInputHandler) => React.createElement(ModelDialog, { ...props, registerInputHandler }) }))
+}
 
 test("auth dialog configures a provider without exposing the API key", async (t) => {
   let submitted: Parameters<NonNullable<React.ComponentProps<typeof AuthDialog>["onSubmit"]>>[0] | undefined
   let closed = false
-  const view = render(React.createElement(AuthDialog, {
+  const view = renderAuthDialog({
     currentModel: "deepseek/deepseek-v4-pro",
     language: "zh",
     onClose: () => { closed = true },
@@ -20,7 +37,7 @@ test("auth dialog configures a provider without exposing the API key", async (t)
       submitted = input
       return { source: "config", sourceLabel: "test", preset: "deepseek/deepseek-v4-pro", provider: "deepseek", modelId: "deepseek-v4-pro", baseUrl: "https://api.deepseek.com", apiKey: input.apiKey }
     },
-  }))
+  })
   t.after(() => view.unmount())
   assert.match(view.lastFrame() ?? "", /DeepSeek API/)
   view.stdin.write("\r")
@@ -45,12 +62,12 @@ test("auth dialog configures a provider without exposing the API key", async (t)
 
 test("auth dialog returns to provider selection before closing", async () => {
   let closed = false
-  const view = render(React.createElement(AuthDialog, {
+  const view = renderAuthDialog({
     currentModel: "ark-coding-plan/glm-5.2",
     language: "en",
     onClose: () => { closed = true },
     onSubmit: async () => { throw new Error("unused") },
-  }))
+  })
   view.stdin.write("\r")
   await tick()
   assert.match(view.lastFrame() ?? "", /API Key/)
@@ -68,7 +85,7 @@ test("auth dialog discovers models for a custom OpenAI-compatible provider", asy
   let submitted: Parameters<NonNullable<React.ComponentProps<typeof AuthDialog>["onSubmit"]>>[0] | undefined
   let discoveredBaseUrl = ""
   let discoveredApiKey = ""
-  const view = render(React.createElement(AuthDialog, {
+  const view = renderAuthDialog({
     currentModel: "",
     language: "en",
     onClose: () => {},
@@ -81,7 +98,7 @@ test("auth dialog discovers models for a custom OpenAI-compatible provider", asy
       submitted = input
       return { source: "config", sourceLabel: "test", preset: "proxy/model-b", provider: "proxy", modelId: "model-b", baseUrl: input.baseUrl!, apiKey: input.apiKey }
     },
-  }))
+  })
   view.stdin.write("\r")
   await tick()
   view.stdin.write("\r")
@@ -109,7 +126,7 @@ test("auth dialog discovers models for a custom OpenAI-compatible provider", asy
 
 test("auth dialog falls back to manual model IDs when discovery fails", async (t) => {
   let submitted: Parameters<NonNullable<React.ComponentProps<typeof AuthDialog>["onSubmit"]>>[0] | undefined
-  const view = render(React.createElement(AuthDialog, {
+  const view = renderAuthDialog({
     currentModel: "",
     language: "zh",
     onClose: () => {},
@@ -118,7 +135,7 @@ test("auth dialog falls back to manual model IDs when discovery fails", async (t
       submitted = input
       return { source: "config", sourceLabel: "test", preset: "proxy/manual-model", provider: "proxy", modelId: "manual-model", baseUrl: input.baseUrl!, apiKey: input.apiKey }
     },
-  }))
+  })
   t.after(() => view.unmount())
   view.stdin.write("\r")
   await tick()
@@ -138,13 +155,13 @@ test("auth dialog falls back to manual model IDs when discovery fails", async (t
 
 test("model dialog filters typed text and switches the highlighted model", async () => {
   let switched = ""
-  const view = render(React.createElement(ModelDialog, {
+  const view = renderModelDialog({
     models: ["ark/glm-5.2", "ark/deepseek-v4-pro", "ark-coding-plan/deepseek-v4-pro"],
     currentModel: "ark/glm-5.2",
     language: "zh",
     onClose: () => {},
     onSelect: async (model) => { switched = model; return { source: "config", sourceLabel: "test", preset: model, provider: "ark", modelId: model, baseUrl: "https://example.com", apiKey: "test" } },
-  }))
+  })
   view.stdin.write("coding")
   await tick(); await tick()
   assert.match(view.lastFrame() ?? "", /ark-coding-plan\/deepseek-v4-pro/)
@@ -158,14 +175,14 @@ test("model dialog filters typed text and switches the highlighted model", async
 test("model dialog can remember the selected model for future sessions", async () => {
   let switched = ""
   let persisted = ""
-  const view = render(React.createElement(ModelDialog, {
+  const view = renderModelDialog({
     models: ["ark/glm-5.2", "ark/deepseek-v4-pro"],
     currentModel: "ark/glm-5.2",
     language: "en",
     onClose: () => {},
     onSelect: async (model) => { switched = model; return { source: "config", sourceLabel: "test", preset: model, provider: "ark", modelId: model, baseUrl: "https://example.com", apiKey: "test" } },
     onPersist: async (model) => { persisted = model },
-  }))
+  })
   view.stdin.write("\u001b[B")
   await tick()
   view.stdin.write("\t")
@@ -175,6 +192,26 @@ test("model dialog can remember the selected model for future sessions", async (
   assert.equal(switched, "ark/deepseek-v4-pro")
   assert.equal(persisted, "ark/deepseek-v4-pro")
   view.unmount()
+})
+
+test("centralized input closes the model dialog for Kitty Escape", async (t) => {
+  const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
+  const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
+  const props: ChatAppProps = {
+    workspace: process.cwd(), model: "ark/glm-5.2", approvalMode: "ask", sessionId: "session_model_escape", restored: false,
+    initialMessages: [], conversation, language: "en", modelPresets: ["ark/glm-5.2"], approvalBridge: new ApprovalBridge(), attachEventSink: () => {},
+    configureAuth: async () => { throw new Error("unused") }, switchModel: async () => ({ source: "config", sourceLabel: "test", preset: "ark/glm-5.2", provider: "ark", modelId: "glm-5.2", baseUrl: "https://example.com", apiKey: "test" }),
+    runShellShortcut: async () => ({ ok: true, output: "" }), listSessions: async () => [], resumeSession: async () => { throw new Error("unused") },
+    renameCurrentSession: async () => { throw new Error("unused") }, exportCurrentSession: async () => "unused", save: async () => {}, reportError: async () => ({ id: "err_test", file: "/tmp/error.json" }),
+  }
+  const view = render(React.createElement(ChatApp, props))
+  t.after(() => view.unmount())
+  view.stdin.write("/model\r")
+  await tick(); await tick()
+  assert.match(view.lastFrame() ?? "", /Select Model/)
+  view.stdin.write("[27;1u")
+  await tick(); await tick()
+  assert.doesNotMatch(view.lastFrame() ?? "", /Select Model/)
 })
 
 test("models installed by auth are immediately available to the model switcher", async () => {

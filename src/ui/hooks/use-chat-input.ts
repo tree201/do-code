@@ -14,7 +14,12 @@ export function useChatInput(props: ChatAppProps, state: ChatAppState, transcrip
     const normalized = normalizeEnhancedKeyboardKey(rawInput, inkKey as ChatInputKey)
     const key = normalized.key
     const input = normalized.input.replaceAll("\u001b[200~", "").replaceAll("\u001b[201~", "")
+    const dialog = state.getActiveDialog()
+    if (dialog.kind === "auth" || dialog.kind === "model") {
+      state.dialogInputHandlers.current[dialog.kind]?.(input, key)
+      return
+    }
     if (routeDialogInput(rawInput, input, key, props, state, transcript, sessions)) return
     routeEditorInput(rawInput, input, key, props, state, transcript, attachments, submit, exit)
-  }, { isActive: state.activeDialog.kind !== "auth" && state.activeDialog.kind !== "model" })
+  })
 }
