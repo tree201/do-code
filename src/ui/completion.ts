@@ -43,7 +43,7 @@ const commandDefinitions: CompletionItem[] = [
   { label: "/auth", description: "Configure model providers and API keys", insert: "/auth", submit: true },
   { label: "/paste-image", description: "Attach an image from the system clipboard", insert: "/paste-image", submit: true },
   { label: "/remove-image", description: "Remove an attached clipboard image", insert: "/remove-image" },
-  { label: "/effort", description: "Show or switch reasoning effort", insert: "/effort" },
+  { label: "/effort", description: "Show or switch reasoning effort", insert: "/effort", submit: true },
   { label: "/thinking", description: "Show or switch thinking mode", insert: "/thinking" },
   { label: "/exit", description: "Save the session and exit", insert: "/exit", submit: true },
 ]

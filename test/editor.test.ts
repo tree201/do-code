@@ -56,6 +56,16 @@ test("completion provides slash commands and workspace file references", () => {
   assert.equal(completionsForEditor(createEditor("/resu"), [])?.items[0]?.submit, true)
 })
 
+test("effort completion submits like model completion", () => {
+  const model = completionsForEditor(createEditor("/mod"), [])?.items[0]
+  const effort = completionsForEditor(createEditor("/eff"), [])?.items[0]
+  assert.equal(model?.label, "/model")
+  assert.equal(model?.submit, true)
+  assert.equal(effort?.label, "/effort")
+  assert.equal(effort?.submit, true)
+  assert.equal(applyCompletion(createEditor("/eff"), []).value, "/effort")
+})
+
 test("file completion works directly after Chinese text without matching email addresses", () => {
   const files = ["README.md", "src/main.ts"]
   const completion = completionsForEditor(createEditor("请输入@"), files)

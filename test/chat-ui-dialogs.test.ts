@@ -261,3 +261,25 @@ test("agent interactions record the question before the answer without exposing 
   assert.ok(frame.indexOf("Ask: [Direction] Choose one") < frame.indexOf("Answer: Accessibility"))
   assert.doesNotMatch(frame, /ask_user/)
 })
+
+test("Enter submits an effort completion and opens the effort dialog", async (t) => {
+  const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
+  const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
+  const props: ChatAppProps = {
+    workspace: process.cwd(), model: "test-model", approvalMode: "ask", sessionId: "session_effort_completion", restored: false,
+    initialMessages: [], conversation, language: "en", reasoningEffort: "medium", approvalBridge: new ApprovalBridge(), attachEventSink: () => {},
+    switchEffort: async (effort) => ({ source: "config", sourceLabel: "test", preset: "test-model", provider: "test", modelId: "test-model", baseUrl: "https://example.com/v1", apiKey: "test", reasoningEffort: effort }),
+    runShellShortcut: async () => ({ ok: true, output: "" }), listSessions: async () => [],
+    resumeSession: async () => { throw new Error("unused") }, renameCurrentSession: async () => { throw new Error("unused") },
+    exportCurrentSession: async () => "unused", save: async () => {}, reportError: async () => ({ id: "err_test", file: "/tmp/error.json" }),
+  }
+  const view = render(React.createElement(ChatApp, props))
+  t.after(() => view.unmount())
+  await tick()
+  view.stdin.write("/eff")
+  await tick()
+  assert.match(visibleFrame(view), /› \/effort/)
+  view.stdin.write("\r")
+  await tick()
+  assert.match(visibleFrame(view), /Select Reasoning Effort/)
+})
