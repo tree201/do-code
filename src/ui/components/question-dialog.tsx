@@ -1,6 +1,7 @@
 import React from "react"
 import { Box, Text } from "ink"
 import type { DoCodeLanguage } from "../../config.js"
+import { t } from "../i18n.js"
 import { DialogManager, DialogSurface } from "./dialog-manager.js"
 import { tuiTheme } from "../theme.js"
 
@@ -14,7 +15,7 @@ export function QuestionDialog({ question, options, selectedIndex, draft, custom
 }) {
   return (
     <DialogManager><DialogSurface>
-      <Text bold>{language === "zh" ? "需要你的输入" : "Agent needs your input"}</Text>
+      <Text bold>{t(language, "Agent needs your input")}</Text>
       <Box marginTop={1}><Text wrap="wrap">{question}</Text></Box>
       <Box flexDirection="column" marginTop={1} paddingLeft={1}>
         {customAnswer
@@ -26,9 +27,7 @@ export function QuestionDialog({ question, options, selectedIndex, draft, custom
           ))}
       </Box>
       <Box marginTop={1}>
-        <Text dimColor>{customAnswer
-          ? language === "zh" ? "输入回答 · Enter 发送 · Esc 返回选项" : "Type an answer · Enter Send · Esc Back"
-          : language === "zh" ? "↑↓ 选择 · Enter 确认 · Esc 取消" : "↑↓ Select · Enter Answer · Esc Cancel"}</Text>
+        <Text dimColor>{t(language, customAnswer ? "Type an answer · Enter Send · Esc Back" : "↑↓ Select · Enter Answer · Esc Cancel")}</Text>
       </Box>
     </DialogSurface></DialogManager>
   )
