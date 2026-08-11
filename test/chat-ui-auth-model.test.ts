@@ -201,7 +201,7 @@ test("centralized input closes the model dialog for Kitty Escape", async (t) => 
   assert.doesNotMatch(view.lastFrame() ?? "", /Select Model/)
 })
 
-test("centralized input opens the effort dialog and closes it for Kitty Escape", async (t) => {
+test("effort uses one dialog entry with or without trailing spaces", async (t) => {
   const view = render(React.createElement(ChatApp, effortDialogProps("session_effort_escape")))
   t.after(() => view.unmount())
   view.stdin.write("/effort\r")
@@ -210,6 +210,13 @@ test("centralized input opens the effort dialog and closes it for Kitty Escape",
   view.stdin.write("[27;1u")
   await tick(); await tick()
   assert.doesNotMatch(view.lastFrame() ?? "", /Select Reasoning Effort/)
+
+  view.stdin.write("/effort ")
+  await tick(); await tick()
+  assert.doesNotMatch(view.lastFrame() ?? "", /low\s+Switch reasoning effort/)
+  view.stdin.write("\r")
+  await tick(); await tick()
+  assert.match(view.lastFrame() ?? "", /Select Reasoning Effort/)
 })
 
 test("models installed by auth are immediately available to the model switcher", async () => {
