@@ -49,6 +49,21 @@ test("normalizes ordinary Ctrl-letter control bytes", () => {
   }
 })
 
+test("normalizes uppercase enhanced Ctrl letters for all editor shortcuts", () => {
+  const shortcuts: Array<[number, string]> = [[65, "a"], [67, "c"], [68, "d"], [69, "e"], [72, "h"], [74, "j"], [82, "r"], [84, "t"], [85, "u"], [86, "v"], [89, "y"], [90, "z"]]
+  for (const [codepoint, expected] of shortcuts) {
+    const normalized = normalizeEnhancedKeyboardKey(`[${codepoint};5u`, emptyKey)
+    assert.equal(normalized.input, expected)
+    assert.equal(normalized.key.ctrl, true)
+  }
+})
+
+test("normalizes modifyOtherKeys Ctrl letters", () => {
+  const normalized = normalizeEnhancedKeyboardKey("[27;5;72~", emptyKey)
+  assert.equal(normalized.input, "h")
+  assert.equal(normalized.key.ctrl, true)
+})
+
 test("preserves ordinary Ink input", () => {
   const key = { shift: true } as ChatInputKey
   const normalized = normalizeEnhancedKeyboardKey("A", key)
