@@ -15,6 +15,8 @@ export type RuntimeSnapshot = {
 export type RuntimeCommands = {
   switchModel?: (preset: string, effort?: ReasoningEffort, thinking?: ThinkingMode) => Promise<RuntimeModelConfig>
   persistDefaultModel?: (preset: string) => Promise<void>
+  persistDefaultReasoningEffort?: (effort: ReasoningEffort) => Promise<void>
+  persistDefaultThinkingMode?: (thinking: ThinkingMode) => Promise<void>
   restoreModel?: (preset: string, effort?: ReasoningEffort, thinking?: ThinkingMode) => Promise<RuntimeModelConfig>
   switchEffort?: (effort: ReasoningEffort) => Promise<RuntimeModelConfig>
   switchThinking?: (thinking: ThinkingMode) => Promise<RuntimeModelConfig>
@@ -54,6 +56,16 @@ export function createRuntimeStore(initial: RuntimeSnapshot, commands: RuntimeCo
       await commands.persistDefaultModel(preset)
     },
     canPersistDefaultModel: Boolean(commands.persistDefaultModel),
+    async persistDefaultReasoningEffort(effort: ReasoningEffort) {
+      if (!commands.persistDefaultReasoningEffort) throw new Error("Saving the default reasoning effort is unavailable")
+      await commands.persistDefaultReasoningEffort(effort)
+    },
+    canPersistDefaultReasoningEffort: Boolean(commands.persistDefaultReasoningEffort),
+    async persistDefaultThinkingMode(thinking: ThinkingMode) {
+      if (!commands.persistDefaultThinkingMode) throw new Error("Saving the default thinking mode is unavailable")
+      await commands.persistDefaultThinkingMode(thinking)
+    },
+    canPersistDefaultThinkingMode: Boolean(commands.persistDefaultThinkingMode),
     async switchEffort(effort: ReasoningEffort) {
       if (commands.switchEffort) return applyModelConfig(await commands.switchEffort(effort))
       if (!commands.switchModel) throw new Error("Reasoning effort switching is unavailable")

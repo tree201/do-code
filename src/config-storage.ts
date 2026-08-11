@@ -1,6 +1,6 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
-import type { ProviderConfig, ResolvedConfig, StoredConfig } from "./config-contracts.js"
+import type { ProviderConfig, ReasoningEffort, ResolvedConfig, StoredConfig, ThinkingMode } from "./config-contracts.js"
 import { doCodeConfigPath, doCodeModelStatePath, projectConfigPath, systemConfigPath } from "./config-paths.js"
 import { migrateConfig } from "./config-schema.js"
 
@@ -68,12 +68,24 @@ export async function saveMigratedConfig(workspace = process.cwd()) {
   return file
 }
 
-export async function saveDefaultModel(model: string) {
+async function updateUserConfig(update: (config: StoredConfig) => StoredConfig) {
   const file = doCodeConfigPath()
   const existing = await readConfigJson(file)
   const stored = existing === null ? { ...EMPTY_CONFIG } : migrateConfig(existing, file)
-  await writeStoredConfig(file, { ...stored, defaultModel: model })
+  await writeStoredConfig(file, update(stored))
   return file
+}
+
+export async function saveDefaultModel(model: string) {
+  return await updateUserConfig((config) => ({ ...config, defaultModel: model }))
+}
+
+export async function saveDefaultReasoningEffort(effort: ReasoningEffort) {
+  return await updateUserConfig((config) => ({ ...config, defaultReasoningEffort: effort }))
+}
+
+export async function saveDefaultThinkingMode(mode: ThinkingMode) {
+  return await updateUserConfig((config) => ({ ...config, defaultThinkingMode: mode }))
 }
 
 export async function loadRecentModels() {

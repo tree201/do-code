@@ -52,18 +52,30 @@ export function executeGeneralSlashCommand(input: string, context: SlashCommandC
   }
   if (input === EFFORT_COMMAND) { state.append({ kind: "info", text: `Reasoning effort: ${state.activeEffort}\nAvailable: low, medium, high, xhigh, max\nUsage: /effort <level>` }); return true }
   if (commandWithArgument(input, EFFORT_COMMAND)) {
-    const effort = parseReasoningEffort(commandArgument(input, EFFORT_COMMAND))
-    if (!effort) state.append({ kind: "error", text: "Usage: /effort low|medium|high|xhigh|max" })
+    const argument = commandArgument(input, EFFORT_COMMAND)
+    const persist = /(?:^|\s)--persist\s*$/.test(argument)
+    const effort = parseReasoningEffort(argument.replace(/(?:^|\s)--persist\s*$/, ""))
+    if (!effort) state.append({ kind: "error", text: "Usage: /effort low|medium|high|xhigh|max [--persist]" })
     else if (!state.runtimeStore.canSwitchEffort) state.append({ kind: "error", text: "This client does not support reasoning effort switching." })
-    else void state.runtimeStore.switchEffort(effort).catch((error) => transcript.appendReportedError("Effort switch failed", error, "effort.switch", { effort }))
+    else void state.runtimeStore.switchEffort(effort).then(async () => {
+      if (!persist) return
+      await state.runtimeStore.persistDefaultReasoningEffort(effort)
+      state.append({ kind: "info", text: state.activeLanguage === "zh" ? `已将 ${effort} 设为后续新会话的默认思考强度。` : `${effort} is now the default reasoning effort for future sessions.` })
+    }).catch((error) => transcript.appendReportedError("Effort switch failed", error, "effort.switch", { effort, persist }))
     return true
   }
-  if (input === THINKING_COMMAND) { state.append({ kind: "info", text: state.activeLanguage === "zh" ? `思考模式：${state.activeThinkingMode}\n可选：auto（自动）、on（开启）、off（关闭）\n用法：/thinking <mode>` : `Thinking mode: ${state.activeThinkingMode}\nAvailable: auto, on, off\nUsage: /thinking <mode>` }); return true }
+  if (input === THINKING_COMMAND) { state.append({ kind: "info", text: state.activeLanguage === "zh" ? `思考模式：${state.activeThinkingMode}\n可选：auto（自动）、on（开启）、off（关闭）\n用法：/thinking <mode> [--persist]` : `Thinking mode: ${state.activeThinkingMode}\nAvailable: auto, on, off\nUsage: /thinking <mode> [--persist]` }); return true }
   if (commandWithArgument(input, THINKING_COMMAND)) {
-    const mode = parseThinkingMode(commandArgument(input, THINKING_COMMAND))
-    if (!mode) state.append({ kind: "error", text: state.activeLanguage === "zh" ? "用法：/thinking auto|on|off" : "Usage: /thinking auto|on|off" })
+    const argument = commandArgument(input, THINKING_COMMAND)
+    const persist = /(?:^|\s)--persist\s*$/.test(argument)
+    const mode = parseThinkingMode(argument.replace(/(?:^|\s)--persist\s*$/, ""))
+    if (!mode) state.append({ kind: "error", text: state.activeLanguage === "zh" ? "用法：/thinking auto|on|off [--persist]" : "Usage: /thinking auto|on|off [--persist]" })
     else if (!state.runtimeStore.canSwitchThinking) state.append({ kind: "error", text: state.activeLanguage === "zh" ? "当前客户端不支持切换思考模式。" : "This client does not support thinking mode switching." })
-    else void state.runtimeStore.switchThinking(mode).catch((error) => transcript.appendReportedError(state.activeLanguage === "zh" ? "思考模式切换失败" : "Thinking mode switch failed", error, "thinking.switch", { mode }))
+    else void state.runtimeStore.switchThinking(mode).then(async () => {
+      if (!persist) return
+      await state.runtimeStore.persistDefaultThinkingMode(mode)
+      state.append({ kind: "info", text: state.activeLanguage === "zh" ? `已将 ${mode} 设为后续新会话的默认思考模式。` : `${mode} is now the default thinking mode for future sessions.` })
+    }).catch((error) => transcript.appendReportedError(state.activeLanguage === "zh" ? "思考模式切换失败" : "Thinking mode switch failed", error, "thinking.switch", { mode, persist }))
     return true
   }
   if (input === EXTENSIONS_COMMAND) { state.append({ kind: "info", text: props.promptExtensions?.length ? props.promptExtensions.map((item) => `/${item.name}  [${item.kind} · ${item.source}] ${item.description}`).join("\n") : "No custom commands or skills are loaded." }); return true }

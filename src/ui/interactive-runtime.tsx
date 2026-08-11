@@ -2,7 +2,7 @@ import path from "node:path"
 import React from "react"
 import { AgentConversation, type AgentEvent } from "../agent.js"
 import type { Args } from "../cli-args.js"
-import { listModelPresets, outputLanguageInstruction, rememberRecentModel, resolveAgentProfile, resolveRuntimeModelConfig, saveDefaultModel, saveLanguagePreference, type DoCodeLanguage, type ResolvedConfig, type RuntimeModelConfig, type SandboxNetworkMode } from "../config.js"
+import { listModelPresets, outputLanguageInstruction, rememberRecentModel, resolveAgentProfile, resolveRuntimeModelConfig, saveDefaultModel, saveDefaultReasoningEffort, saveDefaultThinkingMode, saveLanguagePreference, type DoCodeLanguage, type ResolvedConfig, type RuntimeModelConfig, type SandboxNetworkMode } from "../config.js"
 import { reportError } from "../error-reports.js"
 import { loadPromptExtensions } from "../extension-registry.js"
 import { HookRunner } from "../hooks.js"
@@ -62,6 +62,8 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
   }, {
     switchModel: switchRuntimeModel,
     persistDefaultModel: async (preset) => { await saveDefaultModel(preset) },
+    persistDefaultReasoningEffort: async (effort) => { await saveDefaultReasoningEffort(effort) },
+    persistDefaultThinkingMode: async (thinking) => { await saveDefaultThinkingMode(thinking) },
     restoreModel: applyRuntimeModel,
     configureAuth: async (input) => { const installed = await installProvider(input); return await switchRuntimeModel(`${installed.providerId}/${installed.models[0]}`) },
     setLanguage: async (language) => { await saveLanguagePreference(language); await conversation.setProfileInstructions(instructions(language)) },
