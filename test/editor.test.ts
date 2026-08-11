@@ -107,11 +107,17 @@ test("workspace completion index is reusable across editor queries", () => {
   assert.match(completionsForEditor(createEditor("@src/"), files, [], {}, "en", index)?.items[0]?.label ?? "", /^@src\//)
 })
 
-test("Chinese completion explains every built-in command and workspace file action", () => {
+test("all localized completions explain every built-in command without English fallback", () => {
+  const english = new Map(builtinCommandCompletions("en").map((item) => [item.label, item.description]))
+  for (const language of ["zh", "ja", "ko", "es", "fr"] as const) {
+    const commands = builtinCommandCompletions(language)
+    assert.equal(commands.length, english.size)
+    assert.ok(commands.every((item) => item.description !== english.get(item.label)), `${language} command descriptions must not fall back to English`)
+  }
+
   const commands = builtinCommandCompletions("zh")
   assert.equal(commands.find((item) => item.label === "/plan")?.description, "进入只读规划模式或开始制定目标计划")
   assert.equal(commands.find((item) => item.label === "/effort")?.description, "查看或切换思考强度")
-  assert.ok(commands.every((item) => !/^(Show|View|Capture|Restore|Rewind|Compact|Trust|Enter|Clear|Browse|Rename|Export|Save)\b/.test(item.description)))
 
   const files = completionsForEditor(createEditor("@"), ["src/main.ts"], [], {}, "zh")
   assert.equal(files?.items.find((item) => item.label === "@src/")?.description, "继续浏览此目录")

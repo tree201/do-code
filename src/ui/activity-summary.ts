@@ -43,8 +43,8 @@ function quoted(value: string) {
   return value.length > 52 ? `“${value.slice(0, 51)}…”` : `“${value}”`
 }
 
-function stats(change: ToolFileChange) {
-  if (change.additions === undefined && change.deletions === undefined) return change.lines === undefined ? "" : ` (${change.lines} lines)`
+function stats(change: ToolFileChange, language: DoCodeLanguage) {
+  if (change.additions === undefined && change.deletions === undefined) return change.lines === undefined ? "" : t(language, " ({count} lines)", { count: change.lines })
   return ` (+${change.additions ?? 0} -${change.deletions ?? 0})`
 }
 
@@ -123,7 +123,7 @@ function editSummary(items: ToolSummaryItem[], language: DoCodeLanguage, ok: boo
     const available = change.diffLines?.length ? change.diffLines : fallbackLines
     return {
       path: short(change.path),
-      stats: stats(change),
+      stats: stats(change, language),
       ...(change.additions === undefined ? {} : { additions: change.additions }),
       ...(change.deletions === undefined ? {} : { deletions: change.deletions }),
       lines: available,
@@ -135,7 +135,7 @@ function editSummary(items: ToolSummaryItem[], language: DoCodeLanguage, ok: boo
 
 function commandSummary(item: ToolSummaryItem, language: DoCodeLanguage): ActivitySummary {
   const presentation = item.presentation
-  const command = short(presentation?.command ?? "command", 120)
+  const command = short(presentation?.command ?? t(language, "command"), 120)
   const duration = presentation?.durationMs !== undefined ? `${(presentation.durationMs / 1000).toFixed(presentation.durationMs < 10_000 ? 2 : 1)}s` : ""
   const title = t(language, item.ok ? "Ran {command}" : "{command} failed", { command })
   const lines: ActivitySummaryLine[] = (presentation?.excerpt ?? []).slice(0, 4).map((text) => ({ text: short(text, 160), tone: item.ok ? "muted" : "danger" }))

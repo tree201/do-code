@@ -73,7 +73,7 @@ test("large and failed edits keep every changed line", () => {
   const newText = Array.from({ length: 17 }, (_, index) => `new-${index + 1}`).join("\n")
   const large = createToolPresentation("edit_file", { path: "src/main.js", old_text: oldText, new_text: newText }, { ok: true, output: "done" }, 15)
   const summary = buildActivitySummary([{ name: "edit_file", args: {}, ok: true, output: "done", presentation: large }], "zh")
-  assert.equal(summary.title, "修改 1 个文件 (+17 -4)")
+  assert.equal(summary.title, "已编辑 1 个文件 (+17 -4)")
   const diff = summary.diffs?.[0]
   assert.equal(diff?.path, "src/main.js")
   assert.equal(diff?.lines[0]?.kind, "remove")
@@ -133,4 +133,15 @@ test("new files expose numbered added lines instead of only a total", () => {
     [1, "add", "first"],
     [2, "add", "second"],
   ])
+})
+
+test("activity summaries localize fixed command and line-count fallbacks", () => {
+  const command = createToolPresentation("shell", {}, { ok: true, output: "" }, 0)
+  const summary = buildActivitySummary([{ name: "shell", args: {}, ok: true, output: "", presentation: command }], "ja")
+  assert.equal(summary.title, "コマンド を実行")
+
+  const file = createToolPresentation("edit_file", { path: "src/main.ts" }, { ok: true, output: "" }, 0)
+  file.fileChanges = [{ path: "src/main.ts", lines: 3 }]
+  const fileSummary = buildActivitySummary([{ name: "edit_file", args: {}, ok: true, output: "", presentation: file }], "fr")
+  assert.equal(fileSummary.diffs?.[0]?.stats, " (3 lignes)")
 })
