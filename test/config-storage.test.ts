@@ -4,7 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import test from "node:test"
 import { modelProvidersPublic } from "../src/config-catalog.js"
-import { loadStoredConfig, mergeConfig, saveMigratedConfig } from "../src/config-storage.js"
+import { loadStoredConfig, mergeConfig, saveDefaultModel, saveMigratedConfig } from "../src/config-storage.js"
 
 test("configuration layers merge provider models without replacing provider settings", () => {
   const merged = mergeConfig(
@@ -60,6 +60,23 @@ test("loading and migrated persistence retain ordered sources without storing me
     else process.env.DO_CODE_CONFIG_PATH = previousUser
     if (previousSystem === undefined) delete process.env.DO_CODE_SYSTEM_CONFIG_PATH
     else process.env.DO_CODE_SYSTEM_CONFIG_PATH = previousSystem
+  }
+})
+
+test("saving a default model updates only the user config layer", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "do-code-default-model-"))
+  const user = path.join(root, "user.json")
+  await writeFile(user, JSON.stringify({ version: 2, language: "zh", defaultModel: "old/model" }))
+  const previousUser = process.env.DO_CODE_CONFIG_PATH
+  process.env.DO_CODE_CONFIG_PATH = user
+  try {
+    assert.equal(await saveDefaultModel("new/model"), user)
+    const persisted = JSON.parse(await readFile(user, "utf8")) as Record<string, unknown>
+    assert.equal(persisted.defaultModel, "new/model")
+    assert.equal(persisted.language, "zh")
+  } finally {
+    if (previousUser === undefined) delete process.env.DO_CODE_CONFIG_PATH
+    else process.env.DO_CODE_CONFIG_PATH = previousUser
   }
 })
 

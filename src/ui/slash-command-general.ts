@@ -37,10 +37,17 @@ export function executeGeneralSlashCommand(input: string, context: SlashCommandC
     return true
   }
   if (commandWithArgument(input, MODEL_COMMAND)) {
-    const preset = modelPresetArgument(commandArgument(input, MODEL_COMMAND))
+    const argument = commandArgument(input, MODEL_COMMAND)
+    const persist = /(?:^|\s)--persist\s*$/.test(argument)
+    const preset = modelPresetArgument(argument.replace(/^(?:set\s+)?|(?:^|\s)--persist\s*$/g, ""))
+    if (!preset) { state.append({ kind: "error", text: "Usage: /model set <model> [--persist]" }); return true }
     state.updateRunning(true); state.setActiveTool("Switching model")
     if (!state.runtimeStore.canSwitchModel) { state.append({ kind: "error", text: "This client does not support model switching." }); state.updateRunning(false); state.setActiveTool(null) }
-    else void state.runtimeStore.switchModel(preset).catch((error) => transcript.appendReportedError("Model switch failed", error, "model.switch", { preset })).finally(() => { state.updateRunning(false); state.setActiveTool(null) })
+    else void state.runtimeStore.switchModel(preset).then(async () => {
+      if (!persist) return
+      await state.runtimeStore.persistDefaultModel(preset)
+      state.append({ kind: "info", text: state.activeLanguage === "zh" ? `已将 ${preset} 设为后续新会话的默认模型。` : `${preset} is now the default model for future sessions.` })
+    }).catch((error) => transcript.appendReportedError("Model switch failed", error, "model.switch", { preset, persist })).finally(() => { state.updateRunning(false); state.setActiveTool(null) })
     return true
   }
   if (input === EFFORT_COMMAND) { state.append({ kind: "info", text: `Reasoning effort: ${state.activeEffort}\nAvailable: low, medium, high, xhigh, max\nUsage: /effort <level>` }); return true }
