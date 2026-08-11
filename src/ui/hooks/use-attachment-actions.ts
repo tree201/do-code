@@ -1,6 +1,6 @@
 import { useCallback } from "react"
 import { classifyPastedImagePaths, MAX_IMAGE_COUNT, MAX_IMAGE_TOTAL_BYTES } from "../../image-attachments.js"
-import { acceptAttachments, attachmentIndex, attachmentInsertionIndex, insertAttachmentTokens, removeAttachmentToken } from "../attachment-model.js"
+import { acceptAttachments, attachmentInsertionIndex, insertAttachmentTokens, removeAttachmentToken } from "../attachment-model.js"
 import { insertEditorText } from "../editor.js"
 import { t } from "../i18n.js"
 import type { ChatAppProps } from "../chat-app-types.js"
@@ -15,16 +15,10 @@ export function useAttachmentActions(props: ChatAppProps, state: ChatAppState) {
     state.setEditor((current) => insertAttachmentTokens(current, images.length))
   }, [state.composerOwner, state.setEditor, state.updateAttachedImages])
 
-  const removeAttachedImage = useCallback((query: string) => {
-    const index = attachmentIndex(state.attachedImages, query)
-    const image = state.attachedImages[index]
-    if (!image) {
-      state.append({ kind: "error", text: t(state.activeLanguage, "Usage: /remove-image <index|name>") })
-      return
-    }
+  const removeAttachedImage = useCallback((index: number) => {
     state.setEditor((current) => removeAttachmentToken(current, index))
     state.updateAttachedImages((current) => current.filter((_, currentIndex) => currentIndex !== index))
-  }, [state.append, state.attachedImages, state.setEditor, state.updateAttachedImages])
+  }, [state.setEditor, state.updateAttachedImages])
 
   const attachClipboardImage = useCallback(async () => {
     if (!props.pasteImage) throw new Error("Clipboard image support is unavailable")

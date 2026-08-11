@@ -119,7 +119,7 @@ ACP 표준 입출력 프로토콜에는 `do-code acp`를 사용하세요. 지원
 do-code run --image screenshots/bug.png --image screenshots/diagram.webp "Describe these images"
 ```
 
-대화형 TUI에서는 `@path/to/image.png`를 입력하거나 `/paste-image`를 사용해 시스템 클립보드에서 이미지를 가져옵니다. 대기 중인 첨부를 제거하려면 `/remove-image <index|name>`을 사용하세요. 각 이미지는 10 MB, 프롬프트 전체는 20 MB로 제한됩니다. 가져온 파일은 `~/.local/share/do-code/projects/<project-key>/sessions/<session-id>/attachments/`에 복사됩니다. 저장된 메시지에는 `attachments/image_xxx.png`와 같은 상대 참조만 포함되며 Base64 데이터나 원래 절대 경로는 포함되지 않습니다. 전역 데이터 루트를 재정의하려면 `DO_CODE_DATA_DIR`을 설정하세요. 기존 프로젝트 로컬 `.do-code` 데이터는 다음에 프로젝트에 접근할 때 사용자 관리 프로젝트 디렉터리로 마이그레이션됩니다.
+대화형 TUI에서는 Ctrl+V로 시스템 클립보드의 이미지를 붙여넣거나 `@path/to/image.png`를 입력해 이미지를 추가합니다. 첨부를 제거하려면 편집기에서 이미지 태그/token에 커서를 놓고 Backspace를 누르세요. 각 이미지는 10 MB, 프롬프트 전체는 20 MB로 제한됩니다. 가져온 파일은 `~/.local/share/do-code/projects/<project-key>/sessions/<session-id>/attachments/`에 복사됩니다. 저장된 메시지에는 `attachments/image_xxx.png`와 같은 상대 참조만 포함되며 Base64 데이터나 원래 절대 경로는 포함되지 않습니다. 전역 데이터 루트를 재정의하려면 `DO_CODE_DATA_DIR`을 설정하세요. 기존 프로젝트 로컬 `.do-code` 데이터는 다음에 프로젝트에 접근할 때 사용자 관리 프로젝트 디렉터리로 마이그레이션됩니다.
 
 ### 유용한 CLI 명령
 

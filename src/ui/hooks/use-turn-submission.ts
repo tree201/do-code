@@ -13,12 +13,11 @@ import { hasBlockingDialog } from "../dialog-coordinator.js"
 import { CLEAR_COMMAND, DIFF_COMMAND } from "../shortcut-command-policy.js"
 import { t } from "../i18n.js"
 import type { ChatAppProps } from "../chat-app-types.js"
-import type { AttachmentActions } from "./use-attachment-actions.js"
 import type { ChatAppState } from "./use-chat-app-state.js"
 import type { SessionActions } from "./use-session-actions.js"
 import type { TranscriptController } from "./use-transcript-controller.js"
 
-export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, transcript: TranscriptController, attachments: AttachmentActions, sessions: SessionActions, exit: () => void) {
+export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, transcript: TranscriptController, sessions: SessionActions, exit: () => void) {
   const SHELL_TOOL_NAME = "shell"
   const submit = useCallback((rawInput: string) => {
     const input = stripAttachmentTokens(rawInput).trim()
@@ -33,7 +32,7 @@ export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, tran
     if (state.activeModel === "未配置模型" && !input.startsWith("/") && !input.startsWith("!")) {
       state.append({ kind: "info", text: t(state.activeLanguage, "No model is configured. Use /auth to configure a model provider before starting a task.") }); return
     }
-    if (executeSlashCommand(input, { props, state, transcript, attachments, sessions, exit })) return
+    if (executeSlashCommand(input, { props, state, transcript, sessions, exit })) return
 
     const route = routeSlashCommand(input, props.promptExtensions?.map((item) => item.name))
     const extension = route.kind === "extension" ? props.promptExtensions?.find((item) => item.name === route.command) : undefined
@@ -64,7 +63,7 @@ export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, tran
         else transcript.appendReportedError(t(state.activeLanguage, "Turn failed"), error, "agent.turn", { input })
       } finally { transcript.flushPendingTools(); state.turnOwner.finish(); state.setActiveTool(null); transcript.clearLiveAssistant() }
     })()
-  }, [attachments, exit, props, sessions, state, transcript])
+  }, [exit, props, sessions, state, transcript])
 
   useEffect(() => {
     if (state.running || hasBlockingDialog(state.activeDialog) || !state.queuedInputs.length) return

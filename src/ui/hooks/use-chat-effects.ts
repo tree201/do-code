@@ -1,5 +1,4 @@
 import { useEffect } from "react"
-import { isWorkspaceTrusted } from "../../policy.js"
 import { commandOutput } from "../command-output.js"
 import type { ChatAppProps } from "../chat-app-types.js"
 import type { ChatAppState } from "./use-chat-app-state.js"
@@ -20,7 +19,6 @@ export function useChatEffects(props: ChatAppProps, state: ChatAppState, stdout:
     const stats = props.conversation.stats()
     state.setContextPercent(Math.round(stats.currentContextTokens / stats.contextWindow * 100))
     void props.conversation.memorySources().then((sources) => state.setMemoryCount(sources.length))
-    void isWorkspaceTrusted(props.workspace).then(state.setTrusted)
-  }, [props.conversation, props.workspace, state.setContextPercent, state.setMemoryCount, state.setTrusted])
+  }, [props.conversation, state.setContextPercent, state.setMemoryCount])
 
 }

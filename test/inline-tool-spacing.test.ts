@@ -51,9 +51,9 @@ test("real inline CLI separates frozen assistant text from later tool activity",
     }
     if (!openedCompletion && raw.includes("Everything passed.")) {
       openedCompletion = true
-      setTimeout(() => child.write("/re"), 300)
+      setTimeout(() => child.write("/rew"), 300)
     }
-    if (!exiting && openedCompletion && raw.includes("/restore")) {
+    if (!exiting && openedCompletion && raw.includes("/rewind")) {
       exiting = true
       setTimeout(() => child.kill(), 400)
     }
@@ -72,7 +72,7 @@ test("real inline CLI separates frozen assistant text from later tool activity",
     assert.equal(lines[assistantLine + 1]?.trim(), "", lines.join("\n"))
     assert.equal(toolLine, assistantLine + 2, lines.join("\n"))
     const answerLine = lines.findIndex((line) => line.includes("Everything passed."))
-    const completionLine = lines.findIndex((line) => line.includes("/restore"))
+    const completionLine = lines.findIndex((line) => line.includes("/rewind"))
     assert.ok(answerLine >= 0 && completionLine > answerLine, lines.join("\n"))
     assert.equal(lines[answerLine + 1]?.trim(), "", lines.join("\n"))
     assert.equal(lines[answerLine + 2]?.trim(), "", lines.join("\n"))

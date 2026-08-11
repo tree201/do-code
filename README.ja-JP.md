@@ -119,7 +119,7 @@ ACP 標準入出力プロトコルには `do-code acp` を使用します。サ�
 do-code run --image screenshots/bug.png --image screenshots/diagram.webp "Describe these images"
 ```
 
-対話型 TUI では、`@path/to/image.png` を入力するか、`/paste-image` を使ってシステムクリップボードから画像をインポートします。保留中の添付を削除するには `/remove-image <index|name>` を使用してください。各画像は 10 MB、プロンプト合計は 20 MB に制限されます。インポートされたファイルは `~/.local/share/do-code/projects/<project-key>/sessions/<session-id>/attachments/` にコピーされます。保存されるメッセージには `attachments/image_xxx.png` のような相対参照のみが含まれ、Base64 データや元の絶対パスは含まれません。グローバルデータルートを上書きするには `DO_CODE_DATA_DIR` を設定してください。既存のプロジェクトローカル `.do-code` データは、次回プロジェクトにアクセスしたときにユーザー管理のプロジェクトディレクトリへ移行されます。
+対話型 TUI では、Ctrl+V を押してシステムクリップボードから画像を貼り付けるか、`@path/to/image.png` を入力してファイルから画像を追加します。保留中の添付を削除するには、エディター内の画像タグ／トークンにカーソルを置いて Backspace を押してください。各画像は 10 MB、プロンプト合計は 20 MB に制限されます。インポートされたファイルは `~/.local/share/do-code/projects/<project-key>/sessions/<session-id>/attachments/` にコピーされます。保存されるメッセージには `attachments/image_xxx.png` のような相対参照のみが含まれ、Base64 データや元の絶対パスは含まれません。グローバルデータルートを上書きするには `DO_CODE_DATA_DIR` を設定してください。既存のプロジェクトローカル `.do-code` データは、次回プロジェクトにアクセスしたときにユーザー管理のプロジェクトディレクトリへ移行されます。
 
 ### 便利な CLI コマンド
 

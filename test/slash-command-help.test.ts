@@ -3,6 +3,11 @@ import test from "node:test"
 import type { DoCodeLanguage } from "../src/config.js"
 import { builtinCommandCompletions } from "../src/ui/completion.js"
 import { helpText } from "../src/ui/slash-command-help.js"
+import { routeSlashCommand } from "../src/ui/slash-command-router.js"
+
+const removedCommands = [
+  "/approval-mode", "/paste-image", "/remove-image", "/restore", "/trust", "/untrust", "/quit",
+]
 
 test("slash command help groups commands into aligned, scannable sections", () => {
   const help = helpText("zh")
@@ -16,6 +21,15 @@ test("slash command help groups commands into aligned, scannable sections", () =
   for (const command of builtinCommandCompletions("zh")) {
     const matches = help.match(new RegExp(`${escapeRegex(command.description)}$`, "gm")) ?? []
     assert.equal(matches.length, 1, `${command.label} should contribute exactly one localized help entry`)
+  }
+})
+
+test("removed commands are absent from builtin completion, help, and routing", () => {
+  const completionLabels = builtinCommandCompletions("en").map((command) => command.label)
+  for (const command of removedCommands) {
+    assert.equal(completionLabels.includes(command), false, `${command} must not be offered as a builtin completion`)
+    assert.doesNotMatch(helpText("en"), new RegExp(`^  ${escapeRegex(command)}(?:\\s|$)`, "m"), `${command} must not appear in help`)
+    assert.deepEqual(routeSlashCommand(command), { kind: "unknown", command: command.slice(1), argument: "" })
   }
 })
 

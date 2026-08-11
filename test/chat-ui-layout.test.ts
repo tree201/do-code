@@ -251,14 +251,14 @@ test("composer owns two visual rows above the complete input control surface", (
     React.createElement(Text, null, "Completed answer"),
     React.createElement(Composer, {
       running: false,
-      input: React.createElement(Text, null, "› /re"),
-      suggestions: React.createElement(Text, null, "› /restore  Restore a checkpoint"),
+      input: React.createElement(Text, null, "› /rew"),
+      suggestions: React.createElement(Text, null, "› /rewind  Rewind chat, files, or both"),
       status: React.createElement(React.Fragment, null, "model · 1%"),
     }),
   ))
   const lines = (view.lastFrame() ?? "").split("\n")
   const answerLine = lines.findIndex((line) => line.includes("Completed answer"))
-  const suggestionLine = lines.findIndex((line) => line.includes("/restore"))
+  const suggestionLine = lines.findIndex((line) => line.includes("/rewind"))
 
   assert.ok(answerLine >= 0 && suggestionLine > answerLine)
   assert.equal(lines[answerLine + 1]?.trim(), "")

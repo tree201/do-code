@@ -17,7 +17,7 @@ export function ChatApp(props: ChatAppProps) {
   const transcript = useTranscriptController(props, state)
   const attachments = useAttachmentActions(props, state)
   const sessions = useSessionActions(props, state, transcript)
-  const submit = useTurnSubmission(props, state, transcript, attachments, sessions, exit)
+  const submit = useTurnSubmission(props, state, transcript, sessions, exit)
   useChatEffects(props, state, stdout)
   useChatInput(props, state, transcript, attachments, sessions, submit, exit)
   return <ChatAppView props={props} state={state} />

@@ -1,16 +1,14 @@
 import { normalizeLanguage } from "../config.js"
-import { setWorkspaceTrusted } from "../policy.js"
 import { availableLanguagesText, invalidLanguageText, languageDisplay, languageUsageText, t } from "./i18n.js"
-import { approvalModeNotice } from "./chat-presentation.js"
 import { modelPresetArgument, parseReasoningEffort, parseThinkingMode } from "./model-actions.js"
 import { enqueueMessage } from "./message-queue.js"
 import type { ApprovalMode } from "../policy.js"
 import type { SlashCommandContext } from "./slash-command-context.js"
-import { APPROVAL_MODE_COMMAND, AUTH_COMMAND, BUG_COMMAND, EFFORT_COMMAND, EXIT_COMMAND, EXTENSIONS_COMMAND, HELP_COMMAND, LANGUAGE_COMMAND, MODEL_COMMAND, PERMISSIONS_COMMAND, PLAN_COMMAND, QUIT_COMMAND, STATUS_COMMAND, THINKING_COMMAND, TRUST_COMMAND, UNTRUST_COMMAND, commandArgument, commandWithArgument } from "./shortcut-command-policy.js"
+import { AUTH_COMMAND, BUG_COMMAND, EFFORT_COMMAND, EXIT_COMMAND, EXTENSIONS_COMMAND, HELP_COMMAND, LANGUAGE_COMMAND, MODEL_COMMAND, PERMISSIONS_COMMAND, PLAN_COMMAND, STATUS_COMMAND, THINKING_COMMAND, commandArgument, commandWithArgument } from "./shortcut-command-policy.js"
 
 export function executeGeneralSlashCommand(input: string, context: SlashCommandContext) {
   const { props, state, transcript, exit } = context
-  if (input === EXIT_COMMAND || input === QUIT_COMMAND) { exit(); return true }
+  if (input === EXIT_COMMAND) { exit(); return true }
   if (input === HELP_COMMAND) {
     state.setActiveDialog({ kind: "help", offset: 0 })
     return true
@@ -95,7 +93,7 @@ export function executeGeneralSlashCommand(input: string, context: SlashCommandC
     return true
   }
   if (input === STATUS_COMMAND) {
-    void props.conversation.memorySources().then((sources) => { state.setMemoryCount(sources.length); state.append({ kind: "info", text: t(state.activeLanguage, "Workspace: {workspace}\nModel: {model}\nThinking mode: {thinkingMode}\nReasoning effort: {effort}\nSession: {session}\nPlan mode: {planMode}\nApproval mode: {approvalMode}\nTrusted workspace: {trusted}\nContext messages: {messages}\nProject instructions: {sources} source(s)", { workspace: props.workspace, model: state.activeModel, thinkingMode: state.activeThinkingMode, effort: state.activeEffort, session: `${state.activeSessionId}${state.activeSessionTitle ? ` · ${state.activeSessionTitle}` : ""}`, planMode: state.activePlanMode ? t(state.activeLanguage, "on") : t(state.activeLanguage, "off"), approvalMode: state.activeApprovalMode, trusted: state.trusted ? t(state.activeLanguage, "yes") : t(state.activeLanguage, "no"), messages: props.conversation.history().length, sources: sources.length }) }) }).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Failed to read status"), error, "status.read"))
+    void props.conversation.memorySources().then((sources) => { state.setMemoryCount(sources.length); state.append({ kind: "info", text: t(state.activeLanguage, "Workspace: {workspace}\nModel: {model}\nThinking mode: {thinkingMode}\nReasoning effort: {effort}\nSession: {session}\nPlan mode: {planMode}\nApproval mode: {approvalMode}\nContext messages: {messages}\nProject instructions: {sources} source(s)", { workspace: props.workspace, model: state.activeModel, thinkingMode: state.activeThinkingMode, effort: state.activeEffort, session: `${state.activeSessionId}${state.activeSessionTitle ? ` · ${state.activeSessionTitle}` : ""}`, planMode: state.activePlanMode ? t(state.activeLanguage, "on") : t(state.activeLanguage, "off"), approvalMode: state.activeApprovalMode, messages: props.conversation.history().length, sources: sources.length }) }) }).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Failed to read status"), error, "status.read"))
     return true
   }
   if (input === PERMISSIONS_COMMAND) {
@@ -107,18 +105,6 @@ export function executeGeneralSlashCommand(input: string, context: SlashCommandC
     const goal = commandArgument(input, PLAN_COMMAND)
     if (goal === "exit") state.applyPlanMode(false)
     else { state.applyPlanMode(true); if (goal) state.setQueuedInputs((current) => enqueueMessage(current, goal)) }
-    return true
-  }
-  if (commandWithArgument(input, APPROVAL_MODE_COMMAND)) {
-    const requested = commandArgument(input, APPROVAL_MODE_COMMAND)
-    if (!requested) state.append({ kind: "info", text: (["ask", "auto", "full-access"] as ApprovalMode[]).map((mode) => approvalModeNotice(mode, state.activeLanguage)).join("\n\n") })
-    else if (!["ask", "auto", "full-access"].includes(requested)) state.append({ kind: "error", text: t(state.activeLanguage, "Usage: /approval-mode [ask|auto|full-access]; use /plan for planning.") })
-    else state.applyApprovalMode(requested as ApprovalMode)
-    return true
-  }
-  if (input === TRUST_COMMAND || input === UNTRUST_COMMAND) {
-    const next = input === TRUST_COMMAND
-    void setWorkspaceTrusted(props.workspace, next).then(() => state.setTrusted(next)).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Failed to update workspace trust"), error, "workspace.trust"))
     return true
   }
   return false

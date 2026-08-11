@@ -19,4 +19,3 @@ export {
 } from "./policy-classification.js"
 export { PolicyEngine, createPolicyEngine } from "./policy-engine.js"
 export { approvalForTool, approvalRequest, approved } from "./policy-approval.js"
-export { isWorkspaceTrusted, setWorkspaceTrusted } from "./workspace-trust.js"

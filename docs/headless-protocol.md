@@ -28,7 +28,7 @@ do-code run --image screenshots/bug.png --image screenshots/diagram.webp "分析
 
 图片必须是 PNG、JPEG、GIF 或 WebP；每张最大 10 MB，每次提示最多 4 张、总大小最多 20 MB。图片会复制到本次运行的 `~/.local/share/do-code/projects/<project-key>/sessions/<run-id>/attachments/`，请求发送前才转换为 Provider 所需的 Base64。运行配置、消息和事件只保存会话相对引用，例如 `attachments/image_xxx.png`，不会保存 Base64 或原工作区绝对路径。可通过 `DO_CODE_DATA_DIR` 覆盖全局数据根目录。
 
-交互式 TUI 支持在编辑器中输入 `@path/to/image.png`，也可使用 `/paste-image` 从系统剪贴板导入图片；使用 `/remove-image <index|name>` 删除当前提示中的附件。
+交互式 TUI 支持使用 `Ctrl+V` 从系统剪贴板添加图片，或在编辑器中输入 `@path/to/image.png` 添加工作区图片；将光标移到图片标签/token 后，按 Backspace 可删除当前提示中的对应附件。
 
 ## 退出码
 

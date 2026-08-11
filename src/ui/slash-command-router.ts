@@ -5,9 +5,9 @@ export type SlashCommandRoute =
   | { kind: "none" }
 
 const BUILTIN_COMMANDS = new Set([
-  "help", "status", "stats", "compact", "diff", "clear", "exit", "quit", "model", "auth", "paste-image", "remove-image",
-  "thinking", "effort", "language", "extensions", "plan", "permissions", "approval-mode", "trust", "untrust", "bug",
-  "memory", "restore", "rewind", "resume", "rename", "export",
+  "help", "status", "stats", "compact", "diff", "clear", "exit", "model", "auth",
+  "thinking", "effort", "language", "extensions", "plan", "permissions", "bug",
+  "memory", "rewind", "resume", "rename", "export",
 ])
 
 export function routeSlashCommand(input: string, extensionNames: string[] = []): SlashCommandRoute {

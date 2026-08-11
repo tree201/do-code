@@ -1,7 +1,7 @@
 import type { DoCodeLanguage } from "../config.js"
 import { builtinCommandCompletions } from "./completion.js"
 import { t } from "./i18n.js"
-import { APPROVAL_MODE_COMMAND, AUTH_COMMAND, BUG_COMMAND, CLEAR_COMMAND, COMPACT_COMMAND, DIFF_COMMAND, EFFORT_COMMAND, EXIT_COMMAND, EXPORT_COMMAND, EXTENSIONS_COMMAND, HELP_COMMAND, LANGUAGE_COMMAND, MEMORY_COMMAND, MODEL_COMMAND, PASTE_IMAGE_COMMAND, PERMISSIONS_COMMAND, PLAN_COMMAND, REMOVE_IMAGE_COMMAND, RENAME_COMMAND, RESTORE_COMMAND, RESUME_COMMAND, REWIND_COMMAND, STATS_COMMAND, STATUS_COMMAND, THINKING_COMMAND, TRUST_COMMAND } from "./shortcut-command-policy.js"
+import { AUTH_COMMAND, BUG_COMMAND, CLEAR_COMMAND, COMPACT_COMMAND, DIFF_COMMAND, EFFORT_COMMAND, EXIT_COMMAND, EXPORT_COMMAND, EXTENSIONS_COMMAND, HELP_COMMAND, LANGUAGE_COMMAND, MEMORY_COMMAND, MODEL_COMMAND, PERMISSIONS_COMMAND, PLAN_COMMAND, RENAME_COMMAND, RESUME_COMMAND, REWIND_COMMAND, STATS_COMMAND, STATUS_COMMAND, THINKING_COMMAND } from "./shortcut-command-policy.js"
 
 type HelpEntry = { usage: string; command?: string; description?: string }
 type HelpGroup = { title: string; entries: HelpEntry[] }
@@ -35,8 +35,6 @@ const HELP_GROUPS: HelpGroup[] = [
     entries: [
       { usage: `${PLAN_COMMAND} [goal|exit]`, command: PLAN_COMMAND },
       { usage: PERMISSIONS_COMMAND, command: PERMISSIONS_COMMAND },
-      { usage: `${APPROVAL_MODE_COMMAND} [mode]`, command: APPROVAL_MODE_COMMAND },
-      { usage: TRUST_COMMAND, command: TRUST_COMMAND },
     ],
   },
   {
@@ -46,11 +44,8 @@ const HELP_GROUPS: HelpGroup[] = [
       { usage: `${RENAME_COMMAND} <name>`, command: RENAME_COMMAND },
       { usage: `${EXPORT_COMMAND} [md|json] [path]`, command: EXPORT_COMMAND },
       { usage: DIFF_COMMAND, command: DIFF_COMMAND },
-      { usage: `${RESTORE_COMMAND} [id]`, command: RESTORE_COMMAND },
       { usage: `${REWIND_COMMAND} [both|chat|files]`, command: REWIND_COMMAND },
       { usage: `${MEMORY_COMMAND} [list|show|reload]`, command: MEMORY_COMMAND },
-      { usage: PASTE_IMAGE_COMMAND, command: PASTE_IMAGE_COMMAND },
-      { usage: `${REMOVE_IMAGE_COMMAND} <index>`, command: REMOVE_IMAGE_COMMAND },
       { usage: `${BUG_COMMAND} [description]`, command: BUG_COMMAND },
     ],
   },
