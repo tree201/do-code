@@ -1,5 +1,4 @@
 export type TranslationRow = [string, string, string, string, string]
-
 export const commandDescriptionTranslations: Record<string, TranslationRow> = {
   "Show available commands": ["查看可用命令", "利用可能なコマンドを表示", "사용 가능한 명령 보기", "Mostrar los comandos disponibles", "Afficher les commandes disponibles"],
   "Show workspace, model, and session status": ["查看工作区、模型和会话状态", "ワークスペース、モデル、セッションの状態を表示", "작업 공간, 모델 및 세션 상태 보기", "Mostrar el estado del espacio de trabajo, modelo y sesión", "Afficher l’état de l’espace de travail, du modèle et de la session"],
@@ -30,7 +29,6 @@ export const commandDescriptionTranslations: Record<string, TranslationRow> = {
 }
 const HELP_MODELS_KEY = "/model [provider/model] Switch the current model · /model set <model> --persist Set the future-session default · /auth Configure model providers · /paste-image Attach clipboard image · /remove-image <index> Remove attachment · /thinking [auto|on|off] [--persist] Switch thinking mode · /effort [low|medium|high|xhigh|max] [--persist] Switch reasoning effort · /language [zh|en] Switch language · /extensions Show commands and skills"
 const HELP_MODELS_TRANSLATIONS: TranslationRow = ["/model [provider/model] 切换当前模型 · /model set <model> --persist 设置后续新会话默认模型 · /auth 配置模型服务 · /paste-image 粘贴剪贴板图片 · /remove-image <index> 删除附件 · /thinking [auto|on|off] [--persist] 切换思考模式 · /effort [low|medium|high|xhigh|max] [--persist] 切换思考强度 · /language [zh|en] 切换语言 · /extensions 查看命令和 Skills", "/model [provider/model] 現在のモデルを切り替え · /model set <model> --persist 今後の新規セッションの既定値を設定 · /auth モデルプロバイダーを設定 · /paste-image クリップボード画像を添付 · /remove-image <index> 添付を削除 · /thinking [auto|on|off] [--persist] 思考モードを切り替え · /effort [low|medium|high|xhigh|max] [--persist] 推論レベルを切り替え · /language [zh|en] 言語を切り替え · /extensions コマンドとスキルを表示", "/model [provider/model] 현재 모델 전환 · /model set <model> --persist 이후 새 세션 기본값 설정 · /auth 모델 제공자 구성 · /paste-image 클립보드 이미지 첨부 · /remove-image <index> 첨부 삭제 · /thinking [auto|on|off] [--persist] 사고 모드 전환 · /effort [low|medium|high|xhigh|max] [--persist] 추론 수준 전환 · /language [zh|en] 언어 전환 · /extensions 명령과 스킬 보기", "/model [provider/model] Cambiar el modelo actual · /model set <model> --persist Establecer el valor predeterminado para futuras sesiones · /auth Configurar proveedores de modelos · /paste-image Adjuntar imagen del portapapeles · /remove-image <index> Eliminar adjunto · /thinking [auto|on|off] [--persist] Cambiar modo de razonamiento · /effort [low|medium|high|xhigh|max] [--persist] Cambiar nivel de razonamiento · /language [zh|en] Cambiar idioma · /extensions Mostrar comandos y habilidades", "/model [provider/model] Changer le modèle actuel · /model set <model> --persist Définir la valeur par défaut des prochaines sessions · /auth Configurer les fournisseurs de modèles · /paste-image Joindre une image du presse-papiers · /remove-image <index> Supprimer la pièce jointe · /thinking [auto|on|off] [--persist] Changer le mode de réflexion · /effort [low|medium|high|xhigh|max] [--persist] Changer le niveau de raisonnement · /language [zh|en] Changer la langue · /extensions Afficher les commandes et compétences"]
-
 export const cliAndProviderSetupTranslations: Record<string, TranslationRow> = {
   "Usage:": ["用法：", "使い方:", "사용법:", "Uso:", "Utilisation :"],
   "Start the interactive coding agent": ["启动交互式编程代理", "対話型コーディングエージェントを開始", "대화형 코딩 에이전트 시작", "Iniciar el agente de programación interactivo", "Démarrer l’agent de codage interactif"],
@@ -151,11 +149,13 @@ export const cliAndProviderSetupTranslations: Record<string, TranslationRow> = {
   "Configuration file: {file}": ["配置文件：{file}", "設定ファイル: {file}", "구성 파일: {file}", "Archivo de configuración: {file}", "Fichier de configuration : {file}"],
   "Run do-code to get started.": ["运行 do-code 开始使用。", "do-code を実行して開始します。", "do-code를 실행하여 시작하세요.", "Ejecuta do-code para comenzar.", "Exécutez do-code pour commencer."],
 }
-
 export const catalogCoverageTranslations: Record<string, TranslationRow> = {
   "Configuration layers": ["配置层", "設定レイヤー", "구성 계층", "Capas de configuración", "Couches de configuration"],
-  none: ["无", "なし", "없음", "ninguna", "aucune"],
-  command: ["命令", "コマンド", "명령", "comando", "commande"],
+  none: ["无", "なし", "없음", "ninguna", "aucune"], command: ["命令", "コマンド", "명령", "comando", "commande"],
+  "Set interface and output language to {language}": ["将界面与输出语言切换为{language}", "インターフェースと出力言語を{language}に切り替え", "인터페이스 및 출력 언어를 {language}(으)로 전환", "Cambiar el idioma de la interfaz y la salida a {language}", "Définir la langue de l’interface et de la sortie sur {language}"],
+  "No model is configured. Use /auth to configure a provider, or continue exploring the interface.": ["尚未配置模型。输入 /auth 配置模型服务；也可以先查看帮助或继续浏览界面。", "モデルが設定されていません。/auth でプロバイダーを設定するか、インターフェースを引き続き確認できます。", "구성된 모델이 없습니다. /auth로 제공자를 구성하거나 인터페이스를 계속 살펴보세요.", "No hay ningún modelo configurado. Usa /auth para configurar un proveedor o sigue explorando la interfaz.", "Aucun modèle n’est configuré. Utilisez /auth pour configurer un fournisseur ou continuez à explorer l’interface."],
+  "{count} queued (↑ to edit the latest)": ["已排队 {count} 条（按 ↑ 编辑最新一条）", "{count} 件をキューに追加済み（↑ で最新を編集）", "{count}개 대기 중(↑로 최신 항목 편집)", "{count} en cola (↑ para editar el más reciente)", "{count} en attente (↑ pour modifier le plus récent)"],
+  "…and {count} more": ["…以及另外 {count} 条", "…ほか {count} 件", "…외 {count}개", "…y {count} más", "…et {count} de plus"],
   " ({count} lines)": ["（{count} 行）", "（{count} 行）", "({count}줄)", " ({count} líneas)", " ({count} lignes)"],
   "Ran {command}": ["已运行 {command}", "{command} を実行", "{command} 실행함", "Se ejecutó {command}", "{command} exécutée"],
   "{command} failed": ["{command} 失败", "{command} に失敗", "{command} 실패", "Falló {command}", "Échec de {command}"],
