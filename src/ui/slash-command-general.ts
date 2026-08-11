@@ -50,13 +50,19 @@ export function executeGeneralSlashCommand(input: string, context: SlashCommandC
     }).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Model switch failed"), error, "model.switch", { preset, persist })).finally(() => { state.updateRunning(false); state.setActiveTool(null) })
     return true
   }
-  if (input === EFFORT_COMMAND) { state.append({ kind: "info", text: t(state.activeLanguage, "Reasoning effort: {effort}\nAvailable: low, medium, high, xhigh, max\nUsage: /effort <level> [--persist]", { effort: state.activeEffort }) }); return true }
+  if (input === EFFORT_COMMAND) { state.append({ kind: "info", text: t(state.activeLanguage, "Reasoning effort: {effort}\nAvailable: low, medium, high, xhigh, max\nUsage: /effort <level> · /effort default <level>", { effort: state.activeEffort }) }); return true }
   if (commandWithArgument(input, EFFORT_COMMAND)) {
     const argument = commandArgument(input, EFFORT_COMMAND)
+    const defaultMatch = argument.match(/^default\s+(.*)$/)
     const persist = /(?:^|\s)--persist\s*$/.test(argument)
-    const effort = parseReasoningEffort(argument.replace(/(?:^|\s)--persist\s*$/, ""))
-    if (!effort) state.append({ kind: "error", text: t(state.activeLanguage, "Usage: /effort low|medium|high|xhigh|max [--persist]") })
-    else if (!state.runtimeStore.canSwitchEffort) state.append({ kind: "error", text: t(state.activeLanguage, "This client does not support reasoning effort switching.") })
+    const effort = parseReasoningEffort((defaultMatch?.[1] ?? argument).replace(/(?:^|\s)--persist\s*$/, ""))
+    if (!effort) state.append({ kind: "error", text: t(state.activeLanguage, "Usage: /effort low|medium|high|xhigh|max · /effort default <level>") })
+    else if (defaultMatch) {
+      if (!state.runtimeStore.canPersistDefaultReasoningEffort) state.append({ kind: "error", text: t(state.activeLanguage, "This client does not support saving the default reasoning effort.") })
+      else void state.runtimeStore.persistDefaultReasoningEffort(effort).then(() => {
+        state.append({ kind: "info", text: t(state.activeLanguage, "{effort} is now the default reasoning effort for future sessions.", { effort }) })
+      }).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Saving default reasoning effort failed"), error, "effort.default", { effort }))
+    } else if (!state.runtimeStore.canSwitchEffort) state.append({ kind: "error", text: t(state.activeLanguage, "This client does not support reasoning effort switching.") })
     else void state.runtimeStore.switchEffort(effort).then(async () => {
       if (!persist) return
       await state.runtimeStore.persistDefaultReasoningEffort(effort)

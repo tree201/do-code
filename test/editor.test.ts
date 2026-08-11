@@ -86,6 +86,13 @@ test("model selection uses the dedicated dialog instead of model list completion
   assert.equal(completionsForEditor(editor, [], [], argumentCompletions), null)
 })
 
+test("effort completion exposes the new-session default setting", () => {
+  const choices = completionsForEditor(createEditor("/effort "), [], [], {
+    "/effort": [{ label: "default", description: "Set the default reasoning effort for new sessions", insert: "default" }],
+  })
+  assert.deepEqual(choices?.items.map((item) => item.label), ["default"])
+})
+
 test("file completion hides do-code artifacts and prioritizes workspace roots", () => {
   const files = [
     ".do-code/checkpoints/session/cp.json",

@@ -29,6 +29,22 @@ test("model provider entries resolve protocol, credentials and effort", async ()
   }
 })
 
+test("new sessions resolve the persisted default reasoning effort", async () => {
+  const directory=await mkdtemp(path.join(os.tmpdir(),"do-code-provider-default-effort-"))
+  const configPath=path.join(directory,"config.json")
+  await writeFile(configPath,JSON.stringify({version:2,defaultModel:"test/model",defaultReasoningEffort:"high",modelProviders:{test:[{id:"model",baseUrl:"https://example.com/v1",envKey:"TEST_DEFAULT_EFFORT_KEY",supportedEfforts:["low","medium","high"]}]},providerProtocol:{test:"openai-compatible"}}))
+  const previousPath=process.env.DO_CODE_CONFIG_PATH,previousKey=process.env.TEST_DEFAULT_EFFORT_KEY
+  process.env.DO_CODE_CONFIG_PATH=configPath;process.env.TEST_DEFAULT_EFFORT_KEY="secret"
+  try{
+    const runtime=await resolveRuntimeModelConfig(directory)
+    assert.equal(runtime.reasoningEffort,"high")
+    assert.equal(runtime.effectiveReasoningEffort,"high")
+  }finally{
+    if(previousPath===undefined)delete process.env.DO_CODE_CONFIG_PATH;else process.env.DO_CODE_CONFIG_PATH=previousPath
+    if(previousKey===undefined)delete process.env.TEST_DEFAULT_EFFORT_KEY;else process.env.TEST_DEFAULT_EFFORT_KEY=previousKey
+  }
+})
+
 test("model provider entries preserve explicit image capability", async () => {
   const directory=await mkdtemp(path.join(os.tmpdir(),"do-code-provider-images-"))
   const configPath=path.join(directory,"config.json")

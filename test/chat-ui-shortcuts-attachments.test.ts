@@ -8,6 +8,7 @@ import { classifyPastedImagePaths } from "../src/image-attachments.js"
 import type { ChatModel } from "../src/protocol.js"
 import { ApprovalBridge, ChatApp, HelpDialog, isHelpShortcut, isReasoningEffortShortcut, nextReasoningEffort, type ChatAppProps } from "../src/ui/chat-app.js"
 import { tick, visibleFrame } from "./support/chat-ui.js"
+import { createRuntimeStore } from "../src/ui/runtime-store.js"
 
 test("reasoning effort shortcut cycles through the configured levels", () => {
   assert.equal(nextReasoningEffort("low"), "medium")
@@ -93,6 +94,32 @@ test("interactive Ctrl+R switches effort while Ctrl+E keeps its editor behavior"
   await tick(); await tick()
   assert.deepEqual(switched, ["medium"])
   assert.doesNotMatch(view.lastFrame() ?? "", /Reasoning effort: medium/)
+  view.unmount()
+})
+
+test("effort default command persists without changing the current session", async () => {
+  const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
+  const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
+  let switched = false
+  let persisted = ""
+  const session = { id: "session_effort_default", workspace: process.cwd(), model: "test-model", createdAt: "now", updatedAt: "now", directory: "/tmp/session_effort_default" }
+  const modelConfig = { source: "config" as const, sourceLabel: "test", preset: "test-model", provider: "test", modelId: "test-model", baseUrl: "https://example.com", apiKey: "test", reasoningEffort: "medium" as const }
+  const runtimeStore = createRuntimeStore({ session, modelConfig, modelPresets: ["test-model"], approvalMode: "ask", planMode: false, language: "en" }, {
+    switchEffort: async (effort) => { switched = true; return { ...modelConfig, reasoningEffort: effort } },
+    persistDefaultReasoningEffort: async (effort) => { persisted = effort },
+  })
+  const view = render(React.createElement(ChatApp, {
+    workspace: process.cwd(), model: "test-model", approvalMode: "ask", sessionId: session.id, restored: false,
+    initialMessages: [], conversation, runtimeStore, approvalBridge: new ApprovalBridge(), attachEventSink: () => {},
+    runShellShortcut: async () => ({ ok: true, output: "" }), listSessions: async () => [], resumeSession: async () => { throw new Error("unused") },
+    renameCurrentSession: async () => { throw new Error("unused") }, exportCurrentSession: async () => "unused", save: async () => {},
+    reportError: async () => ({ id: "err_test", file: "/tmp/error.json" }),
+  } satisfies ChatAppProps))
+  view.stdin.write("/effort default high\r")
+  await tick(); await tick()
+  assert.equal(switched, false)
+  assert.equal(persisted, "high")
+  assert.match(visibleFrame(view), /high is now the default reasoning effort/)
   view.unmount()
 })
 
