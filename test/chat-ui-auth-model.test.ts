@@ -9,6 +9,7 @@ import type { ChatModel } from "../src/protocol.js"
 import { ApprovalBridge, ChatApp, type ChatAppProps } from "../src/ui/chat-app.js"
 import { AuthDialog } from "../src/ui/components/auth-dialog.js"
 import { ModelDialog } from "../src/ui/components/model-dialog.js"
+import { EffortDialog } from "../src/ui/components/effort-dialog.js"
 import { tick, visibleFrame, waitForFrame } from "./support/chat-ui.js"
 import type { ChatInputKey } from "../src/ui/input-routing-types.js"
 
@@ -25,6 +26,10 @@ function renderAuthDialog(props: Omit<React.ComponentProps<typeof AuthDialog>, "
 
 function renderModelDialog(props: Omit<React.ComponentProps<typeof ModelDialog>, "registerInputHandler">) {
   return render(React.createElement(DialogInputHarness, { children: (registerInputHandler) => React.createElement(ModelDialog, { ...props, registerInputHandler }) }))
+}
+
+function renderEffortDialog(props: Omit<React.ComponentProps<typeof EffortDialog>, "registerInputHandler">) {
+  return render(React.createElement(DialogInputHarness, { children: (registerInputHandler) => React.createElement(EffortDialog, { ...props, registerInputHandler }) }))
 }
 
 test("auth dialog configures a provider without exposing the API key", async (t) => {
@@ -195,17 +200,40 @@ test("model dialog can remember the selected model for future sessions", async (
   view.unmount()
 })
 
-test("centralized input closes the model dialog for Kitty Escape", async (t) => {
+test("effort dialog remembers the selected effort for future sessions", async (t) => {
+  let switched = ""
+  let persisted = ""
+  const view = renderEffortDialog({
+    efforts: ["low", "medium", "high", "xhigh", "max"], currentEffort: "medium", defaultEffort: "high", language: "en", onClose: () => {},
+    onSelect: async (effort) => { switched = effort; return { source: "config", sourceLabel: "test", preset: "ark/glm-5.2", provider: "ark", modelId: "glm-5.2", baseUrl: "https://example.com", apiKey: "test", reasoningEffort: effort } },
+    onPersist: async (effort) => { persisted = effort },
+  })
+  t.after(() => view.unmount())
+  assert.match(visibleFrame(view), /high \(default\)/)
+  view.stdin.write("\u001b[B")
+  await tick()
+  view.stdin.write("\t")
+  await tick()
+  view.stdin.write("\r")
+  await tick(); await tick(); await tick()
+  assert.equal(switched, "high")
+  assert.equal(persisted, "high")
+})
+
+function effortDialogProps(sessionId: string): ChatAppProps {
   const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
   const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
-  const props: ChatAppProps = {
-    workspace: process.cwd(), model: "ark/glm-5.2", approvalMode: "ask", sessionId: "session_model_escape", restored: false,
+  return {
+    workspace: process.cwd(), model: "ark/glm-5.2", approvalMode: "ask", sessionId, restored: false,
     initialMessages: [], conversation, language: "en", modelPresets: ["ark/glm-5.2"], approvalBridge: new ApprovalBridge(), attachEventSink: () => {},
     configureAuth: async () => { throw new Error("unused") }, switchModel: async () => ({ source: "config", sourceLabel: "test", preset: "ark/glm-5.2", provider: "ark", modelId: "glm-5.2", baseUrl: "https://example.com", apiKey: "test" }),
     runShellShortcut: async () => ({ ok: true, output: "" }), listSessions: async () => [], resumeSession: async () => { throw new Error("unused") },
     renameCurrentSession: async () => { throw new Error("unused") }, exportCurrentSession: async () => "unused", save: async () => {}, reportError: async () => ({ id: "err_test", file: "/tmp/error.json" }),
   }
-  const view = render(React.createElement(ChatApp, props))
+}
+
+test("centralized input closes the model dialog for Kitty Escape", async (t) => {
+  const view = render(React.createElement(ChatApp, effortDialogProps("session_model_escape")))
   t.after(() => view.unmount())
   view.stdin.write("/model\r")
   await tick(); await tick()
@@ -213,6 +241,17 @@ test("centralized input closes the model dialog for Kitty Escape", async (t) => 
   view.stdin.write("[27;1u")
   await tick(); await tick()
   assert.doesNotMatch(view.lastFrame() ?? "", /Select Model/)
+})
+
+test("centralized input opens the effort dialog and closes it for Kitty Escape", async (t) => {
+  const view = render(React.createElement(ChatApp, effortDialogProps("session_effort_escape")))
+  t.after(() => view.unmount())
+  view.stdin.write("/effort\r")
+  await tick(); await tick()
+  assert.match(view.lastFrame() ?? "", /Select Reasoning Effort/)
+  view.stdin.write("[27;1u")
+  await tick(); await tick()
+  assert.doesNotMatch(view.lastFrame() ?? "", /Select Reasoning Effort/)
 })
 
 test("models installed by auth are immediately available to the model switcher", async () => {

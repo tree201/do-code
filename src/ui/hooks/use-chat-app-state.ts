@@ -47,10 +47,11 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
   const [memoryCount, setMemoryCount] = useState(0)
   const [trusted, setTrusted] = useState(false)
   const [contextPercent, setContextPercent] = useState(0)
-  const dialogInputHandlers = useRef<{ auth?: DialogInputHandler | undefined; model?: DialogInputHandler | undefined }>({})
+  const dialogInputHandlers = useRef<{ auth?: DialogInputHandler | undefined; model?: DialogInputHandler | undefined; effort?: DialogInputHandler | undefined }>({})
   const activeModel = runtime.modelConfig.preset
   const activeModelPresets = runtime.modelPresets
   const activeEffort: ReasoningEffort | "default" = runtime.modelConfig.reasoningEffort ?? "default"
+  const activeDefaultEffort = runtime.defaultReasoningEffort
   const activeThinkingMode = runtime.modelConfig.thinkingMode ?? "auto"
   const activeLanguage = runtime.language
   const activeApprovalMode = runtime.approvalMode
@@ -63,10 +64,7 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
   const customCompletions = useMemo(() => props.promptExtensions?.map((item) => ({ label: `/${item.name}`, description: item.description, insert: `/${item.name}` })) ?? [], [props.promptExtensions])
   const workspaceCompletionIndex = useMemo(() => buildWorkspaceCompletionIndex(workspaceFiles), [workspaceFiles])
   const argumentCompletions = useMemo<ArgumentCompletions>(() => ({
-    [EFFORT_COMMAND]: [
-      { label: "default", description: t(activeLanguage, "Set the default reasoning effort for new sessions"), insert: "default", submit: false },
-      ...(["low", "medium", "high", "xhigh", "max"] as ReasoningEffort[]).map((effort) => ({ label: effort, description: t(activeLanguage, effort === activeEffort ? "Current reasoning effort" : "Switch reasoning effort"), insert: effort, submit: true })),
-    ],
+    [EFFORT_COMMAND]: (["low", "medium", "high", "xhigh", "max"] as ReasoningEffort[]).map((effort) => ({ label: effort, description: t(activeLanguage, effort === activeEffort ? "Current reasoning effort" : "Switch reasoning effort"), insert: effort, submit: true })),
     [THINKING_COMMAND]: (["auto", "on", "off"] as ThinkingMode[]).map((mode) => ({ label: mode, description: t(activeLanguage, mode === activeThinkingMode ? "Current thinking mode" : mode === "auto" ? "Let the model decide when to think" : mode === "on" ? "Force thinking on" : "Turn thinking off"), insert: mode, submit: true })),
     [LANGUAGE_COMMAND]: localeDefinitions.map((language) => ({ label: language.id, description: t(activeLanguage, `Set interface and output language to ${language.englishName}`), insert: language.id, submit: true })),
     [APPROVAL_MODE_COMMAND]: (["ask", "auto", "full-access"] as ApprovalMode[]).map((mode) => ({ label: mode, description: approvalModeNotice(mode, activeLanguage).split("\n").slice(1).join(" "), insert: mode, submit: true })),
@@ -97,7 +95,7 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
     history, setHistory, historyIndex, setHistoryIndex, historyDraft, setHistoryDraft, workspaceFiles, setWorkspaceFiles, completionIndex, setCompletionIndex,
     sessionPickerItems, sessionPickerIndex, sessionPickerQuery, memoryCount, setMemoryCount,
     trusted, setTrusted, contextPercent, setContextPercent, dialogInputHandlers, queuedInputs, setQueuedInputs, activeModel, activeModelPresets, attachedImages,
-    updateAttachedImages, activeEffort,
+    updateAttachedImages, activeEffort, activeDefaultEffort,
     activeThinkingMode, activeLanguage, activeApprovalMode, activePlanMode, viewerItems,
     viewerOffset, externalViewerActiveRef, exitConfirmation, armExitConfirmation, clearExitConfirmation,
     applyApprovalMode, applyPlanMode, append, appendMany, customCompletions, argumentCompletions,

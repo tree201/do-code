@@ -15,7 +15,7 @@ export function useChatInput(props: ChatAppProps, state: ChatAppState, transcrip
     const key = normalized.key
     const input = normalized.input.replaceAll("\u001b[200~", "").replaceAll("\u001b[201~", "")
     const dialog = state.getActiveDialog()
-    if (dialog.kind === "auth" || dialog.kind === "model") {
+    if (dialog.kind === "auth" || dialog.kind === "model" || dialog.kind === "effort") {
       state.dialogInputHandlers.current[dialog.kind]?.(input, key)
       return
     }

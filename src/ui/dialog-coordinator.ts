@@ -8,6 +8,7 @@ export type ActiveDialog =
   | { kind: "auth" }
   | { kind: "help"; offset: number }
   | { kind: "model" }
+  | { kind: "effort" }
   | { kind: "permission-menu"; selectedIndex: number }
   | { kind: "plan-review"; request: PlanReviewRequest; selectedIndex: number }
   | { kind: "question"; request: UserQuestion; selectedIndex: number; draft: string; customAnswer: boolean; returnToOptions: boolean }

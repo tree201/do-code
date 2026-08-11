@@ -50,7 +50,11 @@ export function executeGeneralSlashCommand(input: string, context: SlashCommandC
     }).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Model switch failed"), error, "model.switch", { preset, persist })).finally(() => { state.updateRunning(false); state.setActiveTool(null) })
     return true
   }
-  if (input === EFFORT_COMMAND) { state.append({ kind: "info", text: t(state.activeLanguage, "Reasoning effort: {effort}\nAvailable: low, medium, high, xhigh, max\nUsage: /effort <level> · /effort default <level>", { effort: state.activeEffort }) }); return true }
+  if (input === EFFORT_COMMAND) {
+    if (!state.runtimeStore.canSwitchEffort) state.append({ kind: "error", text: t(state.activeLanguage, "This client does not support reasoning effort switching.") })
+    else state.setActiveDialog({ kind: "effort" })
+    return true
+  }
   if (commandWithArgument(input, EFFORT_COMMAND)) {
     const argument = commandArgument(input, EFFORT_COMMAND)
     const defaultMatch = argument.match(/^default\s+(.*)$/)
