@@ -1,6 +1,6 @@
 import { normalizeLanguage } from "../config.js"
 import { setWorkspaceTrusted } from "../policy.js"
-import { languageDisplay, t } from "./i18n.js"
+import { availableLanguagesText, invalidLanguageText, languageDisplay, languageUsageText, t } from "./i18n.js"
 import { approvalModeNotice } from "./chat-presentation.js"
 import { modelPresetArgument, parseReasoningEffort, parseThinkingMode } from "./model-actions.js"
 import { enqueueMessage } from "./message-queue.js"
@@ -17,12 +17,12 @@ export function executeGeneralSlashCommand(input: string, context: SlashCommandC
     return true
   }
   if (input === LANGUAGE_COMMAND) {
-    state.append({ kind: "info", text: `${t(state.activeLanguage, "Current language")}: ${languageDisplay(state.activeLanguage, state.activeLanguage)}\n${t(state.activeLanguage, "Available languages")}: 中文 [zh-CN], English [en-US]\n${state.activeLanguage === "zh" ? "用法" : "Usage"}: /language [zh|en]` })
+    state.append({ kind: "info", text: `${t(state.activeLanguage, "Current language")}: ${languageDisplay(state.activeLanguage, state.activeLanguage)}\n${t(state.activeLanguage, "Available languages")}: ${availableLanguagesText(state.activeLanguage)}\n${state.activeLanguage === "zh" ? "用法" : "Usage"}: ${languageUsageText()}` })
     return true
   }
   if (commandWithArgument(input, LANGUAGE_COMMAND)) {
     const requested = normalizeLanguage(commandArgument(input, LANGUAGE_COMMAND))
-    if (!requested) state.append({ kind: "error", text: t(state.activeLanguage, "Invalid language. Usage: /language [en|zh]") })
+    if (!requested) state.append({ kind: "error", text: invalidLanguageText(state.activeLanguage) })
     else void state.runtimeStore.setLanguage(requested).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Language setting failed"), error, "language.switch", { requested }))
     return true
   }

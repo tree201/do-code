@@ -21,4 +21,5 @@ export { listModelPresets, modelProvidersPublic, resolveAgentProfile } from "./c
 export { loadRecentModels, loadStoredConfig, rememberRecentModel, saveMigratedConfig } from "./config-storage.js"
 export { migrateConfig } from "./config-schema.js"
 export { normalizeLanguage, outputLanguageInstruction, saveLanguagePreference } from "./config-language.js"
+export { isSupportedLanguage, localeDefinition, localeDefinitions, normalizeLocale, supportedLanguages, type LocaleDefinition } from "./locale-registry.js"
 export { resolveRuntimeModelConfig } from "./config-runtime.js"
