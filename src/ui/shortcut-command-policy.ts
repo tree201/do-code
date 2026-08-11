@@ -56,9 +56,9 @@ export function canRunSlashCommandDuringTask(input: string) {
 }
 
 export function isReasoningEffortShortcut(input: string, key: { ctrl?: boolean }) {
-  return key.ctrl && input.toLowerCase() === "r"
+  return key.ctrl === true && input.toLowerCase() === "r"
 }
 
-export function isHelpShortcut(input: string, key: { backspace?: boolean }) {
-  return key.backspace === true && input === ""
+export function isHelpShortcut(input: string, key: { backspace?: boolean; ctrl?: boolean }) {
+  return key.backspace === true && input === "" || key.ctrl === true && input.toLowerCase() === "h"
 }

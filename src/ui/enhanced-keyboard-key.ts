@@ -7,6 +7,10 @@ function decodeCodepoint(codepoint: number) {
 
 export function normalizeEnhancedKeyboardKey(rawInput: string, inkKey: ChatInputKey) {
   if (rawInput === "\u001b") return { input: "", key: { ...inkKey, escape: true } }
+  const controlCode = rawInput.length === 1 ? rawInput.charCodeAt(0) : 0
+  if (controlCode >= 1 && controlCode <= 26 && ![9, 13].includes(controlCode)) {
+    return { input: String.fromCharCode(96 + controlCode), key: { ...inkKey, ctrl: true } }
+  }
   const kitty = rawInput.match(/^\[(\d+);(\d+)u$/)
   const modifyOtherKeys = rawInput.match(/^\[27;(\d+);(\d+)~$/)
   const modifier = Number(kitty?.[2] ?? modifyOtherKeys?.[1])
