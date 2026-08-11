@@ -40,6 +40,15 @@ test("normalizes a plain Escape byte", () => {
   assert.equal(normalized.key.escape, true)
 })
 
+test("normalizes ordinary Ctrl-letter control bytes", () => {
+  const controls: Array<[string, string]> = [["\u0008", "h"], ["\u0012", "r"], ["\u0014", "t"], ["\u0015", "u"], ["\u0016", "v"], ["\u0019", "y"]]
+  for (const [rawInput, letter] of controls) {
+    const normalized = normalizeEnhancedKeyboardKey(rawInput, emptyKey)
+    assert.equal(normalized.input, letter)
+    assert.equal(normalized.key.ctrl, true)
+  }
+})
+
 test("preserves ordinary Ink input", () => {
   const key = { shift: true } as ChatInputKey
   const normalized = normalizeEnhancedKeyboardKey("A", key)
