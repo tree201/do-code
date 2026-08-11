@@ -17,8 +17,10 @@ export function useChatEffects(props: ChatAppProps, state: ChatAppState, stdout:
   }, [props.workspace, state.setWorkspaceFiles])
 
   useEffect(() => {
+    const stats = props.conversation.stats()
+    state.setContextPercent(Math.round(stats.currentContextTokens / stats.contextWindow * 100))
     void props.conversation.memorySources().then((sources) => state.setMemoryCount(sources.length))
     void isWorkspaceTrusted(props.workspace).then(state.setTrusted)
-  }, [props.conversation, props.workspace, state.setMemoryCount, state.setTrusted])
+  }, [props.conversation, props.workspace, state.setContextPercent, state.setMemoryCount, state.setTrusted])
 
 }

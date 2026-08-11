@@ -49,11 +49,28 @@ test("language command switches the live interface with second-level completion"
   view.unmount()
 })
 
+test("restored sessions initialize the context percentage", async () => {
+  const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
+  const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
+  const initialMessages: Message[] = [{ role: "system", content: "x".repeat(5_000) }, { role: "user", content: "Resume this session" }]
+  conversation.restore(initialMessages)
+  const props: ChatAppProps = {
+    workspace: process.cwd(), model: "test-model", approvalMode: "ask", sessionId: "session_restored", restored: true, initialMessages, conversation,
+    approvalBridge: new ApprovalBridge(), attachEventSink: () => {}, runShellShortcut: async () => ({ ok: true, output: "" }), listSessions: async () => [],
+    resumeSession: async () => { throw new Error("unused") }, renameCurrentSession: async () => { throw new Error("unused") }, exportCurrentSession: async () => "unused", save: async () => {},
+    reportError: async () => ({ id: "err_test", file: "/tmp/error.json" }),
+  }
+  const view = render(React.createElement(ChatApp, props))
+  await tick()
+  assert.match(view.lastFrame() ?? "", /test-model · default · [1-9][0-9]*%/)
+  view.unmount()
+})
+
 test("resuming a session restores conversation and read-only tool history without replaying tools", async () => {
   const model: ChatModel = { async complete() { return { content: "done", toolCalls: [] } } }
   const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
   const messages: Message[] = [
-    { role: "system", content: "system instructions" },
+    { role: "system", content: `system instructions ${"x".repeat(5_000)}` },
     { role: "user", content: "Earlier question" },
     { role: "assistant", content: "I will inspect it.", tool_calls: [{ id: "tool_1", type: "function", function: { name: "read_file", arguments: JSON.stringify({ path: "src/main.ts" }) } }] },
     { role: "tool", tool_call_id: "tool_1", content: "OK: SECRET HISTORICAL TOOL OUTPUT" },
@@ -73,7 +90,10 @@ test("resuming a session restores conversation and read-only tool history withou
     workspace: process.cwd(), model: "test-model", approvalMode: "ask", sessionId: "session_current", restored: false, initialMessages: [], conversation,
     approvalBridge: new ApprovalBridge(), attachEventSink: () => {}, runShellShortcut: async () => ({ ok: true, output: "" }),
     listSessions: async () => [{ id: "session_old", title: "Old work", workspace: process.cwd(), updatedAt: new Date().toISOString(), directory: "/tmp/session_old" }],
-    resumeSession: async () => ({ session: { id: "session_old", title: "Old work", workspace: process.cwd(), updatedAt: new Date().toISOString(), directory: "/tmp/session_old" }, messages, events }),
+    resumeSession: async () => {
+      conversation.restore(messages)
+      return { session: { id: "session_old", title: "Old work", workspace: process.cwd(), updatedAt: new Date().toISOString(), directory: "/tmp/session_old" }, messages, events }
+    },
     renameCurrentSession: async () => { throw new Error("unused") }, exportCurrentSession: async () => "unused", save: async () => {},
     reportError: async () => ({ id: "err_test", file: "/tmp/error.json" }),
   }
@@ -88,6 +108,7 @@ test("resuming a session restores conversation and read-only tool history withou
   await tick()
   const frame = view.lastFrame() ?? ""
   assert.match(frame, /Resumed session: Old work/)
+  assert.match(frame, /test-model · default · [1-9][0-9]*%/)
   assert.match(frame, /Restored 3\/3 conversation messages/)
   assert.match(frame, /1 historical tool action/)
   assert.match(frame, /Earlier question/)

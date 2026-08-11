@@ -12,6 +12,8 @@ export function useSessionActions(props: ChatAppProps, state: ChatAppState, tran
     void (async () => {
       try {
         const loaded = await state.runtimeStore.resumeSession(id)
+        const stats = props.conversation.stats()
+        state.setContextPercent(Math.round(stats.currentContextTokens / stats.contextWindow * 100))
         state.appendMany(restoredSessionItems(loaded.session.title ?? loaded.session.id, loaded.messages, loaded.events, state.activeLanguage))
       } catch (error) {
         transcript.appendReportedError(t(state.activeLanguage, "Resume failed"), error, "session.resume", { id })
