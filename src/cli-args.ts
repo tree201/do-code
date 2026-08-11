@@ -1,6 +1,25 @@
 import path from "node:path"
+import type { DoCodeLanguage } from "./config-contracts.js"
+import { normalizeLanguage } from "./config-language.js"
 import type { ApprovalMode } from "./policy.js"
 import { DEFAULT_MAX_TURNS } from "./turn-limits.js"
+import { t } from "./ui/i18n.js"
+
+export class CliArgumentError extends Error {
+  readonly kind = "argument"
+}
+
+function argumentError(language: DoCodeLanguage, value: string, values?: Record<string, string | number>): never {
+  throw new CliArgumentError(t(language, value, values))
+}
+
+function requestedLanguage(input: string[]): { index: number, language?: DoCodeLanguage } {
+  const index = input.findIndex((argument) => argument === "--language")
+  if (index < 0) return { index }
+  const language = normalizeLanguage(input[index + 1] ?? "")
+  if (!language) argumentError("en", "Unsupported language: {language}", { language: input[index + 1] ?? "" })
+  return { index, language }
+}
 
 export type Args = {
   command: "chat" | "run" | "auth" | "config" | "doctor" | "sessions" | "resume" | "errors" | "extensions" | "agents" | "acp" | "worktrees" | "version" | "update"
@@ -29,60 +48,66 @@ export type Args = {
   worktree?: string
   agent?: string
   images?: string[]
+  language?: DoCodeLanguage
   updateAction?: "check" | "install"
   updateChannel?: "stable" | "preview"
 }
 
-export function usage() {
-  return `Usage:
-  do-code [options]                    Start the interactive coding agent
-  do-code --continue [options]         Continue the latest project session
-  do-code resume [session-id]          Resume a session or the latest session
-  do-code sessions [list]              List project sessions
-  do-code sessions search <query>      Search sessions
-  do-code sessions rename <id> <name>  Rename a session
-  do-code sessions delete <id>         Delete a session
+export function usage(language: DoCodeLanguage = "en") {
+  const translate = (value: string, values?: Record<string, string | number>) => t(language, value, values)
+  return `${translate("Usage:")}
+  do-code [options]                    ${translate("Start the interactive coding agent")}
+  do-code --continue [options]         ${translate("Continue the latest project session")}
+  do-code resume [session-id]          ${translate("Resume a session or the latest session")}
+  do-code sessions [list]              ${translate("List project sessions")}
+  do-code sessions search <query>      ${translate("Search sessions")}
+  do-code sessions rename <id> <name>  ${translate("Rename a session")}
+  do-code sessions delete <id>         ${translate("Delete a session")}
   do-code sessions export <id> [md|json] [output]
-  do-code run [options] "task"         Run one task and exit
-  echo "task" | do-code                Run a headless task from stdin
-  do-code auth                         Configure a model with the guided setup
-  do-code config setup                 Same guided model setup
-  do-code config [show]                Show model configuration (secrets hidden)
-  do-code doctor                       Check the model, workspace, and local tools
-  do-code errors [list]                List recent error reports
-  do-code errors show <error-id>       Show a bad case and reproduction context
-  do-code extensions                   Show commands, skills, and MCP extensions
-  do-code agents                       List configured agent profiles
-  do-code version                      Show the installed version
+  do-code run [options] "task"         ${translate("Run one task and exit")}
+  echo "task" | do-code                ${translate("Run a headless task from stdin")}
+  do-code auth                         ${translate("Configure a model with the guided setup")}
+  do-code config setup                 ${translate("Same guided model setup")}
+  do-code config [show]                ${translate("Show model configuration (secrets hidden)")}
+  do-code doctor                       ${translate("Check the model, workspace, and local tools")}
+  do-code errors [list]                ${translate("List recent error reports")}
+  do-code errors show <error-id>       ${translate("Show a bad case and reproduction context")}
+  do-code extensions                   ${translate("Show commands, skills, and MCP extensions")}
+  do-code agents                       ${translate("List configured agent profiles")}
+  do-code version                      ${translate("Show the installed version")}
   do-code update [check|install] [stable|preview]
-  do-code acp                          Start the ACP server over stdin/stdout
-  do-code worktrees                    List do-code worktrees
+  do-code acp                          ${translate("Start the ACP server over stdin/stdout")}
+  do-code worktrees                    ${translate("List do-code worktrees")}
 
-Options:
-  -C, --cwd <path>       Working directory (default: current directory)
-  -y, --yes              Use full-access mode (no ordinary approval prompts)
+${translate("Options:")}
+  -C, --cwd <path>       ${translate("Working directory (default: current directory)")}
+  -y, --yes              ${translate("Use full-access mode (no ordinary approval prompts)")}
   --approval-mode <mode> ask | auto | full-access
-  --continue             Continue the latest session
-  --task-file <path>     Read the task from a UTF-8 file
-  --artifact-dir <path>  Set the trace, patch, and result directory
-  --json                 Output JSON from do-code run
+  --continue             ${translate("Continue the latest session")}
+  --task-file <path>     ${translate("Read the task from a UTF-8 file")}
+  --artifact-dir <path>  ${translate("Set the trace, patch, and result directory")}
+  --json                 ${translate("Output JSON from do-code run")}
   --output-format <fmt>  text | json | stream-json
-  --max-steps <number>   Maximum model turns per task (default: ${DEFAULT_MAX_TURNS})
-  --timeout <seconds>    Total runtime budget (default: 600)
-  --model <preset>       Select a provider/model preset
-  --provider <name>      Select a provider with a model name
-  --agent <name>         Use a configured agent profile
-  --image <path>         Attach a workspace image (repeatable)
-  --worktree[=name]      Run in an isolated Git worktree
-  -h, --help             Show help
-  -v, --version          Show version
+  --max-steps <number>   ${translate("Maximum model turns per task (default: {count})", { count: DEFAULT_MAX_TURNS })}
+  --timeout <seconds>    ${translate("Total runtime budget (default: 600)")}
+  --model <preset>       ${translate("Select a provider/model preset")}
+  --provider <name>      ${translate("Select a provider with a model name")}
+  --agent <name>         ${translate("Use a configured agent profile")}
+  --image <path>         ${translate("Attach a workspace image (repeatable)")}
+  --worktree[=name]      ${translate("Run in an isolated Git worktree")}
+  --language <locale>    ${translate("Set the interface language for this command")}
+  -h, --help             ${translate("Show help")}
+  -v, --version          ${translate("Show version")}
 
-Model configuration priority:
+${translate("Model configuration priority:")}
   system < user < project < environment < --provider/--model`
 }
 
 export function parseArgs(input: string[]): Args {
-  let argv=[...input]
+  const requested = requestedLanguage(input)
+  const language = requested.language
+  const displayLanguage = language ?? "en"
+  let argv = requested.index < 0 ? input : input.flatMap((argument, index) => index === requested.index || index === requested.index + 1 ? [] : [argument])
   if(argv[0]==="-v"||argv[0]==="--version")argv=["version"]
   const first=argv[0]
   const commands: Args["command"][] = ["run", "auth", "config", "doctor", "sessions", "resume", "errors", "extensions", "agents", "acp", "worktrees", "version", "update"]
@@ -93,82 +118,82 @@ export function parseArgs(input: string[]): Args {
   let configAction:Args["configAction"]
   if(command==="config"){
     const action=argv.shift()??"show"
-    if(action!=="show"&&action!=="setup")throw new Error(`Unknown config action: ${action}`)
+    if(action!=="show"&&action!=="setup")argumentError(displayLanguage, "Unknown config action: {action}", { action })
     configAction=action
   }
   if(command==="resume"&&argv[0]&&!argv[0]!.startsWith("-"))sessionId=argv.shift()
   const task:string[]=[]
   for(let index=0;index<argv.length;index++){
     const arg=argv[index]!
-    if(arg==="-h"||arg==="--help"){console.log(usage());process.exit(0)}
+    if(arg==="-h"||arg==="--help"){console.log(usage(displayLanguage));process.exit(0)}
     if(arg==="-y"||arg==="--yes"){yes=true;approvalMode="full-access";continue}
     if(arg==="--approval-mode"){
       const mode=argv[++index]
-      if(mode!=="ask"&&mode!=="auto"&&mode!=="full-access")throw new Error("--approval-mode must be ask, auto, or full-access")
+      if(mode!=="ask"&&mode!=="auto"&&mode!=="full-access")argumentError(displayLanguage, "--approval-mode must be ask, auto, or full-access")
       approvalMode=mode;yes=mode==="full-access";continue
     }
     if(arg==="--json"){json=true;outputFormat="json";continue}
     if(arg==="--output-format"){
       const format=argv[++index]
-      if(format!=="text"&&format!=="json"&&format!=="stream-json")throw new Error("--output-format must be text, json, or stream-json")
+      if(format!=="text"&&format!=="json"&&format!=="stream-json")argumentError(displayLanguage, "--output-format must be text, json, or stream-json")
       outputFormat=format;json=format==="json";continue
     }
     if(arg==="--continue"){continueSession=true;continue}
-    if(arg==="-C"||arg==="--cwd"){workspace=argv[++index]??"";if(!workspace)throw new Error(`${arg} requires a path`);continue}
-    if(arg==="--task-file"){taskFile=argv[++index]??"";if(!taskFile)throw new Error("--task-file requires a path");continue}
-    if(arg==="--artifact-dir"){artifactDirectory=argv[++index]??"";if(!artifactDirectory)throw new Error("--artifact-dir requires a path");continue}
-    if(arg==="--max-steps"){maxSteps=Number(argv[++index]);if(!Number.isInteger(maxSteps)||maxSteps<1)throw new Error("--max-steps must be a positive integer");continue}
-    if(arg==="--timeout"){timeoutSeconds=Number(argv[++index]);if(!Number.isFinite(timeoutSeconds)||timeoutSeconds<=0)throw new Error("--timeout must be a positive number");continue}
-    if(arg==="--model"){model=argv[++index];if(!model)throw new Error("--model requires a preset");continue}
-    if(arg==="--provider"){provider=argv[++index];if(!provider)throw new Error("--provider requires a name");continue}
-    if(arg==="--agent"){agent=argv[++index];if(!agent)throw new Error("--agent requires a profile name");continue}
-    if(arg==="--image"){const image=argv[++index];if(!image)throw new Error("--image requires a path");images.push(image);continue}
+    if(arg==="-C"||arg==="--cwd"){workspace=argv[++index]??"";if(!workspace)argumentError(displayLanguage, "{argument} requires a path", { argument: arg });continue}
+    if(arg==="--task-file"){taskFile=argv[++index]??"";if(!taskFile)argumentError(displayLanguage, "--task-file requires a path");continue}
+    if(arg==="--artifact-dir"){artifactDirectory=argv[++index]??"";if(!artifactDirectory)argumentError(displayLanguage, "--artifact-dir requires a path");continue}
+    if(arg==="--max-steps"){maxSteps=Number(argv[++index]);if(!Number.isInteger(maxSteps)||maxSteps<1)argumentError(displayLanguage, "--max-steps must be a positive integer");continue}
+    if(arg==="--timeout"){timeoutSeconds=Number(argv[++index]);if(!Number.isFinite(timeoutSeconds)||timeoutSeconds<=0)argumentError(displayLanguage, "--timeout must be a positive number");continue}
+    if(arg==="--model"){model=argv[++index];if(!model)argumentError(displayLanguage, "--model requires a preset");continue}
+    if(arg==="--provider"){provider=argv[++index];if(!provider)argumentError(displayLanguage, "--provider requires a name");continue}
+    if(arg==="--agent"){agent=argv[++index];if(!agent)argumentError(displayLanguage, "--agent requires a profile name");continue}
+    if(arg==="--image"){const image=argv[++index];if(!image)argumentError(displayLanguage, "--image requires a path");images.push(image);continue}
     if(arg==="--worktree"){worktree="";continue}
     if(arg.startsWith("--worktree=")){worktree=arg.slice("--worktree=".length);continue}
-    if(arg.startsWith("-"))throw new Error(`Unknown argument: ${arg}`)
+    if(arg.startsWith("-"))argumentError(displayLanguage, "Unknown argument: {argument}", { argument: arg })
     task.push(arg)
   }
-  if(command==="run"&&task.length&&taskFile)throw new Error("Use either a task argument or --task-file, not both")
+  if(command==="run"&&task.length&&taskFile)argumentError(displayLanguage, "Use either a task argument or --task-file, not both")
   let sessionAction:Args["sessionAction"],sessionQuery:string|undefined,sessionTitle:string|undefined,exportFormat:Args["exportFormat"],output:string|undefined
   if(command==="sessions"){
     const action=task.shift()??"list"
-    if(!["list","search","delete","rename","export"].includes(action))throw new Error(`Unknown sessions action: ${action}`)
+    if(!["list","search","delete","rename","export"].includes(action))argumentError(displayLanguage, "Unknown sessions action: {action}", { action })
     sessionAction=action as Args["sessionAction"]
     if(sessionAction==="search"){
       sessionQuery=task.join(" ").trim()
-      if(!sessionQuery)throw new Error("Usage: do-code sessions search <query>")
+      if(!sessionQuery)argumentError(displayLanguage, "Usage: do-code sessions search <query>")
     }else if(sessionAction==="delete"){
       sessionId=task.shift()
-      if(!sessionId||task.length)throw new Error("Usage: do-code sessions delete <session-id>")
+      if(!sessionId||task.length)argumentError(displayLanguage, "Usage: do-code sessions delete <session-id>")
     }else if(sessionAction==="rename"){
       sessionId=task.shift();sessionTitle=task.join(" ").trim()
-      if(!sessionId||!sessionTitle)throw new Error("Usage: do-code sessions rename <session-id> <name>")
+      if(!sessionId||!sessionTitle)argumentError(displayLanguage, "Usage: do-code sessions rename <session-id> <name>")
     }else if(sessionAction==="export"){
       sessionId=task.shift()
       const format=task.shift()??"md"
-      if(!sessionId||(format!=="md"&&format!=="json"))throw new Error("Usage: do-code sessions export <session-id> [md|json] [output]")
+      if(!sessionId||(format!=="md"&&format!=="json"))argumentError(displayLanguage, "Usage: do-code sessions export <session-id> [md|json] [output]")
       exportFormat=format;output=task.shift()
-      if(task.length)throw new Error("Usage: do-code sessions export <session-id> [md|json] [output]")
-    }else if(task.length)throw new Error("Usage: do-code sessions [list]")
+      if(task.length)argumentError(displayLanguage, "Usage: do-code sessions export <session-id> [md|json] [output]")
+    }else if(task.length)argumentError(displayLanguage, "Usage: do-code sessions [list]")
   }
   let errorAction:Args["errorAction"],errorIdValue:string|undefined
   if(command==="errors"){
     const action=task.shift()??"list"
-    if(action!=="list"&&action!=="show")throw new Error(`Unknown errors action: ${action}`)
+    if(action!=="list"&&action!=="show")argumentError(displayLanguage, "Unknown errors action: {action}", { action })
     errorAction=action
     if(action==="show"){
       errorIdValue=task.shift()
-      if(!errorIdValue||task.length)throw new Error("Usage: do-code errors show <error-id>")
-    }else if(task.length)throw new Error("Usage: do-code errors [list]")
+      if(!errorIdValue||task.length)argumentError(displayLanguage, "Usage: do-code errors show <error-id>")
+    }else if(task.length)argumentError(displayLanguage, "Usage: do-code errors [list]")
   }
   let updateAction:Args["updateAction"],updateChannel:Args["updateChannel"]
   if(command==="update"){
     const action=task.shift()??"check",channel=task.shift()??"stable"
-    if((action!=="check"&&action!=="install")||(channel!=="stable"&&channel!=="preview")||task.length)throw new Error("Usage: do-code update [check|install] [stable|preview]")
+    if((action!=="check"&&action!=="install")||(channel!=="stable"&&channel!=="preview")||task.length)argumentError(displayLanguage, "Usage: do-code update [check|install] [stable|preview]")
     updateAction=action;updateChannel=channel
   }
-  if(command!=="run"&&command!=="chat"&&command!=="sessions"&&command!=="errors"&&command!=="update"&&task.length)throw new Error(`Unknown argument: ${task[0]}`)
-  if(command!=="run"&&command!=="chat"&&(taskFile||json||outputFormat!=="text"||artifactDirectory))throw new Error("Task and output options are only available in headless mode")
+  if(command!=="run"&&command!=="chat"&&command!=="sessions"&&command!=="errors"&&command!=="update"&&task.length)argumentError(displayLanguage, "Unknown argument: {argument}", { argument: task[0] ?? "" })
+  if(command!=="run"&&command!=="chat"&&(taskFile||json||outputFormat!=="text"||artifactDirectory))argumentError(displayLanguage, "Task and output options are only available in headless mode")
   if(command==="resume")continueSession=true
-  return {command,workspace:path.resolve(workspace),yes,approvalMode,json,outputFormat,maxSteps,timeoutSeconds,continueSession,...((command==="run"||command==="chat")&&task.length?{task:task.join(" ")}:{ }),...(taskFile?{taskFile:path.resolve(taskFile)}:{}),...(artifactDirectory?{artifactDirectory:path.resolve(artifactDirectory)}:{}),...(sessionId?{sessionId}:{}),...(sessionAction?{sessionAction}:{}),...(sessionQuery?{sessionQuery}:{}),...(sessionTitle?{sessionTitle}:{}),...(exportFormat?{exportFormat}:{}),...(output?{output}:{}),...(configAction?{configAction}:{}),...(errorAction?{errorAction}:{}),...(errorIdValue?{errorId:errorIdValue}:{}),...(model?{model}:{}),...(provider?{provider}:{}),...(agent?{agent}:{}),...(images.length?{images}:{}),...(updateAction?{updateAction}:{}),...(updateChannel?{updateChannel}:{}),...(worktree!==undefined?{worktree}:{})}
+  return {command,workspace:path.resolve(workspace),yes,approvalMode,json,outputFormat,maxSteps,timeoutSeconds,continueSession,...((command==="run"||command==="chat")&&task.length?{task:task.join(" ")}:{ }),...(taskFile?{taskFile:path.resolve(taskFile)}:{}),...(artifactDirectory?{artifactDirectory:path.resolve(artifactDirectory)}:{}),...(sessionId?{sessionId}:{}),...(sessionAction?{sessionAction}:{}),...(sessionQuery?{sessionQuery}:{}),...(sessionTitle?{sessionTitle}:{}),...(exportFormat?{exportFormat}:{}),...(output?{output}:{}),...(configAction?{configAction}:{}),...(errorAction?{errorAction}:{}),...(errorIdValue?{errorId:errorIdValue}:{}),...(model?{model}:{}),...(provider?{provider}:{}),...(agent?{agent}:{}),...(images.length?{images}:{}),...(language?{language}:{}),...(updateAction?{updateAction}:{}),...(updateChannel?{updateChannel}:{}),...(worktree!==undefined?{worktree}:{})}
 }

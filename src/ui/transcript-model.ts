@@ -1,5 +1,6 @@
 import type { DoCodeLanguage } from "../config.js"
 import type { ToolPresentation } from "../protocol.js"
+import { t } from "./i18n.js"
 import type { PlanProposal, TodoItem } from "../tool-contracts.js"
 import type { ToolSummaryItem } from "./tool-summary.js"
 
@@ -22,7 +23,6 @@ export type NewTranscriptItem = TranscriptItem extends infer Item
   : never
 
 export function planMarkdown(plan: PlanProposal, language: DoCodeLanguage) {
-  const zh = language === "zh"
   const stepText = (step: PlanProposal["steps"][number]) => typeof step === "string" ? step : step.description
   const steps = plan.steps.map((step, index) => {
     const [first = "", ...rest] = stepText(step).trim().split("\n")
@@ -32,19 +32,18 @@ export function planMarkdown(plan: PlanProposal, language: DoCodeLanguage) {
   }).join("\n")
   const sections = [
     `# ${plan.title}`,
-    `## ${zh ? "总体目标" : "Summary"}`,
+    `## ${t(language, "Summary")}`,
     plan.summary,
-    `## ${zh ? "执行步骤" : "Implementation"}`,
+    `## ${t(language, "Implementation")}`,
     steps,
   ]
-  if (plan.files?.length) sections.push(`## ${zh ? "涉及文件" : "Files"}`, ...plan.files.map((file) => `- \`${file}\``))
-  if (plan.verification?.length) sections.push(`## ${zh ? "验证方式" : "Verification"}`, ...plan.verification.map((item) => `- ${item}`))
-  if (plan.risks?.length) sections.push(`## ${zh ? "风险" : "Risks"}`, ...plan.risks.map((item) => `- ${item}`))
+  if (plan.files?.length) sections.push(`## ${t(language, "Files")}`, ...plan.files.map((file) => `- \`${file}\``))
+  if (plan.verification?.length) sections.push(`## ${t(language, "Verification")}`, ...plan.verification.map((item) => `- ${item}`))
+  if (plan.risks?.length) sections.push(`## ${t(language, "Risks")}`, ...plan.risks.map((item) => `- ${item}`))
   return sections.join("\n\n")
 }
 
 export function transcriptViewerText(items: TranscriptItem[], language: DoCodeLanguage) {
-  const zh = language === "zh"
   const sections: string[] = []
   let assistantGroup: number | undefined
   for (const item of items) {
@@ -54,11 +53,11 @@ export function transcriptViewerText(items: TranscriptItem[], language: DoCodeLa
       continue
     }
     assistantGroup = item.kind === "assistant" ? item.streamGroup : undefined
-    if (item.kind === "resume") sections.push(`• ${zh ? "已恢复会话" : "Resumed session"}: ${item.title}`)
-    else if (item.kind === "user") sections.push(`› ${zh ? "你" : "You"}\n${item.text}`)
+    if (item.kind === "resume") sections.push(`• ${t(language, "Resumed session")}: ${item.title}`)
+    else if (item.kind === "user") sections.push(`› ${t(language, "You")}\n${item.text}`)
     else if (item.kind === "assistant") sections.push(`• do-code\n${item.text}`)
-    else if (item.kind === "plan") sections.push(`• ${zh ? "建议计划" : "Proposed Plan"}\n${planMarkdown(item.plan, language)}`)
-    else if (item.kind === "error" || item.kind === "info") sections.push(item.kind === "error" ? `× ${zh ? "错误" : "Error"}\n${item.text}` : `• ${item.text}`)
+    else if (item.kind === "plan") sections.push(`• ${t(language, "Proposed Plan")}\n${planMarkdown(item.plan, language)}`)
+    else if (item.kind === "error" || item.kind === "info") sections.push(item.kind === "error" ? `× ${t(language, "Error")}\n${item.text}` : `• ${item.text}`)
     else if (item.kind === "tool") sections.push(...item.tools.map((tool) => {
       const status = tool.ok ? "✓" : "×"
       const args = tool.args === undefined ? "" : `\n${JSON.stringify(tool.args, null, 2)}`

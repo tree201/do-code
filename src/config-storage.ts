@@ -12,6 +12,7 @@ export async function readConfigJson(file: string): Promise<unknown | null> {
     return JSON.parse(await readFile(file, "utf8"))
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null
+    // This message is consumed while loading the language preference itself, so it remains English.
     throw new Error(`Cannot read configuration ${file}: ${error instanceof Error ? error.message : String(error)}`)
   }
 }

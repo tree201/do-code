@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process"
+import type { DoCodeLanguage } from "./config-contracts.js"
+import { t } from "./ui/i18n.js"
 import { DO_CODE_VERSION } from "./version.js"
 
 export type UpdateChannel = "stable" | "preview"
@@ -17,20 +19,20 @@ export function compareVersions(left: string, right: string) {
   return a.prerelease.localeCompare(b.prerelease, undefined, { numeric: true })
 }
 
-export async function checkForUpdate(channel: UpdateChannel, fetcher: typeof fetch = fetch) {
+export async function checkForUpdate(channel: UpdateChannel, fetcher: typeof fetch = fetch, language: DoCodeLanguage = "en") {
   const registry = (process.env.DO_CODE_UPDATE_REGISTRY ?? "https://registry.npmjs.org").replace(/\/$/, "")
   const packageName = process.env.DO_CODE_UPDATE_PACKAGE ?? "do-code"
   const response = await fetcher(`${registry}/${encodeURIComponent(packageName).replace(/%40/g, "@").replace(/%2F/gi, "%2f")}`, { headers: { accept: "application/json" } })
-  if (!response.ok) throw new Error(`Update registry returned HTTP ${response.status}`)
+  if (!response.ok) throw new Error(t(language, "Update registry returned HTTP {status}", { status: response.status }))
   const metadata = await response.json() as { "dist-tags"?: Record<string, string> }
   const tag = channel === "preview" ? "next" : "latest"
   const latest = metadata["dist-tags"]?.[tag]
-  if (!latest) throw new Error(`Update channel ${channel} does not have an npm ${tag} release`)
+  if (!latest) throw new Error(t(language, "Update channel {channel} does not have an npm {tag} release", { channel, tag }))
   return { packageName, channel, tag, current: DO_CODE_VERSION, latest, updateAvailable: compareVersions(latest, DO_CODE_VERSION) > 0 }
 }
 
-export async function installUpdate(channel: UpdateChannel) {
-  const result = await checkForUpdate(channel)
+export async function installUpdate(channel: UpdateChannel, language: DoCodeLanguage = "en") {
+  const result = await checkForUpdate(channel, fetch, language)
   if (!result.updateAvailable) return { ...result, installed: false }
   await new Promise<void>((resolve, reject) => {
     const child = spawn("npm", ["install", "--global", `${result.packageName}@${result.tag}`], { stdio: "inherit", env: process.env })

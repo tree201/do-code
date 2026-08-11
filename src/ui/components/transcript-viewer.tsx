@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { Box, Text, useStdout } from "ink"
 import type { DoCodeLanguage } from "../../config.js"
+import { t } from "../i18n.js"
 import type { TranscriptItem } from "../transcript-model.js"
 import { cachedTranscriptViewerLines } from "../transcript-viewer-cache.js"
 import { tuiTheme } from "../theme.js"
 
 export const TranscriptViewer = React.memo(function TranscriptViewer({ items, offset, width, height, language, preparedLines }: { items: TranscriptItem[]; offset: number; width: number; height: number; language: DoCodeLanguage; preparedLines?: string[] }) {
-  const zh = language === "zh"
   const contentWidth = Math.max(8, width - 4)
   const rows = Math.max(3, height - 4)
   const lines = useMemo(
@@ -28,10 +28,10 @@ export const TranscriptViewer = React.memo(function TranscriptViewer({ items, of
     flexShrink={0}
     overflow="hidden"
   >
-    <Text bold color={tuiTheme.accent}>{zh ? "消息查看模式" : "Message viewer"}<Text dimColor>  {lines.length ? `${start + 1}-${Math.min(lines.length, start + rows)}/${lines.length}` : "0/0"}</Text></Text>
+    <Text bold color={tuiTheme.accent}>{t(language, "Message viewer")}<Text dimColor>  {lines.length ? `${start + 1}-${Math.min(lines.length, start + rows)}/${lines.length}` : "0/0"}</Text></Text>
     {visible.map((line, index) => <Text key={`${start + index}-${line}`} wrap="truncate-end">{line || " "}</Text>)}
     {visible.length < rows ? <Box height={rows - visible.length} flexShrink={0} /> : null}
-    <Text dimColor wrap="truncate-end">{zh ? "↑↓ · PgUp/PgDn · Home/End · Ctrl+T/Esc 返回" : "↑↓ · PgUp/PgDn · Ctrl+T/Esc Back"}</Text>
+    <Text dimColor wrap="truncate-end">{t(language, "↑↓ · PgUp/PgDn · Home/End · Ctrl+T/Esc Back")}</Text>
   </Box>
 })
 

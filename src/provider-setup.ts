@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises"
 import path from "node:path"
-import { doCodeConfigPath, migrateConfig, type ModelProviderModelConfig, type ProviderProtocol } from "./config.js"
+import { doCodeConfigPath, loadStoredConfig, migrateConfig, type DoCodeLanguage, type ModelProviderModelConfig, type ProviderProtocol } from "./config.js"
+import { t } from "./ui/i18n.js"
 import { allReasoningEfforts, generateCustomEnvKey, providerDefinition } from "./provider-registry.js"
 
 export type ProviderInstallInput = {
@@ -25,6 +26,12 @@ export function customProviderId(baseUrl: string) {
   return "custom-provider"
 }
 
+/** Returns the saved UI language, falling back safely when configuration is unavailable. */
+export async function resolveProviderSetupLanguage(): Promise<DoCodeLanguage> {
+  try { return (await loadStoredConfig()).language ?? "en" }
+  catch { return "en" }
+}
+
 async function readUserConfig(file = doCodeConfigPath()) {
   try { return migrateConfig(JSON.parse(await readFile(file, "utf8")), file) }
   catch (error) {
@@ -33,29 +40,29 @@ async function readUserConfig(file = doCodeConfigPath()) {
   }
 }
 
-function resolveBaseUrl(input: ProviderInstallInput) {
+function resolveBaseUrl(input: ProviderInstallInput, language: DoCodeLanguage) {
   const definition = providerDefinition(input.providerId)
-  if (!definition) throw new Error(`未知 Provider：${input.providerId}`)
+  if (!definition) throw new Error(t(language, "Unknown provider: {providerId}", { providerId: input.providerId }))
   if (input.providerId === "custom") return input.baseUrl?.trim() ?? ""
   if (typeof definition.baseUrl === "string") return definition.baseUrl
   if (Array.isArray(definition.baseUrl)) return definition.baseUrl.find((item) => item.id === input.regionId)?.url ?? definition.baseUrl[0]?.url ?? ""
   return input.baseUrl?.trim() ?? ""
 }
 
-export function buildProviderInstall(input: ProviderInstallInput) {
+export function buildProviderInstall(input: ProviderInstallInput, language: DoCodeLanguage = "en") {
   const definition = providerDefinition(input.providerId)
-  if (!definition) throw new Error(`未知 Provider：${input.providerId}`)
+  if (!definition) throw new Error(t(language, "Unknown provider: {providerId}", { providerId: input.providerId }))
   const apiKey = input.apiKey.trim()
-  if (!apiKey) throw new Error("API Key 不能为空")
-  if (definition.id === "coding-plan" && !apiKey.startsWith("sk-sp-")) throw new Error("百炼 Coding Plan API Key 应以 sk-sp- 开头")
-  const baseUrl = resolveBaseUrl(input)
-  if (!/^https?:\/\//.test(baseUrl)) throw new Error("接口地址必须是有效的 HTTP(S) URL")
+  if (!apiKey) throw new Error(t(language, "API Key cannot be empty."))
+  if (definition.id === "coding-plan" && !apiKey.startsWith("sk-sp-")) throw new Error(t(language, "Alibaba Coding Plan API Key must start with sk-sp-."))
+  const baseUrl = resolveBaseUrl(input, language)
+  if (!/^https?:\/\//.test(baseUrl)) throw new Error(t(language, "Base URL must be a valid HTTP(S) URL."))
   const protocol = input.protocol ?? definition.protocol
-  if (!(definition.protocolOptions ?? [definition.protocol]).includes(protocol)) throw new Error("该 Provider 不支持所选协议")
+  if (!(definition.protocolOptions ?? [definition.protocol]).includes(protocol)) throw new Error(t(language, "This provider does not support the selected protocol."))
   const providerId = definition.id === "custom" ? input.customProviderId?.trim() || customProviderId(baseUrl) : definition.id
-  if (!/^[a-z0-9][a-z0-9._-]*$/i.test(providerId)) throw new Error("Provider ID 只能包含字母、数字、点、下划线和连字符")
+  if (!/^[a-z0-9][a-z0-9._-]*$/i.test(providerId)) throw new Error(t(language, "Provider ID may contain only letters, numbers, dots, underscores, and hyphens."))
   const requested = [...new Set((input.modelIds ?? definition.models?.map((item) => item.id) ?? []).map((item) => item.trim()).filter(Boolean))]
-  if (!requested.length) throw new Error("至少选择一个模型")
+  if (!requested.length) throw new Error(t(language, "Select at least one model."))
   const envKey = definition.envKey ?? generateCustomEnvKey(protocol, baseUrl)
   const models: ModelProviderModelConfig[] = requested.map((id) => {
     const spec = definition.models?.find((item) => item.id === id)
@@ -71,8 +78,9 @@ export function buildProviderInstall(input: ProviderInstallInput) {
   return { providerId, protocol, envKey, baseUrl, apiKey, models }
 }
 
-export async function installProvider(input: ProviderInstallInput) {
-  const plan = buildProviderInstall(input)
+export async function installProvider(input: ProviderInstallInput, language?: DoCodeLanguage) {
+  const setupLanguage = language ?? await resolveProviderSetupLanguage()
+  const plan = buildProviderInstall(input, setupLanguage)
   const file = doCodeConfigPath()
   const previous = await readFile(file, "utf8").catch((error: NodeJS.ErrnoException) => error.code === "ENOENT" ? null : Promise.reject(error))
   const current = await readUserConfig(file)

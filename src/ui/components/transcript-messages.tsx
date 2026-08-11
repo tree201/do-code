@@ -1,6 +1,7 @@
 import React from "react"
 import { Box, Text } from "ink"
 import type { DoCodeLanguage } from "../../config.js"
+import { t } from "../i18n.js"
 import { MarkdownText, ToolOutput } from "../markdown.js"
 import { planMarkdown, type TranscriptItem } from "../transcript-model.js"
 import { tuiTheme } from "../theme.js"
@@ -15,10 +16,12 @@ type ItemProps<Item extends TranscriptItem> = {
 export function ResumeMessage({ item, language }: ItemProps<Extract<TranscriptItem, { kind: "resume" }>>) {
   return (
     <MessageRow prefix={STATUS_DOT} color={tuiTheme.accent}>
-      <Text color={tuiTheme.accent}>{language === "zh" ? "已恢复会话" : "Resumed session"}: {item.title}</Text>
-      <Text dimColor>{language === "zh"
-        ? `已恢复 ${item.visibleCount}/${item.conversationCount} 条对话${item.toolCount ? ` · ${item.toolCount} 个历史工具动作（只读，不会重新执行）` : ""}`
-        : `Restored ${item.visibleCount}/${item.conversationCount} conversation messages${item.toolCount ? ` · ${item.toolCount} historical tool action${item.toolCount === 1 ? "" : "s"} (read-only; never rerun)` : ""}`}</Text>
+      <Text color={tuiTheme.accent}>{t(language, "Resumed session")}: {item.title}</Text>
+      <Text dimColor>{t(language, "Restored {visibleCount}/{conversationCount} conversation messages{tools}", {
+        visibleCount: item.visibleCount,
+        conversationCount: item.conversationCount,
+        tools: item.toolCount ? t(language, " · {count} historical tool action{plural} (read-only; never rerun)", { count: item.toolCount, plural: item.toolCount === 1 ? "" : "s" }) : "",
+      })}</Text>
     </MessageRow>
   )
 }
@@ -27,18 +30,17 @@ export function UserMessage({ item, width }: ItemProps<Extract<TranscriptItem, {
   return <UserMessageRow width={width}><Text wrap="wrap">{item.text}</Text></UserMessageRow>
 }
 
-export function AssistantMessage({ item, width }: ItemProps<Extract<TranscriptItem, { kind: "assistant" }>>) {
+export function AssistantMessage({ item, width, language }: ItemProps<Extract<TranscriptItem, { kind: "assistant" }>>) {
   const markdown = <MarkdownText width={Math.max(1, width - MESSAGE_PREFIX_WIDTH)} trimBoundarySpacing>{item.text}</MarkdownText>
   return item.continuation
     ? <MessageContinuation marginTop={1}>{markdown}</MessageContinuation>
-    : <MessageRow ariaLabel="Assistant:">{markdown}</MessageRow>
+    : <MessageRow ariaLabel={t(language, "Assistant:")}>{markdown}</MessageRow>
 }
 
 export function PlanTranscript({ item, language, width }: ItemProps<Extract<TranscriptItem, { kind: "plan" }>>) {
-  const zh = language === "zh"
   return (
-    <MessageRow prefix={STATUS_DOT} color={tuiTheme.accent} ariaLabel={zh ? "计划：" : "Plan:"}>
-      <Text bold>{zh ? "建议计划" : "Proposed Plan"}</Text>
+    <MessageRow prefix={STATUS_DOT} color={tuiTheme.accent} ariaLabel={t(language, "Plan:")}>
+      <Text bold>{t(language, "Proposed Plan")}</Text>
       <Box width={Math.max(20, width - MESSAGE_PREFIX_WIDTH)} marginTop={1} paddingX={1} paddingY={1} flexDirection="column" backgroundColor={tuiTheme.userMessageBackground}>
         <MarkdownText width={Math.max(18, width - MESSAGE_PREFIX_WIDTH - 2)}>{planMarkdown(item.plan, language)}</MarkdownText>
       </Box>

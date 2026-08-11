@@ -4,6 +4,7 @@ import { highlight, supportsLanguage } from "cli-highlight"
 import { Box, Text } from "ink"
 import type { DoCodeLanguage } from "../../config.js"
 import type { ActivityDiffFile } from "../activity-summary.js"
+import { t } from "../i18n.js"
 import { displayWidth, truncateTerminal } from "../terminal-text.js"
 import { tuiTheme } from "../theme.js"
 
@@ -111,7 +112,7 @@ export function ActivityDiff({ file, width, language, showHeader = true }: {
       })}
       {file.omitted > 0 ? (
         <Text dimColor>
-          {"…".padStart(LINE_NUMBER_WIDTH)}   {language === "zh" ? `… 省略 ${file.omitted} 行修改` : `… ${file.omitted} changed lines omitted`}
+          {"…".padStart(LINE_NUMBER_WIDTH)}   {t(language, "… {count} changed lines omitted", { count: file.omitted })}
         </Text>
       ) : null}
     </Box>

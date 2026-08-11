@@ -1,5 +1,6 @@
 import type { DoCodeLanguage } from "../config.js"
 import type { AgentEvent } from "../protocol.js"
+import { t } from "./i18n.js"
 
 export type LiveActiveTool = string | { name: string; args: unknown }
 
@@ -39,9 +40,10 @@ export function reduceLiveTranscript(
     state.activityEpoch++
     state.reasoningCharacters = 0
   } else if (event.type === "model.retrying") {
-    state.activeTool = language === "zh"
-      ? `正在重试第 ${event.attempt} 次 · ${Math.ceil(event.delayMs / 1000)} 秒后`
-      : `Retrying attempt #${event.attempt} · in ${Math.ceil(event.delayMs / 1000)}s`
+    state.activeTool = t(language, "Retrying attempt #{attempt} · in {seconds}s", {
+      attempt: event.attempt,
+      seconds: Math.ceil(event.delayMs / 1000),
+    })
   } else if (event.type === "message.delta") {
     state.liveAssistant += event.delta
     effects.flushPendingTools = true

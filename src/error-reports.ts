@@ -4,6 +4,8 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { promisify } from "node:util"
+import type { DoCodeLanguage } from "./config.js"
+import { t } from "./ui/i18n.js"
 import { DO_CODE_VERSION } from "./version.js"
 
 const run = promisify(execFile)
@@ -111,11 +113,11 @@ export async function listErrorReports(limit = 20) {
   return reports.filter((item): item is ErrorReport => Boolean(item)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit)
 }
 
-export function formatErrorReport(report: ErrorReport) {
+export function formatErrorReport(report: ErrorReport, language: DoCodeLanguage = "en") {
   return [
-    `Error ID: ${report.id}`, `Category: ${report.category}`, `Time: ${report.createdAt}`, `Operation: ${report.operation}`,
-    `Error: ${report.message}`, `Workspace: ${report.workspace}`, `Session: ${report.sessionId ?? "—"}`, `Model: ${report.model ?? "—"}`,
-    `Git Revision: ${report.git.revision ?? "—"}`, `Log file: ${report.file}`, "", "Stack:", report.stack ?? "—",
-    "", "Git Status:", report.git.status ?? "—", "", "Git Diff:", report.git.diff ?? "—", "", "Reproduction context:", JSON.stringify(report.context, null, 2),
+    `${t(language, "Error ID")}: ${report.id}`, `${t(language, "Category")}: ${report.category}`, `${t(language, "Time")}: ${report.createdAt}`, `${t(language, "Operation")}: ${report.operation}`,
+    `${t(language, "Error")}: ${report.message}`, `${t(language, "Workspace")}: ${report.workspace}`, `${t(language, "Session")}: ${report.sessionId ?? "—"}`, `${t(language, "Model")}: ${report.model ?? "—"}`,
+    `${t(language, "Git Revision")}: ${report.git.revision ?? "—"}`, `${t(language, "Log file")}: ${report.file}`, "", `${t(language, "Stack")}:`, report.stack ?? "—",
+    "", `${t(language, "Git Status")}:`, report.git.status ?? "—", "", `${t(language, "Git Diff")}:`, report.git.diff ?? "—", "", `${t(language, "Reproduction context")}:`, JSON.stringify(report.context, null, 2),
   ].join("\n")
 }

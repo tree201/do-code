@@ -2,19 +2,20 @@
 import { stdin, stdout, stderr } from "node:process"
 import { parseArgs } from "./cli-args.js"
 import { loadSession } from "./sessions.js"
-import { loadStoredConfig, rememberRecentModel, resolveAgentProfile, resolveRuntimeModelConfig, type RuntimeModelConfig } from "./config.js"
+import { loadStoredConfig, NoModelConfiguredError, rememberRecentModel, resolveAgentProfile, resolveRuntimeModelConfig, type RuntimeModelConfig } from "./config.js"
 import { createChatModel, SwitchableModel } from "./model.js"
 import { createWorktree } from "./worktree.js"
 import { DEFAULT_MAX_TURNS } from "./turn-limits.js"
 import { runCliCommand } from "./cli-commands.js"
 import { handleCliError } from "./cli-errors.js"
 import { runHeadless } from "./cli-headless.js"
+import { t } from "./ui/i18n.js"
 
-function unconfiguredModel(): RuntimeModelConfig {
+function unconfiguredModel(language: import("./config.js").DoCodeLanguage): RuntimeModelConfig {
   return {
     source: "config",
     sourceLabel: "not configured",
-    preset: "未配置模型",
+    preset: t(language, "Unconfigured model"),
     provider: "unconfigured",
     modelId: "unconfigured",
     baseUrl: "https://127.0.0.1.invalid/v1",
@@ -36,14 +37,18 @@ async function main() {
     await runCliCommand(args)
     return
   }
+  let createdWorktree: string | undefined
   if (args.worktree !== undefined) {
     const worktree = await createWorktree(args.workspace, args.worktree || undefined)
     args.workspace = worktree.directory
-    stderr.write(`Worktree: ${worktree.directory}\n`)
+    createdWorktree = worktree.directory
   }
   if (await runCliCommand(args)) return
 
-  const resolvedConfig = await loadStoredConfig(args.workspace)
+  const storedConfig = await loadStoredConfig(args.workspace)
+  const resolvedConfig = args.language ? { ...storedConfig, language: args.language } : storedConfig
+  const language = resolvedConfig.language ?? "en"
+  if (createdWorktree) stderr.write(`${t(language, "Worktree: {directory}", { directory: createdWorktree })}\n`)
   const agentProfile = resolveAgentProfile(resolvedConfig, args.agent)
   if (agentProfile) {
     args.agent = agentProfile.name
@@ -70,8 +75,8 @@ async function main() {
       }
       if (args.model) await rememberRecentModel({ providerID: modelConfig.provider, modelID: modelConfig.modelId })
     } catch (error) {
-      if (!(error instanceof Error) || !error.message.startsWith("No model is configured") || !stdin.isTTY || !stdout.isTTY) throw error
-      modelConfig = unconfiguredModel()
+      if (!(error instanceof NoModelConfiguredError) || !stdin.isTTY || !stdout.isTTY) throw error
+      modelConfig = unconfiguredModel(resolvedConfig.language ?? "en")
     }
     const { runInteractiveChat } = await import("./ui/chat-app.js")
     await runInteractiveChat(args, new SwitchableModel(modelConfig.preset, createChatModel(modelConfig)), modelConfig, resolvedConfig)

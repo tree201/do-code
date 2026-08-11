@@ -4,6 +4,7 @@ import { backspaceEditor, createEditor, deleteEditor, insertEditorText, moveEdit
 import { takeLastMessage } from "./message-queue.js"
 import { nextReasoningEffort } from "./model-actions.js"
 import { isReasoningEffortShortcut } from "./shortcut-command-policy.js"
+import { t } from "./i18n.js"
 import type { ChatInputKey } from "./input-routing-types.js"
 import type { ChatAppProps } from "./chat-app-types.js"
 import type { AttachmentActions } from "./hooks/use-attachment-actions.js"
@@ -26,8 +27,8 @@ export function routeEditorInput(rawInput: string, input: string, key: ChatInput
   }
   if (isReasoningEffortShortcut(input, key)) {
     const effort = nextReasoningEffort(state.activeEffort)
-    if (!state.runtimeStore.canSwitchEffort) state.append({ kind: "error", text: "This client does not support reasoning effort switching." })
-    else void state.runtimeStore.switchEffort(effort).catch((error) => transcript.appendReportedError("Effort switch failed", error, "effort.switch", { effort }))
+    if (!state.runtimeStore.canSwitchEffort) state.append({ kind: "error", text: t(state.activeLanguage, "This client does not support reasoning effort switching.") })
+    else void state.runtimeStore.switchEffort(effort).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Effort switch failed"), error, "effort.switch", { effort }))
     return
   }
   if (state.turnOwner.getSnapshot().running && (key.escape || (key.ctrl && input === "c"))) { state.turnOwner.abort(); return }

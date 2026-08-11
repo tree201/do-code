@@ -2,6 +2,7 @@ import React, { useMemo } from "react"
 import { Box, Text } from "ink"
 import type { DoCodeLanguage } from "../../config.js"
 import { buildActivitySummary, type ActivitySummaryLine } from "../activity-summary.js"
+import { t } from "../i18n.js"
 import { activitySucceeded, type TranscriptTool } from "../transcript-model.js"
 import { tuiTheme } from "../theme.js"
 import { ActivityDiff, ActivityDiffStats } from "./activity-diff.js"
@@ -32,9 +33,9 @@ export const ToolActivityGroup = React.memo(function ToolActivityGroup({ tools, 
   const contentWidth = Math.max(1, width)
   return (
     <Box flexDirection="column" width={contentWidth}>
-      <MessageRow prefix={STATUS_DOT} color={ok ? tuiTheme.success : tuiTheme.danger} ariaLabel={ok ? "Tools succeeded:" : "Tool failed:"} marginBottom={0}>
+      <MessageRow prefix={STATUS_DOT} color={ok ? tuiTheme.success : tuiTheme.danger} ariaLabel={t(language, ok ? "Tools succeeded:" : "Tool failed:")} marginBottom={0}>
         {phase === "completed" && singleSuccessfulDiff ? (
-          <Text bold wrap="truncate-end">{language === "zh" ? "修改 " : "Edited "}{singleSuccessfulDiff.path}<ActivityDiffStats file={singleSuccessfulDiff} /></Text>
+          <Text bold wrap="truncate-end">{t(language, "Edited ")}{singleSuccessfulDiff.path}<ActivityDiffStats file={singleSuccessfulDiff} /></Text>
         ) : <Text bold wrap="truncate-end">{summary.title}</Text>}
         {phase === "completed" ? summary.lines.map((line, index) => (
           <Box key={`${index}-${line.text}`} paddingLeft={2}>

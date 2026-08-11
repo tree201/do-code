@@ -17,6 +17,7 @@ import { executeTool } from "../tools.js"
 import { CheckpointManager } from "../checkpoints.js"
 import { ApprovalBridge, PlanReviewBridge, QuestionBridge } from "./async-bridges.js"
 import { ChatApp } from "./chat-app-component.js"
+import { t } from "./i18n.js"
 import { createInteractiveRenderer } from "./interactive-renderer.js"
 import { createInteractiveSessionStore } from "./interactive-session-store.js"
 import { createRuntimeStore, type RuntimeStore } from "./runtime-store.js"
@@ -125,5 +126,5 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
   } finally {
     renderer.stop()
   }
-  process.stdout.write(`\n${runtimeStore.getSnapshot().language === "zh" ? "恢复此会话：" : "Resume this session:"}\n  do-code resume ${runtimeStore.getSnapshot().session.id}\n`)
+  process.stdout.write(`\n${t(runtimeStore.getSnapshot().language, "Resume this session:")}\n  do-code resume ${runtimeStore.getSnapshot().session.id}\n`)
 }

@@ -4,6 +4,7 @@ import type { DoCodeLanguage, ProviderProtocol, RuntimeModelConfig } from "../..
 import { customProviderId, type ProviderInstallInput } from "../../provider-setup.js"
 import { discoverProviderModels } from "../../provider-model-discovery.js"
 import { providerRegistry, type ProviderDefinition } from "../../provider-registry.js"
+import { t } from "../i18n.js"
 import { DialogManager, DialogSurface } from "./dialog-manager.js"
 import { tuiTheme } from "../theme.js"
 
@@ -15,11 +16,11 @@ const protocols: Array<{ label: string; value: ProviderProtocol }> = [
   { label: "Gemini", value: "gemini" },
 ]
 
-const groupLabels: Record<ProviderDefinition["group"], [string, string]> = {
-  ark: ["火山方舟", "Volcengine Ark"],
-  alibaba: ["阿里云百炼", "Alibaba ModelStudio"],
-  "third-party": ["其他模型服务", "Third-party Providers"],
-  custom: ["自定义", "Custom"],
+const groupLabels: Record<ProviderDefinition["group"], string> = {
+  ark: "Volcengine Ark",
+  alibaba: "Alibaba ModelStudio",
+  "third-party": "Third-party Providers",
+  custom: "Custom",
 }
 
 function appendInput(value: string, input: string) {
@@ -42,7 +43,6 @@ export function AuthDialog({ currentModel, language, onSubmit, onClose, discover
   onClose: () => void
   discoverModels?: typeof discoverProviderModels
 }) {
-  const zh = language === "zh"
   const currentProvider = currentModel.includes("/") ? currentModel.split("/", 1)[0] : ""
   const matchedProviderIndex = providerRegistry.findIndex((provider) => provider.id === currentProvider)
   const initialProviderIndex = matchedProviderIndex >= 0 ? matchedProviderIndex : providerRegistry.findIndex((provider) => provider.id === "custom")
@@ -99,7 +99,7 @@ export function AuthDialog({ currentModel, language, onSubmit, onClose, discover
       ? selectedModels
       : manualModelIds ?? customModels.split(",").map((model) => model.trim()).filter(Boolean)
     if (!modelIds.length) {
-      setError(zh ? "至少选择一个模型。" : "Select at least one model.")
+      setError(t(language, "Select at least one model."))
       return
     }
     setSubmitting(true)
@@ -139,7 +139,7 @@ export function AuthDialog({ currentModel, language, onSubmit, onClose, discover
     } catch (caught) {
       setDiscoveredModels([])
       setSelectedModels([])
-      setError(`${caught instanceof Error ? caught.message : String(caught)} ${zh ? "请手动输入模型 ID。" : "Enter model IDs manually."}`)
+      setError(`${caught instanceof Error ? caught.message : String(caught)} ${t(language, "Enter model IDs manually.")}`)
     } finally {
       setDiscovering(false)
       setStep("models")
@@ -192,7 +192,7 @@ export function AuthDialog({ currentModel, language, onSubmit, onClose, discover
     if (hasReturn) {
       const trimmed = nextValue.trim()
       if (!trimmed) {
-        setError(zh ? "此字段不能为空。" : "This field cannot be empty.")
+        setError(t(language, "This field cannot be empty."))
         return
       }
       update(nextValue)
@@ -208,19 +208,19 @@ export function AuthDialog({ currentModel, language, onSubmit, onClose, discover
     }
   }, { isActive: true })
 
-  const stepTitle = step === "provider" ? (zh ? "连接 Provider" : "Connect a Provider")
-    : step === "protocol" ? (zh ? "协议" : "Protocol")
-        : step === "base-url" ? "Base URL"
-          : step === "region" ? (zh ? "接入区域" : "Endpoint")
-            : step === "api-key" ? "API Key"
-              : (zh ? "模型" : "Models")
+  const stepTitle = step === "provider" ? t(language, "Connect a Provider")
+    : step === "protocol" ? t(language, "Protocol")
+        : step === "base-url" ? t(language, "Base URL")
+          : step === "region" ? t(language, "Endpoint")
+            : step === "api-key" ? t(language, "API Key")
+              : t(language, "Models")
 
   const modelWindowStart = selectableModels.length ? Math.max(0, Math.min(modelIndex - 7, selectableModels.length - 8)) : 0
   return <DialogManager><DialogSurface>
     <Text bold>{provider && step !== "provider" ? `${provider.label} · ` : ""}{stepTitle}</Text>
     {step === "provider" ? <Box marginTop={1} flexDirection="column">
       {providerRegistry.map((item, index) => <React.Fragment key={item.id}>
-        {index === 0 || providerRegistry[index - 1]?.group !== item.group ? <Text bold dimColor>{groupLabels[item.group][zh ? 0 : 1]}</Text> : null}
+        {index === 0 || providerRegistry[index - 1]?.group !== item.group ? <Text bold dimColor>{t(language, groupLabels[item.group])}</Text> : null}
         <Text inverse={providerIndex === index} color={providerIndex === index ? tuiTheme.accent : tuiTheme.border}>
           {providerIndex === index ? "›" : " "} {item.label}  <Text dimColor={providerIndex !== index}>{item.description}</Text>
         </Text>
@@ -231,7 +231,7 @@ export function AuthDialog({ currentModel, language, onSubmit, onClose, discover
     {step === "region" && Array.isArray(provider?.baseUrl) ? <Box marginTop={1} flexDirection="column">{provider.baseUrl.map((region, index) => <Text key={region.id} inverse={regionIndex === index} color={regionIndex === index ? tuiTheme.accent : tuiTheme.border}>{regionIndex === index ? "›" : " "} {region.label}  <Text dimColor={regionIndex !== index}>{region.url}</Text></Text>)}</Box> : null}
     {step === "api-key" ? <Box marginTop={1}><InputLine value={apiKey} secret placeholder={provider?.apiKeyPlaceholder ?? "sk-..."} /></Box> : null}
     {step === "models" && selectableModels.length ? <Box marginTop={1} flexDirection="column">
-      <Text dimColor>{zh ? "Space 选择或取消，Enter 安装所选模型。" : "Space toggles a model; Enter installs the selection."}</Text>
+      <Text dimColor>{t(language, "Space toggles a model; Enter installs the selection.")}</Text>
       {selectableModels.slice(modelWindowStart, modelWindowStart + 8).map((model, offset) => {
         const index = modelWindowStart + offset
         const selected = selectedModels.includes(model)
@@ -239,8 +239,8 @@ export function AuthDialog({ currentModel, language, onSubmit, onClose, discover
       })}
       {selectableModels.length > 8 ? <Text dimColor>{modelWindowStart + 1}-{Math.min(selectableModels.length, modelWindowStart + 8)} / {selectableModels.length}</Text> : null}
     </Box> : null}
-    {step === "models" && provider && !selectableModels.length ? <Box marginTop={1} flexDirection="column"><Text dimColor>{zh ? "多个模型 ID 使用逗号分隔。" : "Separate multiple model IDs with commas."}</Text><InputLine value={customModels} placeholder="model-id" /></Box> : null}
+    {step === "models" && provider && !selectableModels.length ? <Box marginTop={1} flexDirection="column"><Text dimColor>{t(language, "Separate multiple model IDs with commas.")}</Text><InputLine value={customModels} placeholder="model-id" /></Box> : null}
     {error ? <Box marginTop={1}><Text color={tuiTheme.danger}>{error}</Text></Box> : null}
-    <Box marginTop={1}><Text dimColor>{discovering ? (zh ? "正在获取可用模型..." : "Discovering available models...") : submitting ? (zh ? "正在保存并切换模型..." : "Saving and switching model...") : step === "provider" || step === "protocol" || step === "region" || step === "models" && selectableModels.length > 0 ? (zh ? "↑↓ 选择 · Enter 确认 · Esc 返回" : "↑↓ Select · Enter Confirm · Esc Back") : (zh ? "输入内容 · Enter 继续 · Esc 返回" : "Type a value · Enter Continue · Esc Back")}</Text></Box>
+    <Box marginTop={1}><Text dimColor>{discovering ? t(language, "Discovering available models...") : submitting ? t(language, "Saving and switching model...") : step === "provider" || step === "protocol" || step === "region" || step === "models" && selectableModels.length > 0 ? t(language, "↑↓ Select · Enter Confirm · Esc Back") : t(language, "Type a value · Enter Continue · Esc Back")}</Text></Box>
   </DialogSurface></DialogManager>
 }

@@ -72,11 +72,9 @@ export function WelcomeHeader({ workspace, model, sessionId, restored, width, ag
       </Box>
       <Box marginTop={1} marginLeft={showLogo && width >= 100 ? logoWidth + gap : 1}>
         <Text bold>{t(language, "Tip")}</Text>
-        {language === "zh"
-          ? <><Text dimColor>  输入 </Text><Text color={tuiTheme.accent}>/</Text><Text dimColor> 打开命令</Text></>
-          : <><Text dimColor>  Type </Text><Text color={tuiTheme.accent}>/</Text><Text dimColor>{width >= 48 ? " for commands" : "help"}</Text></>}
+        <><Text dimColor> {t(language, "Type ")}</Text><Text color={tuiTheme.accent}>/</Text><Text dimColor>{t(language, width >= 48 ? " for commands" : "help")}</Text></>
         {width >= 48 ? <><Text dimColor> · </Text><Text color={tuiTheme.accent}>@</Text><Text dimColor> {t(language, "to attach files")}</Text></> : null}
-        {width >= 72 ? <><Text dimColor> · </Text><Text color={tuiTheme.accent}>Ctrl+H</Text><Text dimColor> {language === "zh" ? "查看快捷键" : "for shortcuts"}</Text></> : null}
+        {width >= 72 ? <><Text dimColor> · </Text><Text color={tuiTheme.accent}>Ctrl+H</Text><Text dimColor> {t(language, "for shortcuts")}</Text></> : null}
       </Box>
     </Box>
   )

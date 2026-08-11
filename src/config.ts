@@ -22,4 +22,4 @@ export { loadRecentModels, loadStoredConfig, rememberRecentModel, saveDefaultMod
 export { migrateConfig } from "./config-schema.js"
 export { normalizeLanguage, outputLanguageInstruction, saveLanguagePreference } from "./config-language.js"
 export { isSupportedLanguage, localeDefinition, localeDefinitions, normalizeLocale, supportedLanguages, type LocaleDefinition } from "./locale-registry.js"
-export { resolveRuntimeModelConfig } from "./config-runtime.js"
+export { NoModelConfiguredError, resolveRuntimeModelConfig } from "./config-runtime.js"

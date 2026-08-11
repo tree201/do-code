@@ -14,7 +14,7 @@ export function Spinner({ label, language }: { label: string; language: DoCodeLa
   useEffect(() => { const timer = setInterval(() => setPhase((value) => (value + 1) % thinkingBreathColors.length), THINKING_BREATH_INTERVAL_MS); return () => clearInterval(timer) }, [])
   useEffect(() => { const started = Date.now(); const timer = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000); return () => clearInterval(timer) }, [])
   const color = thinkingBreathColors[phase]!
-  return <MessageRow prefix={STATUS_DOT} color={color} marginTop={0} marginBottom={0}><Text color={color}>{label} · {formatElapsedTime(elapsed)}{language === "zh" ? " · Esc 停止" : " · Esc stop"}</Text></MessageRow>
+  return <MessageRow prefix={STATUS_DOT} color={color} marginTop={0} marginBottom={0}><Text color={color}>{label} · {formatElapsedTime(elapsed)}{t(language, " · Esc stop")}</Text></MessageRow>
 }
 
 export function RunningActivity({ liveAssistant, width, height, activityEpoch, activeTool, reasoningCharacters, language }: {
@@ -40,7 +40,7 @@ export function RunningStatus({ activityEpoch, activeTool, reasoningCharacters, 
   const label = activeTool
     ? typeof activeTool === "string" ? activeTool : activeToolSummary(activeTool.name, activeTool.args, language)
     : reasoningCharacters > 0
-      ? language === "zh" ? `思考中 · 已接收 ${reasoningCharacters.toLocaleString()} 字符` : `Thinking · ${reasoningCharacters.toLocaleString()} reasoning characters received`
+      ? t(language, "Thinking · {count} reasoning characters received", { count: reasoningCharacters.toLocaleString() })
       : t(language, "Thinking")
   return <Spinner key={`activity-${activityEpoch}`} label={label} language={language} />
 }

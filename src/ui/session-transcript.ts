@@ -2,6 +2,7 @@ import type { DoCodeLanguage } from "../config.js"
 import { contentText, type Message, type ToolPresentation } from "../protocol.js"
 import { activityGroupKey, createToolPresentation } from "../tool-presentation.js"
 import { activityVisibleSignature } from "./activity-summary.js"
+import { t } from "./i18n.js"
 import type { PlanProposal } from "../tool-contracts.js"
 import { blockedTodoCount, type HistoricalToolEvent, type NewTranscriptItem, type TranscriptTool } from "./transcript-model.js"
 
@@ -81,8 +82,8 @@ export function askAnswerPairs(args: unknown, output: string) {
 }
 
 function interactionItems(args: unknown, output: string, language: DoCodeLanguage): NewTranscriptItem[] {
-  const ask = language === "zh" ? "提问" : "Ask"
-  const reply = language === "zh" ? "回答" : "Answer"
+  const ask = t(language, "Ask")
+  const reply = t(language, "Answer")
   return askAnswerPairs(args, output).map((pair) => ({
     kind: "info",
     text: `${ask}: ${pair.question}${pair.answer ? `\n${reply}: ${pair.answer}` : ""}`,

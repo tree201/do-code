@@ -1,15 +1,17 @@
 import { useCallback, useEffect } from "react"
 import type { ApprovalChoice } from "../../policy.js"
 import type { PlanReviewDecision } from "../../tools.js"
+import { t } from "../i18n.js"
 import type { ChatAppProps } from "../chat-app-types.js"
 import type { ChatAppState } from "./use-chat-app-state.js"
 
 export function useTranscriptController(props: ChatAppProps, state: ChatAppState) {
   const appendReportedError = useCallback((label: string, error: unknown, operation: string, context?: unknown) => {
+    const message = error instanceof Error ? error.message : String(error)
     void props.reportError(error, operation, "exception", context).then((report) => {
-      state.append({ kind: "error", text: `${label}: ${error instanceof Error ? error.message : String(error)}\nError ID: ${report.id}\nTo inspect it, run: do-code errors show ${report.id}` })
-    }).catch(() => state.append({ kind: "error", text: `${label}: ${error instanceof Error ? error.message : String(error)} (failed to write the error report)` }))
-  }, [props.reportError, state.append])
+      state.append({ kind: "error", text: t(state.activeLanguage, "{label}: {message}\nError ID: {id}\nTo inspect it, run: do-code errors show {id}", { label, message, id: report.id }) })
+    }).catch(() => state.append({ kind: "error", text: t(state.activeLanguage, "{label}: {message} (failed to write the error report)", { label, message }) }))
+  }, [props.reportError, state.activeLanguage, state.append])
 
   useEffect(() => {
     props.approvalBridge.attach((request) => state.setActiveDialog({ kind: "approval", request, selectedIndex: 0 }))
@@ -41,8 +43,8 @@ export function useTranscriptController(props: ChatAppProps, state: ChatAppState
     const dialog = state.getActiveDialog()
     if (dialog.kind !== "question") return
     dialog.request.resolve(answer)
-    const ask = state.activeLanguage === "zh" ? "提问" : "Ask"
-    const reply = state.activeLanguage === "zh" ? "回答" : "Answer"
+    const ask = t(state.activeLanguage, "Ask")
+    const reply = t(state.activeLanguage, "Answer")
     state.append({ kind: "info", text: `${ask}: ${dialog.request.question}\n${reply}: ${answer}` })
     state.setActiveDialog({ kind: "none" })
   }, [state.activeLanguage, state.append, state.getActiveDialog, state.setActiveDialog])

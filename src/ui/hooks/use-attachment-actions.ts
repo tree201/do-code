@@ -2,6 +2,7 @@ import { useCallback } from "react"
 import { classifyPastedImagePaths, MAX_IMAGE_COUNT, MAX_IMAGE_TOTAL_BYTES } from "../../image-attachments.js"
 import { acceptAttachments, attachmentIndex, attachmentInsertionIndex, insertAttachmentTokens, removeAttachmentToken } from "../attachment-model.js"
 import { insertEditorText } from "../editor.js"
+import { t } from "../i18n.js"
 import type { ChatAppProps } from "../chat-app-types.js"
 import type { ChatAppState } from "./use-chat-app-state.js"
 
@@ -18,7 +19,7 @@ export function useAttachmentActions(props: ChatAppProps, state: ChatAppState) {
     const index = attachmentIndex(state.attachedImages, query)
     const image = state.attachedImages[index]
     if (!image) {
-      state.append({ kind: "error", text: "Usage: /remove-image <index|name>" })
+      state.append({ kind: "error", text: t(state.activeLanguage, "Usage: /remove-image <index|name>") })
       return
     }
     state.setEditor((current) => removeAttachmentToken(current, index))
@@ -28,13 +29,13 @@ export function useAttachmentActions(props: ChatAppProps, state: ChatAppState) {
   const attachClipboardImage = useCallback(async () => {
     if (!props.pasteImage) throw new Error("Clipboard image support is unavailable")
     if (state.composerOwner.getSnapshot().attachments.length >= MAX_IMAGE_COUNT) {
-      state.append({ kind: "error", text: `A prompt can include at most ${MAX_IMAGE_COUNT} images.` })
+      state.append({ kind: "error", text: t(state.activeLanguage, "A prompt can include at most {count} images.", { count: MAX_IMAGE_COUNT }) })
       throw new Error("Image limit reached")
     }
     const image = await props.pasteImage()
     const { accepted } = acceptAttachments(state.composerOwner.getSnapshot().attachments, [image], MAX_IMAGE_TOTAL_BYTES)
     if (!accepted.length) {
-      state.append({ kind: "error", text: "Attached images exceed the 20 MB total limit." })
+      state.append({ kind: "error", text: t(state.activeLanguage, "Attached images exceed the 20 MB total limit.") })
       return false
     }
     state.composerOwner.markPaste()
@@ -47,14 +48,14 @@ export function useAttachmentActions(props: ChatAppProps, state: ChatAppState) {
     if (!classified.allImages || !props.pasteImagePaths) return false
     const available = MAX_IMAGE_COUNT - state.composerOwner.getSnapshot().attachments.length
     if (available <= 0) {
-      state.append({ kind: "error", text: `A prompt can include at most ${MAX_IMAGE_COUNT} images.` })
+      state.append({ kind: "error", text: t(state.activeLanguage, "A prompt can include at most {count} images.", { count: MAX_IMAGE_COUNT }) })
       return true
     }
     void props.pasteImagePaths(classified.imagePaths.slice(0, available)).then((images) => {
       if (!images.length) { state.setEditor((current) => insertEditorText(current, pasted)); return }
       const { accepted, skipped } = acceptAttachments(state.composerOwner.getSnapshot().attachments, images, MAX_IMAGE_TOTAL_BYTES)
-      if (!accepted.length) { state.append({ kind: "error", text: "Attached images exceed the 20 MB total limit." }); return }
-      if (skipped) state.append({ kind: "error", text: "Some images were skipped because attachments exceed the 20 MB total limit." })
+      if (!accepted.length) { state.append({ kind: "error", text: t(state.activeLanguage, "Attached images exceed the 20 MB total limit.") }); return }
+      if (skipped) state.append({ kind: "error", text: t(state.activeLanguage, "Some images were skipped because attachments exceed the 20 MB total limit.") })
       insertAttachedImages(accepted)
     }).catch(() => state.setEditor((current) => insertEditorText(current, pasted)))
     return true

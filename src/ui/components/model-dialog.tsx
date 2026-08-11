@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react"
 import { Box, Text, useInput } from "ink"
 import type { DoCodeLanguage, RuntimeModelConfig } from "../../config.js"
+import { t } from "../i18n.js"
 import { DialogManager, DialogSurface } from "./dialog-manager.js"
 import { tuiTheme } from "../theme.js"
 
@@ -12,7 +13,6 @@ export function ModelDialog({ models, currentModel, language, onSelect, onPersis
   onPersist?: (model: string) => Promise<void>
   onClose: () => void
 }) {
-  const zh = language === "zh"
   const [query, setQuery] = useState("")
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase()
@@ -68,21 +68,21 @@ export function ModelDialog({ models, currentModel, language, onSelect, onPersis
   }, { isActive: true })
 
   return <DialogManager><DialogSurface>
-    <Text bold>{zh ? "选择模型" : "Select Model"}</Text>
-    <Box marginTop={1}><Text><Text color={tuiTheme.accent}>› </Text>{query || <Text dimColor>{zh ? "输入文字筛选模型" : "Type to filter models"}</Text>}<Text inverse> </Text></Text></Box>
+    <Text bold>{t(language, "Select Model")}</Text>
+    <Box marginTop={1}><Text><Text color={tuiTheme.accent}>› </Text>{query || <Text dimColor>{t(language, "Type to filter models")}</Text>}<Text inverse> </Text></Text></Box>
     <Box marginTop={1} flexDirection="column">
       {filtered.length ? filtered.slice(windowStart, windowStart + 10).map((model, offset) => {
         const index = windowStart + offset
         const selected = index === effectiveIndex
         const current = model === currentModel
         return <Text key={model} inverse={selected} color={selected ? tuiTheme.accent : current ? tuiTheme.success : tuiTheme.border}>
-          {selected ? "›" : " "} {current ? "●" : "○"} {model}{current ? (zh ? "（当前）" : " (current)") : ""}
+          {selected ? "›" : " "} {current ? "●" : "○"} {model}{current ? ` ${t(language, "(current)")}` : ""}
         </Text>
-      }) : <Text dimColor>{zh ? "没有匹配的模型" : "No matching models"}</Text>}
+      }) : <Text dimColor>{t(language, "No matching models")}</Text>}
       {filtered.length > 10 ? <Text dimColor>{windowStart + 1}-{Math.min(filtered.length, windowStart + 10)} / {filtered.length}</Text> : null}
     </Box>
     {error ? <Box marginTop={1}><Text color={tuiTheme.danger}>{error}</Text></Box> : null}
-    {onPersist ? <Box marginTop={1}><Text color={persist ? tuiTheme.success : tuiTheme.border}>{persist ? "●" : "○"} {zh ? "将模型记住，用于后续新会话" : "Remember model for future sessions"}</Text></Box> : null}
-    <Box marginTop={1}><Text dimColor>{switching ? (zh ? "正在切换模型..." : "Switching model...") : (zh ? "输入筛选 · ↑↓ 选择 · Tab 记住 · Enter 切换 · Esc 关闭" : "Type to filter · ↑↓ Select · Tab Remember · Enter Switch · Esc Close")}</Text></Box>
+    {onPersist ? <Box marginTop={1}><Text color={persist ? tuiTheme.success : tuiTheme.border}>{persist ? "●" : "○"} {t(language, "Remember model for future sessions")}</Text></Box> : null}
+    <Box marginTop={1}><Text dimColor>{switching ? t(language, "Switching model...") : t(language, "Type to filter · ↑↓ Select · Tab Remember · Enter Switch · Esc Close")}</Text></Box>
   </DialogSurface></DialogManager>
 }

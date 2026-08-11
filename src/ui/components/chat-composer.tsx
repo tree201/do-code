@@ -27,13 +27,13 @@ export function ChatComposer({ props, state }: { props: ChatAppProps; state: Cha
   return <Composer
     key="composer"
     running={state.running}
-    input={state.viewerItems ? <Text dimColor>{state.activeLanguage === "zh" ? "正在查看消息；按 Ctrl+T 或 Esc 返回输入" : "Viewing messages; press Ctrl+T or Esc to return to input"}</Text> : <ComposerInput state={state} />}
+    input={state.viewerItems ? <Text dimColor>{t(state.activeLanguage, "Viewing messages; press Ctrl+T or Esc to return to input")}</Text> : <ComposerInput state={state} />}
     activity={!state.viewerItems && state.running && showRunningActivity(state.activeDialog) ? <RunningStatus activityEpoch={state.activityEpoch} activeTool={state.activeTool} reasoningCharacters={state.reasoningCharacters} language={state.activeLanguage} /> : undefined}
     suggestions={state.viewerItems ? undefined : <>{state.visibleCompletionItems.map((item, windowIndex) => { const index = state.completionWindowStart + windowIndex; return <Text key={item.label} inverse={index === state.completionIndex} color={index === state.completionIndex ? tuiTheme.accent : tuiTheme.border}>{index === state.completionIndex ? "›" : " "} {item.label}  <Text dimColor>{item.description}</Text></Text> })}</>}
     attachments={undefined}
     status={<>{state.exitConfirmation
-      ? state.activeLanguage === "zh" ? "再次按 Ctrl+C 退出" : "Press Ctrl+C again to exit"
+      ? t(state.activeLanguage, "Press Ctrl+C again to exit")
       : composerStatusText({ language: state.activeLanguage, running: state.running, command: state.editor.value.trimStart().startsWith("/"), width: state.terminalWidth, model: state.activeModel, reasoningIntensity: state.activeEffort, thinkingMode: state.activeThinkingMode, contextPercent: state.contextPercent, approvalMode: state.activeApprovalMode, planMode: state.activePlanMode })}{props.renderRevision ? props.renderRevision % 2 ? "\u200B" : "\u200C" : null}</>}
-    statusRight={state.activePlanMode ? <Text color={tuiTheme.accent}>{state.activeLanguage === "zh" ? "计划" : "Plan"}</Text> : null}
+    statusRight={state.activePlanMode ? <Text color={tuiTheme.accent}>{t(state.activeLanguage, "Plan")}</Text> : null}
   />
 }

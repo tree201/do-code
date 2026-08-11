@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { stripVTControlCharacters } from "node:util"
 import test from "node:test"
 import React from "react"
 import { render } from "ink-testing-library"
@@ -127,9 +128,9 @@ test("auth dialog falls back to manual model IDs when discovery fails", async (t
   view.stdin.write("https://proxy.example/v1\r")
   await tick()
   view.stdin.write("secret-key\r")
-  await tick(); await tick()
-  assert.match(visibleFrame(view), /HTTP 401.*手动输入模型 ID/)
-  assert.doesNotMatch(visibleFrame(view), /secret-key/)
+  const failureFrame = stripVTControlCharacters(await waitForFrame(view, /HTTP 401/))
+  assert.match(failureFrame, /HTTP 401[\s\S]*手动输入模型 ID/)
+  assert.doesNotMatch(failureFrame, /secret-key/)
   view.stdin.write("manual-model\r")
   await tick(); await tick()
   assert.deepEqual(submitted?.modelIds, ["manual-model"])
@@ -201,8 +202,8 @@ test("models installed by auth are immediately available to the model switcher",
   await tick(); await tick()
 
   view.stdin.write("/model\r")
-  await tick(); await tick()
-  assert.match(view.lastFrame() ?? "", /deepseek\/deepseek-v4-flash/)
+  const modelFrame = await waitForFrame(view, /deepseek-v4-flash/)
+  assert.match(modelFrame, /deepseek-v4-flash/)
   view.stdin.write("\u001b[B")
   await tick()
   view.stdin.write("\r")

@@ -11,6 +11,7 @@ import { executeSlashCommand } from "../slash-command-controller.js"
 import { turnSubmissionDisposition } from "../turn-submission-model.js"
 import { hasBlockingDialog } from "../dialog-coordinator.js"
 import { CLEAR_COMMAND, DIFF_COMMAND } from "../shortcut-command-policy.js"
+import { t } from "../i18n.js"
 import type { ChatAppProps } from "../chat-app-types.js"
 import type { AttachmentActions } from "./use-attachment-actions.js"
 import type { ChatAppState } from "./use-chat-app-state.js"
@@ -30,7 +31,7 @@ export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, tran
     }
     state.setEditor(createEditor()); state.setHistory((current) => [...current.filter((value) => value !== input), input]); state.setHistoryIndex(null); state.setHistoryDraft("")
     if (state.activeModel === "未配置模型" && !input.startsWith("/") && !input.startsWith("!")) {
-      state.append({ kind: "info", text: state.activeLanguage === "zh" ? "尚未配置模型。输入 /auth 配置模型服务后再开始任务。" : "No model is configured. Use /auth to configure a model provider before starting a task." }); return
+      state.append({ kind: "info", text: t(state.activeLanguage, "No model is configured. Use /auth to configure a model provider before starting a task.") }); return
     }
     if (executeSlashCommand(input, { props, state, transcript, attachments, sessions, exit })) return
 
@@ -47,10 +48,10 @@ export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, tran
       try {
         if (input.startsWith("!")) {
           const command = input.slice(1).trim()
-          if (!command) state.append({ kind: "info", text: "Usage: !<shell-command>, for example !npm test" })
+          if (!command) state.append({ kind: "info", text: t(state.activeLanguage, "Usage: !<shell-command>, for example !npm test") })
           else { state.setActiveTool(SHELL_TOOL_NAME); const result = await props.runShellShortcut(command); state.append({ kind: "tool", tools: [{ name: SHELL_TOOL_NAME, args: { command }, ok: result.ok, output: result.output, presentation: result.presentation ?? createToolPresentation(SHELL_TOOL_NAME, { command }, result, 0) }] }) }
-        } else if (input === DIFF_COMMAND) state.append({ kind: "info", text: (await commandOutput("git", ["diff", "--no-ext-diff", "--", "."], props.workspace)) || "There are no Git changes." })
-        else if (input === CLEAR_COMMAND) { await props.conversation.clear(); state.append({ kind: "info", text: "Conversation context cleared. File changes were preserved." }) }
+        } else if (input === DIFF_COMMAND) state.append({ kind: "info", text: (await commandOutput("git", ["diff", "--no-ext-diff", "--", "."], props.workspace)) || t(state.activeLanguage, "There are no Git changes.") })
+        else if (input === CLEAR_COMMAND) { await props.conversation.clear(); state.append({ kind: "info", text: t(state.activeLanguage, "Conversation context cleared. File changes were preserved.") }) }
         else {
           const answer = await props.conversation.run(effectiveInput, { signal })
           if (!transcript.hasAssistantOutput() && answer.trim()) state.append({ kind: "assistant", text: answer })
@@ -58,9 +59,9 @@ export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, tran
         }
         await props.save()
       } catch (error) {
-        if (signal.aborted) state.append({ kind: "info", text: "The current task was interrupted." })
-        else if (error instanceof MaxSessionTurnsError) state.append({ kind: "info", text: state.activeLanguage === "zh" ? `本次任务已达到最大模型轮次 ${error.maxTurns}。可使用 --max-steps 或 Agent 配置提高限制。` : `This task reached the maximum of ${error.maxTurns} model turns. Increase it with --max-steps or the active agent profile.` })
-        else transcript.appendReportedError("Turn failed", error, "agent.turn", { input })
+        if (signal.aborted) state.append({ kind: "info", text: t(state.activeLanguage, "The current task was interrupted.") })
+        else if (error instanceof MaxSessionTurnsError) state.append({ kind: "info", text: t(state.activeLanguage, "This task reached the maximum of {maxTurns} model turns. Increase it with --max-steps or the active agent profile.", { maxTurns: error.maxTurns }) })
+        else transcript.appendReportedError(t(state.activeLanguage, "Turn failed"), error, "agent.turn", { input })
       } finally { transcript.flushPendingTools(); state.turnOwner.finish(); state.setActiveTool(null); transcript.clearLiveAssistant() }
     })()
   }, [attachments, exit, props, sessions, state, transcript])
