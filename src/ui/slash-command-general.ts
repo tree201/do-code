@@ -7,13 +7,12 @@ import { enqueueMessage } from "./message-queue.js"
 import type { ApprovalMode } from "../policy.js"
 import type { SlashCommandContext } from "./slash-command-context.js"
 import { APPROVAL_MODE_COMMAND, AUTH_COMMAND, BUG_COMMAND, EFFORT_COMMAND, EXIT_COMMAND, EXTENSIONS_COMMAND, HELP_COMMAND, LANGUAGE_COMMAND, MODEL_COMMAND, PERMISSIONS_COMMAND, PLAN_COMMAND, QUIT_COMMAND, STATUS_COMMAND, THINKING_COMMAND, TRUST_COMMAND, UNTRUST_COMMAND, commandArgument, commandWithArgument } from "./shortcut-command-policy.js"
-import { helpText } from "./slash-command-help.js"
 
 export function executeGeneralSlashCommand(input: string, context: SlashCommandContext) {
   const { props, state, transcript, exit } = context
   if (input === EXIT_COMMAND || input === QUIT_COMMAND) { exit(); return true }
   if (input === HELP_COMMAND) {
-    state.append({ kind: "info", text: helpText(state.activeLanguage) })
+    state.setActiveDialog({ kind: "help", offset: 0 })
     return true
   }
   if (input === LANGUAGE_COMMAND) {

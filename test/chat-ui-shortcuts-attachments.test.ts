@@ -32,16 +32,18 @@ test("Ctrl+H is recognized from Ink's backspace key event", () => {
   assert.equal(isHelpShortcut("h", { backspace: true }), false)
 })
 
-test("help dialog renders localized shortcut content", (t) => {
+test("help dialog renders localized grouped commands", (t) => {
   const zhView = render(React.createElement(HelpDialog, { language: "zh", width: 80, height: 24, offset: 0 }))
   const enView = render(React.createElement(HelpDialog, { language: "en", width: 80, height: 24, offset: 0 }))
   t.after(() => { zhView.unmount(); enView.unmount() })
   const zh = visibleFrame(zhView)
   const en = visibleFrame(enView)
   assert.match(zh, /快捷键与操作帮助/)
-  assert.match(zh, /Ctrl\+R.*切换思考强度/)
+  assert.match(zh, /常用命令/)
+  assert.match(zh, /\/status.*查看工作区、模型和会话状态/)
   assert.match(en, /Keyboard shortcuts and help/)
-  assert.match(en, /Ctrl\+R.*Cycle reasoning effort/)
+  assert.match(en, /Common commands/)
+  assert.match(en, /\/status.*Show workspace, model, and session status/)
 })
 
 test("interactive Ctrl+H opens and closes help without changing the draft", async () => {
@@ -59,6 +61,7 @@ test("interactive Ctrl+H opens and closes help without changing the draft", asyn
   view.stdin.write("\u0008")
   await tick(); await tick()
   assert.match(view.lastFrame() ?? "", /Keyboard shortcuts and help/)
+  assert.match(view.lastFrame() ?? "", /Common commands/)
   view.stdin.write("\u0008")
   await tick(); await tick()
   assert.doesNotMatch(view.lastFrame() ?? "", /Keyboard shortcuts and help/)
@@ -68,6 +71,27 @@ test("interactive Ctrl+H opens and closes help without changing the draft", asyn
   assert.match(view.lastFrame() ?? "", /draf/)
   assert.doesNotMatch(view.lastFrame() ?? "", /draft/)
   view.unmount()
+})
+
+test("interactive /help opens the grouped dialog without adding transcript output", async (t) => {
+  const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
+  const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
+  const view = render(React.createElement(ChatApp, {
+    workspace: process.cwd(), model: "test-model", approvalMode: "ask", sessionId: "session_slash_help", restored: false,
+    initialMessages: [], conversation, approvalBridge: new ApprovalBridge(), attachEventSink: () => {},
+    runShellShortcut: async () => ({ ok: true, output: "" }), listSessions: async () => [], resumeSession: async () => { throw new Error("unused") },
+    renameCurrentSession: async () => { throw new Error("unused") }, exportCurrentSession: async () => "unused", save: async () => {},
+    reportError: async () => ({ id: "err_test", file: "/tmp/error.json" }),
+  } satisfies ChatAppProps))
+  t.after(() => view.unmount())
+  view.stdin.write("/help\r")
+  await tick(); await tick()
+  assert.match(view.lastFrame() ?? "", /Keyboard shortcuts and help/)
+  assert.match(view.lastFrame() ?? "", /Common commands/)
+  view.stdin.write("\u001b")
+  await tick(); await tick()
+  assert.doesNotMatch(view.lastFrame() ?? "", /Keyboard shortcuts and help|Common commands/)
+  assert.equal(conversation.history().length, 0)
 })
 
 test("interactive Ctrl+R switches effort while Ctrl+E keeps its editor behavior", async () => {
