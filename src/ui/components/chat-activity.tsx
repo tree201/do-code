@@ -7,6 +7,7 @@ import { MESSAGE_PREFIX_WIDTH, MessageContinuation, MessageRow, STATUS_DOT } fro
 import { THINKING_BREATH_INTERVAL_MS, thinkingBreathColors, tuiTheme } from "../theme.js"
 import { t } from "../i18n.js"
 import { MarkdownText } from "../markdown.js"
+import { expandComposerValue, type ComposerDraft } from "../attachment-model.js"
 
 export function Spinner({ label, language }: { label: string; language: DoCodeLanguage }) {
   const [phase, setPhase] = useState(0)
@@ -45,7 +46,7 @@ export function RunningStatus({ activityEpoch, activeTool, reasoningCharacters, 
   return <Spinner key={`activity-${activityEpoch}`} label={label} language={language} />
 }
 
-export function QueuedMessages({ messages, language }: { messages: string[]; language: DoCodeLanguage }) {
+export function QueuedMessages({ messages, language }: { messages: ComposerDraft[]; language: DoCodeLanguage }) {
   if (!messages.length) return null
-  return <Box flexDirection="column"><Text dimColor>{t(language, "{count} queued (↑ to edit the latest)", { count: messages.length })}</Text>{messages.slice(0, 3).map((message, index) => <Text key={`${index}-${message}`} dimColor>{index + 1}. {preview(message.replace(/\s+/g, " "), 100)}</Text>)}{messages.length > 3 ? <Text dimColor>{t(language, "…and {count} more", { count: messages.length - 3 })}</Text> : null}</Box>
+  return <Box flexDirection="column"><Text dimColor>{t(language, "{count} queued (↑ to edit the latest)", { count: messages.length })}</Text>{messages.slice(0, 3).map((message, index) => { const display = expandComposerValue(message.value, message.nodes, "display"); return <Text key={`${index}-${display}`} dimColor>{index + 1}. {preview(display.replace(/\s+/g, " "), 100)}</Text> })}{messages.length > 3 ? <Text dimColor>{t(language, "…and {count} more", { count: messages.length - 3 })}</Text> : null}</Box>
 }

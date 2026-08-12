@@ -107,7 +107,7 @@ export function executeGeneralSlashCommand(input: string, context: SlashCommandC
   if (commandWithArgument(input, PLAN_COMMAND)) {
     const goal = commandArgument(input, PLAN_COMMAND)
     if (goal === "exit") state.applyPlanMode(false)
-    else { state.applyPlanMode(true); if (goal) state.setQueuedInputs((current) => enqueueMessage(current, goal)) }
+    else { state.applyPlanMode(true); if (goal) state.setQueuedInputs((current) => enqueueMessage(current, { value: goal, nodes: [] })) }
     return true
   }
   return false

@@ -37,7 +37,7 @@ export async function runAgentTurn(task: string, messages: Message[], options: A
   const signal = turnOptions.signal ?? options.signal
   const attachmentDirectory = typeof options.attachmentDirectory === "function" ? options.attachmentDirectory() : options.attachmentDirectory
   messages.push({ role: "user", content: await expandPromptContent(task, options.workspace, attachmentDirectory) })
-  emit({ type: "turn.started", input: task })
+  emit({ type: "turn.started", input: turnOptions.displayInput ?? task })
   const maxTurns = options.maxSteps ?? DEFAULT_MAX_TURNS
   let toolLoopState = { signature: null as string | null, count: 0 }
   let emptyReplies = 0

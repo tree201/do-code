@@ -44,7 +44,7 @@ export type ConversationStats = {
   contextWindow: number
 }
 
-export type AgentTurnOptions = { signal?: AbortSignal }
+export type AgentTurnOptions = { signal?: AbortSignal; displayInput?: string }
 
 export class AgentConversation {
   private messages: Message[] | null = null

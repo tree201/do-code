@@ -1,21 +1,23 @@
-import type { ImageAttachment } from "./attachment-model.js"
+import type { ComposerDraft, ComposerInlineNode } from "./attachment-model.js"
 import { createEditor, type EditorState } from "./editor.js"
 
 export type ComposerSnapshot = {
   editor: EditorState
-  attachments: ImageAttachment[]
-  history: string[]
+  nodes: ComposerInlineNode[]
+  history: ComposerDraft[]
   historyIndex: number | null
-  historyDraft: string
-  queuedInputs: string[]
+  historyDraft: ComposerDraft
+  queuedInputs: ComposerDraft[]
   completionIndex: number
   exitConfirmation: boolean
 }
 
 type ValueUpdate<T> = T | ((current: T) => T)
 
+const emptyDraft = (): ComposerDraft => ({ value: "", nodes: [] })
+
 export function createComposerOwner() {
-  let snapshot: ComposerSnapshot = { editor: createEditor(), attachments: [], history: [], historyIndex: null, historyDraft: "", queuedInputs: [], completionIndex: 0, exitConfirmation: false }
+  let snapshot: ComposerSnapshot = { editor: createEditor(), nodes: [], history: [], historyIndex: null, historyDraft: emptyDraft(), queuedInputs: [], completionIndex: 0, exitConfirmation: false }
   let recentPasteAt = 0
   let exitTimer: ReturnType<typeof setTimeout> | null = null
   const listeners = new Set<() => void>()
@@ -39,11 +41,11 @@ export function createComposerOwner() {
       const next = typeof value === "function" ? value(snapshot.editor) : value
       publish({ editor: next, completionIndex: 0 })
     },
-    setAttachments: (value: ValueUpdate<ImageAttachment[]>) => update("attachments", value),
-    setHistory: (value: ValueUpdate<string[]>) => update("history", value),
+    setNodes: (value: ValueUpdate<ComposerInlineNode[]>) => update("nodes", value),
+    setHistory: (value: ValueUpdate<ComposerDraft[]>) => update("history", value),
     setHistoryIndex: (value: ValueUpdate<number | null>) => update("historyIndex", value),
-    setHistoryDraft: (value: ValueUpdate<string>) => update("historyDraft", value),
-    setQueuedInputs: (value: ValueUpdate<string[]>) => update("queuedInputs", value),
+    setHistoryDraft: (value: ValueUpdate<ComposerDraft>) => update("historyDraft", value),
+    setQueuedInputs: (value: ValueUpdate<ComposerDraft[]>) => update("queuedInputs", value),
     setCompletionIndex: (value: ValueUpdate<number>) => update("completionIndex", value),
     markPaste: () => { recentPasteAt = Date.now() },
     pastedRecently: (windowMs = 500) => Date.now() - recentPasteAt < windowMs,

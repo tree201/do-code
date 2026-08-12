@@ -2,17 +2,24 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import { enqueueMessage, takeLastMessage, takeNextMessage } from "../src/ui/message-queue.js"
 
-test("message queue trims input and drains in FIFO order", () => {
-  const queue = enqueueMessage(enqueueMessage([], " first "), "second")
-  assert.deepEqual(queue, ["first", "second"])
+const draft = (value: string) => ({ value, nodes: [] })
+
+test("message queue preserves structured drafts and drains in FIFO order", () => {
+  const queue = enqueueMessage(enqueueMessage([], draft("first")), draft("second"))
+  assert.deepEqual(queue, [draft("first"), draft("second")])
   const first = takeNextMessage(queue)
-  assert.equal(first.message, "first")
-  assert.deepEqual(first.queue, ["second"])
+  assert.deepEqual(first.message, draft("first"))
+  assert.deepEqual(first.queue, [draft("second")])
 })
 
-test("message queue lets the newest pending prompt return to the editor", () => {
-  const result = takeLastMessage(["first", "second"])
-  assert.equal(result.message, "second")
-  assert.deepEqual(result.queue, ["first"])
-  assert.deepEqual(enqueueMessage(["first"], "   "), ["first"])
+test("message queue lets the newest pending draft return to the editor", () => {
+  const result = takeLastMessage([draft("first"), draft("second")])
+  assert.deepEqual(result.message, draft("second"))
+  assert.deepEqual(result.queue, [draft("first")])
+  assert.deepEqual(enqueueMessage([draft("first")], draft("   ")), [draft("first")])
+})
+
+test("message queue retains inline nodes even when visible text is empty", () => {
+  const pasted = { kind: "pasted-text" as const, text: "full text", lineCount: 1 }
+  assert.deepEqual(enqueueMessage([], { value: "\uFFFC", nodes: [pasted] }), [{ value: "\uFFFC", nodes: [pasted] }])
 })
