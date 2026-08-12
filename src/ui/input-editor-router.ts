@@ -74,7 +74,7 @@ export function routeEditorInput(rawInput: string, input: string, key: ChatInput
   if (key.end || (key.ctrl && input === "e")) { state.setEditor((current) => moveEditorEnd(current)); return }
   if (key.backspace || key.delete) {
     const attachmentIndex = attachmentTokenIndex(composer.editor, "backspace")
-    if (attachmentIndex >= 0) { attachments.removeAttachedImage(String(attachmentIndex + 1)); return }
+    if (attachmentIndex >= 0) { attachments.removeAttachedImage(attachmentIndex); return }
     state.setEditor((current) => backspaceEditor(current))
     return
   }

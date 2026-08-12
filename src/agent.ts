@@ -1,7 +1,7 @@
 import type { AgentEvent, ChatModel, Message } from "./protocol.js"
 import type { BackgroundProcessController, TodoItem, ToolContext } from "./tools.js"
 import { InstructionMemory, type InstructionSource } from "./instructions.js"
-import { CheckpointManager, type Checkpoint } from "./checkpoints.js"
+import { CheckpointManager } from "./checkpoints.js"
 import { BackgroundProcessManager } from "./background-processes.js"
 import { buildCompactionPrompt, continuationState } from "./context-compaction.js"
 import { buildSystemPrompt, estimateMessages, initialAgentMessages } from "./agent-context.js"
@@ -134,14 +134,6 @@ export class AgentConversation {
     const sources = await this.memory.reload()
     await this.refreshSystemMessage()
     return sources
-  }
-
-  async checkpointsList(): Promise<Checkpoint[]> {
-    return await this.checkpoints.list()
-  }
-
-  async restoreCheckpoint(id?: string) {
-    return await this.checkpoints.restore(id)
   }
 
   async rewind(mode: "both" | "chat" | "files" = "both") {

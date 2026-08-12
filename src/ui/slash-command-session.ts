@@ -1,15 +1,10 @@
 import { matchSessionQuery, parseExportArguments, parseRewindMode } from "./session-actions.js"
 import { t } from "./i18n.js"
 import type { SlashCommandContext } from "./slash-command-context.js"
-import { COMPACT_COMMAND, EXPORT_COMMAND, MEMORY_COMMAND, RENAME_COMMAND, RESTORE_COMMAND, RESUME_COMMAND, REWIND_COMMAND, STATS_COMMAND, commandArgument, commandWithArgument } from "./shortcut-command-policy.js"
+import { COMPACT_COMMAND, EXPORT_COMMAND, MEMORY_COMMAND, RENAME_COMMAND, RESUME_COMMAND, REWIND_COMMAND, STATS_COMMAND, commandArgument, commandWithArgument } from "./shortcut-command-policy.js"
 
 export function executeSessionSlashCommand(input: string, context: SlashCommandContext) {
   const { props, state, transcript, sessions } = context
-  if (commandWithArgument(input, RESTORE_COMMAND)) {
-    const id = commandArgument(input, RESTORE_COMMAND) || undefined
-    void props.conversation.restoreCheckpoint(id).then((checkpoint) => state.append({ kind: "info", text: t(state.activeLanguage, "Restored file checkpoint {id}: {path}", { id: checkpoint.id, path: checkpoint.path }) })).catch((error) => transcript.appendReportedError(t(state.activeLanguage, "Restore failed"), error, "checkpoint.restore", { id }))
-    return true
-  }
   if (input === STATS_COMMAND) {
     const stats = props.conversation.stats()
     const percent = Math.round(stats.currentContextTokens / stats.contextWindow * 100)

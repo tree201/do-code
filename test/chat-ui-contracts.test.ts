@@ -69,15 +69,13 @@ test("async bridges resolve requests through the currently attached UI handler",
 })
 
 test("running tasks allow only non-mutating control commands and bare model selection", () => {
-  for (const command of [
-    "/help", "/status", "/stats", "/permissions", "/approval-mode", "/trust",
-    "/untrust", "/extensions", "/language", "/exit", "/quit", "/model",
-  ]) assert.equal(canRunSlashCommandDuringTask(`  ${command}  `), true, command)
+  const allowed = ["/help", "/status", "/stats", "/permissions", "/extensions", "/language", "/exit", "/model"]
+  for (const command of allowed) assert.equal(canRunSlashCommandDuringTask(`  ${command}  `), true, command)
 
-  assert.equal(canRunSlashCommandDuringTask("/model next-model"), false)
-  assert.equal(canRunSlashCommandDuringTask("/resume"), false)
-  assert.equal(canRunSlashCommandDuringTask("/export json"), false)
-  assert.equal(canRunSlashCommandDuringTask("ordinary message"), false)
+  const removed = ["/approval-mode", "/paste-image", "/remove-image", "/restore", "/trust", "/untrust", "/quit"]
+  for (const command of removed) assert.equal(canRunSlashCommandDuringTask(`  ${command}  `), false, `${command} must not be a concurrent built-in control command`)
+
+  for (const input of ["/model next-model", "/resume", "/export json", "ordinary message"]) assert.equal(canRunSlashCommandDuringTask(input), false, input)
 })
 
 test("pausable output forwards normally, buffers while paused, and replays atomically", async () => {

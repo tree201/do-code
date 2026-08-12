@@ -18,7 +18,6 @@ cfb3ebc feat: inline image attachment labels
 
 - `Ctrl+V` / `Cmd+V` 粘贴图片后，在输入框光标位置显示 `[Image #1]`。
 - Backspace 删除内嵌标签时，同步删除图片附件。
-- `/remove-image <index|name>` 同步删除标签。
 - 提交时剥离内部附件节点，模型只收到正文和真实图片附件。
 
 ## 当前未提交改动：修复 Dialog 测试超时

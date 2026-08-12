@@ -119,7 +119,7 @@ do-code run --yes --output-format stream-json \
 do-code run --image screenshots/bug.png --image screenshots/diagram.webp "描述这些图片"
 ```
 
-在交互式 TUI 中，输入 `@path/to/image.png`，或使用 `/paste-image` 从系统剪贴板导入图片。使用 `/remove-image <index|name>` 可移除待发送附件。每张图片最大 10 MB，单次提示中的图片总量最大 20 MB。导入的文件会复制到 `~/.local/share/do-code/projects/<project-key>/sessions/<session-id>/attachments/`；持久化消息只保存 `attachments/image_xxx.png` 这类相对引用，不保存 Base64 数据或原始绝对路径。设置 `DO_CODE_DATA_DIR` 可覆盖全局数据根目录。项目内已有的 `.do-code` 数据会在下次访问该项目时迁移到用户管理的项目目录。
+在交互式 TUI 中，按 Ctrl+V 可从系统剪贴板粘贴图片，也可输入 `@path/to/image.png` 从文件添加图片。要移除待发送附件，请将光标置于编辑器中的图片标签/token 上并按 Backspace。每张图片最大 10 MB，单次提示中的图片总量最大 20 MB。导入的文件会复制到 `~/.local/share/do-code/projects/<project-key>/sessions/<session-id>/attachments/`；持久化消息只保存 `attachments/image_xxx.png` 这类相对引用，不保存 Base64 数据或原始绝对路径。设置 `DO_CODE_DATA_DIR` 可覆盖全局数据根目录。项目内已有的 `.do-code` 数据会在下次访问该项目时迁移到用户管理的项目目录。
 
 ### 常用 CLI 命令
 

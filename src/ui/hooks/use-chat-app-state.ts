@@ -1,10 +1,9 @@
 import { useMemo, useRef, useState } from "react"
-import type { ApprovalMode } from "../../policy.js"
 import type { DoCodeLanguage, ReasoningEffort, ThinkingMode } from "../../config.js"
 import { localeDefinitions } from "../../locale-registry.js"
 import { buildWorkspaceCompletionIndex, completionsForEditor, type ArgumentCompletions } from "../completion.js"
 import { editorCursorParts } from "../editor.js"
-import { approvalModeNotice, inlineViewerHeight } from "../chat-presentation.js"
+import { inlineViewerHeight } from "../chat-presentation.js"
 import { filterSessions, sessionPickerWindowStart } from "../session-picker-model.js"
 import { restoredSessionItems } from "../session-transcript.js"
 import type { TranscriptItem } from "../transcript-model.js"
@@ -16,7 +15,7 @@ import { useRuntimeStore } from "./use-runtime-store.js"
 import { useTranscriptOwner } from "./use-transcript-owner.js"
 import { useComposerOwner } from "./use-composer-owner.js"
 import { useTurnOwner } from "./use-turn-owner.js"
-import { APPROVAL_MODE_COMMAND, EXPORT_COMMAND, LANGUAGE_COMMAND, MEMORY_COMMAND, REMOVE_IMAGE_COMMAND, REWIND_COMMAND, THINKING_COMMAND } from "../shortcut-command-policy.js"
+import { EXPORT_COMMAND, LANGUAGE_COMMAND, MEMORY_COMMAND, REWIND_COMMAND, THINKING_COMMAND } from "../shortcut-command-policy.js"
 import type { ChatInputKey } from "../input-routing-types.js"
 
 export type DialogInputHandler = (input: string, key: ChatInputKey) => void
@@ -46,7 +45,6 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
   const { activeDialog, setActiveDialog, getActiveDialog } = useActiveDialog()
   const [workspaceFiles, setWorkspaceFiles] = useState<string[]>([])
   const [memoryCount, setMemoryCount] = useState(0)
-  const [trusted, setTrusted] = useState(false)
   const [contextPercent, setContextPercent] = useState(0)
   const dialogInputHandlers = useRef<{ auth?: DialogInputHandler | undefined; model?: DialogInputHandler | undefined; effort?: DialogInputHandler | undefined }>({})
   const activeModel = runtime.modelConfig.preset
@@ -67,7 +65,6 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
   const argumentCompletions = useMemo<ArgumentCompletions>(() => ({
     [THINKING_COMMAND]: (["auto", "on", "off"] as ThinkingMode[]).map((mode) => ({ label: mode, description: t(activeLanguage, mode === activeThinkingMode ? "Current thinking mode" : mode === "auto" ? "Let the model decide when to think" : mode === "on" ? "Force thinking on" : "Turn thinking off"), insert: mode, submit: true })),
     [LANGUAGE_COMMAND]: localeDefinitions.map((language) => ({ label: language.id, description: t(activeLanguage, "Set interface and output language to {language}", { language: t(activeLanguage, language.englishName) }), insert: language.id, submit: true })),
-    [APPROVAL_MODE_COMMAND]: (["ask", "auto", "full-access"] as ApprovalMode[]).map((mode) => ({ label: mode, description: approvalModeNotice(mode, activeLanguage).split("\n").slice(1).join(" "), insert: mode, submit: true })),
     [MEMORY_COMMAND]: [
       { value: "list", description: "List loaded AGENTS.md instruction files" },
       { value: "show", description: "Show loaded project instructions" },
@@ -82,8 +79,7 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
       { value: "md", description: "Export the session as Markdown" },
       { value: "json", description: "Export the session as JSON" },
     ].map(({ value, description }) => ({ label: value, description: t(activeLanguage, description), insert: value, submit: true })),
-    [REMOVE_IMAGE_COMMAND]: attachedImages.map((image, index) => ({ label: String(index + 1), description: image.name, insert: String(index + 1), submit: true })),
-  }), [activeEffort, activeLanguage, activeThinkingMode, attachedImages])
+  }), [activeLanguage, activeThinkingMode])
   const completion = useMemo(() => completionsForEditor(editor, workspaceFiles, customCompletions, argumentCompletions, activeLanguage, workspaceCompletionIndex), [activeLanguage, argumentCompletions, customCompletions, editor, workspaceCompletionIndex, workspaceFiles])
   const cursorParts = useMemo(() => editorCursorParts(editor), [editor])
   const completionItems = completion?.items ?? []
@@ -105,7 +101,7 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
     pendingToolGroup, liveAssistant, transcriptOwner, activeDialog, setActiveDialog, getActiveDialog,
     history, setHistory, historyIndex, setHistoryIndex, historyDraft, setHistoryDraft, workspaceFiles, setWorkspaceFiles, completionIndex, setCompletionIndex,
     sessionPickerItems, sessionPickerIndex, sessionPickerQuery, memoryCount, setMemoryCount,
-    trusted, setTrusted, contextPercent, setContextPercent, dialogInputHandlers, queuedInputs, setQueuedInputs, activeModel, activeModelPresets, attachedImages,
+    contextPercent, setContextPercent, dialogInputHandlers, queuedInputs, setQueuedInputs, activeModel, activeModelPresets, attachedImages,
     updateAttachedImages, activeEffort, activeDefaultEffort,
     activeThinkingMode, activeLanguage, activeApprovalMode, activePlanMode, viewerItems,
     viewerOffset, externalViewerActiveRef, exitConfirmation, armExitConfirmation, clearExitConfirmation,

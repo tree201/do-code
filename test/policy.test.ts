@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { PolicyEngine, approvalForTool, createPolicyEngine, inspectShellSyntax, isDangerousShell, isWorkspaceTrusted, setWorkspaceTrusted, shellNetworkMode } from "../src/policy.js"
+import { PolicyEngine, approvalForTool, createPolicyEngine, inspectShellSyntax, isDangerousShell, shellNetworkMode } from "../src/policy.js"
 
 test("permission modes match Codex-style workspace, network, and risk behavior", () => {
   assert.equal(approvalForTool("read_file", { path: "a.ts" }, "ask"), "allow")
@@ -29,17 +29,6 @@ test("shell commands request the least network capability they need", () => {
   assert.equal(shellNetworkMode("node -e \"server.listen(3000)\""), "local")
   assert.equal(shellNetworkMode("npm install"), "full")
   assert.equal(shellNetworkMode("git fetch origin"), "full")
-})
-
-test("trusted workspaces persist and apply to child paths", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "do-code-trust-"))
-  const config = path.join(root, "config")
-  const workspace = path.join(root, "repo")
-  assert.equal(await isWorkspaceTrusted(workspace, config), false)
-  await setWorkspaceTrusted(workspace, true, config)
-  assert.equal(await isWorkspaceTrusted(path.join(workspace, "src"), config), true)
-  await setWorkspaceTrusted(workspace, false, config)
-  assert.equal(await isWorkspaceTrusted(workspace, config), false)
 })
 
 test("policy engine fails closed in headless mode and never permits catastrophic shell commands", () => {
