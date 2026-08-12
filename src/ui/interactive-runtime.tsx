@@ -12,7 +12,7 @@ import { createChatModel, type SwitchableModel } from "../model.js"
 import { approvalRequest, createPolicyEngine, type ApprovalMode } from "../policy.js"
 import { installProvider, type ProviderInstallInput } from "../provider-setup.js"
 import { createSandboxShellRunner, createSandboxShellSpawnSpec } from "../sandbox.js"
-import { listSessions } from "../sessions.js"
+import { listSessions, loadSession } from "../sessions.js"
 import { executeTool } from "../tools.js"
 import { CheckpointManager } from "../checkpoints.js"
 import { ApprovalBridge, PlanReviewBridge, QuestionBridge } from "./async-bridges.js"
@@ -30,7 +30,9 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
   const profile = resolveAgentProfile(config, args.agent)
   const initialLanguage: DoCodeLanguage = config.language ?? "en"
   const instructions = (language: DoCodeLanguage) => [profile?.instructions, outputLanguageInstruction(language)].filter(Boolean).join("\n\n")
-  const initialApprovalMode: ApprovalMode = args.approvalMode
+  const requestedApprovalMode: ApprovalMode = args.approvalMode
+  const restoredSession = args.continueSession ? await loadSession(args.workspace, args.sessionId) : undefined
+  const initialApprovalMode = restoredSession?.session.approvalMode ?? requestedApprovalMode
   const policy = await createPolicyEngine(args.workspace, initialApprovalMode)
   const extensions = await loadPromptExtensions(args.workspace)
   const activeSandbox = () => policy.mode === "full-access" ? { type: "local" as const, network: "full" as const } : { ...config.sandbox, network: "full" as const }
@@ -68,6 +70,7 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
     restoreModel: applyRuntimeModel,
     configureAuth: async (input) => { const installed = await installProvider(input); return await switchRuntimeModel(`${installed.providerId}/${installed.models[0]}`) },
     setLanguage: async (language) => { await saveLanguagePreference(language); await conversation.setProfileInstructions(instructions(language)) },
+    setApprovalMode: (mode) => { policy.setMode(mode) },
     resumeSession: store.resume,
     persistSession: async () => { await store.save(true) },
   })
@@ -117,7 +120,7 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
     attachEventSink={(sink) => { eventSink = sink }} runtimeStore={runtimeStore}
     runShellShortcut={async (command) => await executeTool(SHELL_TOOL, { command }, { workspace: args.workspace, policy, approvalMode: runtimeStore.getSnapshot().approvalMode, isPlanMode: () => runtimeStore.getSnapshot().planMode, approveTool: async (request) => await approvalBridge.request(request), approveShell: async (requested) => await approvalBridge.request(approvalRequest(SHELL_TOOL, { command: requested }, policy.evaluate(SHELL_TOOL, { command: requested }))), runShell: shellRunner, shellSpawnSpec: spawnSpec })}
     listSessions={async () => await listSessions(args.workspace)} resumeSession={store.resume} renameCurrentSession={store.rename} exportCurrentSession={store.exportCurrent} save={async () => { await store.save() }}
-    reportError={async (error, operation, category, context) => await reportError({ error, operation, ...(category ? { category } : {}), workspace: args.workspace, sessionId: store.session().id, model: store.modelConfig().preset, context: { input: context, approvalMode: args.approvalMode, maxSteps: args.maxSteps, stats: conversation.stats(), messages: conversation.history().slice(-30), events: store.events().slice(-150) } })}
+    reportError={async (error, operation, category, context) => await reportError({ error, operation, ...(category ? { category } : {}), workspace: args.workspace, sessionId: store.session().id, model: store.modelConfig().preset, context: { input: context, approvalMode: runtimeStore.getSnapshot().approvalMode, maxSteps: args.maxSteps, stats: conversation.stats(), messages: conversation.history().slice(-30), events: store.events().slice(-150) } })}
     modelPresets={listModelPresets(config)} promptExtensions={extensions} language={initialLanguage} openTranscriptViewer={renderer.openTranscriptViewer} openHelp={renderer.openHelp} forwardViewportInput={renderer.forwardViewportInput} renderRevision={renderer.revision()}
     pasteImage={pasteImage} pasteImagePaths={pasteImagePaths}
   />

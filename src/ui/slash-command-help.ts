@@ -55,6 +55,7 @@ const HELP_GROUPS: HelpGroup[] = [
       { usage: "@path", description: "Add workspace file context" },
       { usage: "!command", description: "Run a Shell command directly" },
       { usage: "Ctrl+R", description: "Cycle reasoning effort" },
+      { usage: "Ctrl+G", description: "Cycle approval mode" },
       { usage: "Ctrl+T", description: "View all messages" },
       { usage: "Ctrl+V", description: "Paste clipboard image" },
       { usage: "Tab", description: "Accept completion" },

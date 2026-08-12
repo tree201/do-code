@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import { activeToolSummary, buildToolGroupSummary } from "../src/ui/tool-summary.js"
-import { approvalModeNotice, composerStatusText } from "../src/ui/chat-app.js"
+import { composerStatusText } from "../src/ui/chat-app.js"
 import { buildActivitySummary } from "../src/ui/activity-summary.js"
 import { activityGroupKey, createToolPresentation } from "../src/tool-presentation.js"
 
@@ -19,22 +19,13 @@ test("active tool summaries use a concise localized verb", () => {
   assert.equal(activeToolSummary("edit_file", { path: "src/app.ts" }, "en"), "Editing  src/app.ts")
 })
 
-test("composer status progressively removes metadata in narrow terminals", () => {
+test("composer status retains approval mode when space permits and degrades gracefully", () => {
   const base = { language: "zh" as const, running: true, command: false, model: "ark/glm-5.2", contextPercent: 23, approvalMode: "full-access" as const }
-  assert.equal(composerStatusText({ ...base, width: 100 }), "glm-5.2 · 默认 · 23%")
-  assert.equal(composerStatusText({ ...base, width: 64 }), "glm-5.2 · 默认 · 23%")
-  assert.equal(composerStatusText({ ...base, width: 38 }), "glm-5.2 · 默认 · 23%")
-  assert.equal(composerStatusText({ ...base, width: 28 }), "glm-5.2 · 默认 · 23%")
-  assert.equal(composerStatusText({ ...base, width: 18 }), "glm-5.2 · 23%")
-  assert.equal(composerStatusText({ ...base, language: "en", reasoningIntensity: "high", width: 100 }), "glm-5.2 · high · 23%")
-  assert.equal(composerStatusText({ ...base, planMode: true, width: 100 }), "glm-5.2 · 默认 · 23%")
-})
-
-test("approval mode switches explain every mode in Chinese and English", () => {
-  assert.match(approvalModeNotice("ask", "zh"), /当前工作区.*联网.*请求确认/)
-  assert.match(approvalModeNotice("ask", "en"), /current-workspace.*ask before network/i)
-  assert.match(approvalModeNotice("auto", "zh"), /普通编辑.*联网.*可能不安全/)
-  assert.match(approvalModeNotice("full-access", "en"), /outside the workspace.*catastrophic system commands remain blocked/i)
+  assert.equal(composerStatusText({ ...base, width: 100 }), "glm-5.2 · 默认 · 23% · full-access")
+  assert.equal(composerStatusText({ ...base, width: 38 }), "glm-5.2 · 默认 · 23% · full-access")
+  assert.equal(composerStatusText({ ...base, width: 18 }), "full-access")
+  assert.equal(composerStatusText({ ...base, language: "en", reasoningIntensity: "high", width: 100 }), "glm-5.2 · high · 23% · full-access")
+  assert.match(composerStatusText({ ...base, planMode: true, width: 100 }), /full-access/)
 })
 
 test("activity summaries group exploration into a user-facing outline", () => {

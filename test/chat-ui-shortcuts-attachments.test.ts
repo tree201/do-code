@@ -6,7 +6,7 @@ import { render } from "ink-testing-library"
 import { AgentConversation } from "../src/agent.js"
 import { classifyPastedImagePaths } from "../src/image-attachments.js"
 import type { ChatModel } from "../src/protocol.js"
-import { ApprovalBridge, ChatApp, HelpDialog, helpDialogLines, helpDialogRows, isHelpShortcut, isReasoningEffortShortcut, nextReasoningEffort, type ChatAppProps } from "../src/ui/chat-app.js"
+import { ApprovalBridge, ChatApp, HelpDialog, helpDialogLines, helpDialogRows, isApprovalModeShortcut, isHelpShortcut, isReasoningEffortShortcut, nextApprovalMode, nextReasoningEffort, type ChatAppProps } from "../src/ui/chat-app.js"
 import { displayWidth } from "../src/ui/terminal-text.js"
 import { tick, visibleFrame } from "./support/chat-ui.js"
 import { createRuntimeStore } from "../src/ui/runtime-store.js"
@@ -20,11 +20,34 @@ test("reasoning effort shortcut cycles through the configured levels", () => {
   assert.equal(nextReasoningEffort("default"), "low")
 })
 
+test("approval mode shortcut cycles ask, auto, and full-access", () => {
+  assert.equal(nextApprovalMode("ask"), "auto")
+  assert.equal(nextApprovalMode("auto"), "full-access")
+  assert.equal(nextApprovalMode("full-access"), "ask")
+  assert.equal(isApprovalModeShortcut("p", { ctrl: true }), true)
+  assert.equal(isApprovalModeShortcut("P", { ctrl: true }), true)
+  assert.equal(isApprovalModeShortcut("p", { ctrl: false }), false)
+})
+
 test("reasoning effort shortcut uses Ctrl+R without matching plain R", () => {
   assert.equal(isReasoningEffortShortcut("r", { ctrl: true }), true)
   assert.equal(isReasoningEffortShortcut("R", { ctrl: true }), true)
   assert.equal(isReasoningEffortShortcut("r", { ctrl: false }), false)
   assert.equal(isReasoningEffortShortcut("e", { ctrl: true }), false)
+})
+
+test("runtime resume restores saved approval mode and keeps it for legacy sessions", async () => {
+  const modelConfig = { source: "config" as const, sourceLabel: "test", preset: "test/a", provider: "test", modelId: "a", baseUrl: "https://example.com", apiKey: "hidden" }
+  const session = { id: "session_a", workspace: "/tmp", model: "test/a", createdAt: "now", updatedAt: "now", directory: "/tmp/session_a" }
+  const applied: string[] = []
+  const store = createRuntimeStore({ session, modelConfig, modelPresets: ["test/a"], approvalMode: "ask", planMode: false, language: "en" }, {
+    setApprovalMode: (mode) => { applied.push(mode) },
+    resumeSession: async (id) => ({ session: { ...session, id, ...(id === "saved" ? { approvalMode: "full-access" as const } : {}) }, messages: [], events: [] }),
+  })
+  await store.resumeSession("saved")
+  await store.resumeSession("legacy")
+  assert.equal(store.getSnapshot().approvalMode, "full-access")
+  assert.deepEqual(applied, ["full-access", "full-access"])
 })
 
 test("Ctrl+H is recognized from Ink's backspace key event", () => {

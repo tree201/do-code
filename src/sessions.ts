@@ -4,11 +4,13 @@ import os from "node:os"
 import path from "node:path"
 import { contentText, type Message } from "./protocol.js"
 import { validateImageFile } from "./image-attachments.js"
+import type { ApprovalMode } from "./policy.js"
 
 export type SavedSession = {
   id: string
   workspace: string
   model?: string
+  approvalMode?: ApprovalMode
   title?: string
   createdAt?: string
   updatedAt: string
