@@ -1,5 +1,5 @@
 import { applyCompletion, completionsForEditor } from "./completion.js"
-import { attachmentTokenIndex } from "./attachment-model.js"
+import { attachmentTokenIndex, type ComposerDraft } from "./attachment-model.js"
 import { backspaceEditor, createEditor, deleteEditor, insertEditorText, moveEditorCursor, moveEditorEnd, moveEditorHome, moveEditorVertical, redoEditor, undoEditor } from "./editor.js"
 import { takeLastMessage } from "./message-queue.js"
 import { nextReasoningEffort } from "./model-actions.js"
@@ -11,13 +11,30 @@ import type { AttachmentActions } from "./hooks/use-attachment-actions.js"
 import type { ChatAppState } from "./hooks/use-chat-app-state.js"
 import type { TranscriptController } from "./hooks/use-transcript-controller.js"
 
+function currentDraft(state: ChatAppState): ComposerDraft {
+  const snapshot = state.composerOwner.getSnapshot()
+  return { value: snapshot.editor.value, nodes: snapshot.nodes }
+}
+
+function restoreDraft(state: ChatAppState, draft: ComposerDraft) {
+  state.setEditor(createEditor(draft.value))
+  state.updateInlineNodes(draft.nodes)
+}
+
+function clearDraft(state: ChatAppState) {
+  state.setEditor(createEditor())
+  state.updateInlineNodes([])
+}
+
 export function routeEditorInput(rawInput: string, input: string, key: ChatInputKey, props: ChatAppProps, state: ChatAppState, transcript: TranscriptController, attachments: AttachmentActions, submit: (input: string) => void, exit: () => void) {
   const composer = state.composerOwner.getSnapshot()
-  const isBracketedPaste = Boolean(key.paste) || rawInput.includes("\u001b[200~")
+  const pasteStart = /^(?:\u001b)?\[200~/
+  const isBracketedPaste = Boolean(key.paste) || pasteStart.test(rawInput) || pasteStart.test(input)
   const isClipboardImageShortcut = (key.ctrl || key.meta) && input.toLowerCase() === "v"
   if (isBracketedPaste) {
     state.composerOwner.markPaste()
-    if (input && !attachments.attachPastedImagePaths(input)) state.setEditor((current) => insertEditorText(current, input))
+    const pasted = input.replace(pasteStart, "").replace(/(?:\u001b)?\[201~$/, "")
+    if (pasted && !attachments.attachPastedImagePaths(pasted)) attachments.insertPastedText(pasted)
     return
   }
   if (isClipboardImageShortcut) {
@@ -33,7 +50,7 @@ export function routeEditorInput(rawInput: string, input: string, key: ChatInput
   }
   if (state.turnOwner.getSnapshot().running && (key.escape || (key.ctrl && input === "c"))) { state.turnOwner.abort(); return }
   if (key.ctrl && input === "c") {
-    if (composer.editor.value) { state.setEditor(createEditor()); state.updateAttachedImages([]); state.clearExitConfirmation() }
+    if (composer.editor.value) { clearDraft(state); state.clearExitConfirmation() }
     else if (composer.exitConfirmation) exit()
     else state.armExitConfirmation()
     return
@@ -73,20 +90,21 @@ export function routeEditorInput(rawInput: string, input: string, key: ChatInput
   if (key.home || (key.ctrl && input === "a")) { state.setEditor((current) => moveEditorHome(current)); return }
   if (key.end || (key.ctrl && input === "e")) { state.setEditor((current) => moveEditorEnd(current)); return }
   if (key.backspace || key.delete) {
-    const attachmentIndex = attachmentTokenIndex(composer.editor, "backspace")
-    if (attachmentIndex >= 0) { attachments.removeAttachedImage(attachmentIndex); return }
-    state.setEditor((current) => backspaceEditor(current))
+    const forwardDelete = rawInput.includes("[3~")
+    const nodeIndex = attachmentTokenIndex(composer.editor, forwardDelete ? "delete" : "backspace")
+    if (nodeIndex >= 0) { attachments.removeInlineNode(nodeIndex); return }
+    state.setEditor((current) => forwardDelete ? deleteEditor(current) : backspaceEditor(current))
     return
   }
-  if (key.ctrl && input === "u") { state.setEditor(createEditor()); state.updateAttachedImages([]); return }
+  if (key.ctrl && input === "u") { clearDraft(state); return }
   if ((key.ctrl || key.meta || key.super) && input.toLowerCase() === "z") { state.setEditor((current) => key.shift ? redoEditor(current) : undoEditor(current)); return }
   if (key.ctrl && input.toLowerCase() === "y") { state.setEditor((current) => redoEditor(current)); return }
   if (completionItems.length && key.upArrow) { state.setCompletionIndex((composer.completionIndex - 1 + completionItems.length) % completionItems.length); return }
-  if (key.upArrow && !composer.editor.value && composer.queuedInputs.length) { const editable = takeLastMessage(composer.queuedInputs); state.setQueuedInputs(editable.queue); if (editable.message) state.setEditor(createEditor(editable.message)); return }
+  if (key.upArrow && !composer.editor.value && composer.queuedInputs.length) { const editable = takeLastMessage(composer.queuedInputs); state.setQueuedInputs(editable.queue); if (editable.message) restoreDraft(state, editable.message); return }
   if (completionItems.length && key.downArrow) { state.setCompletionIndex((composer.completionIndex + 1) % completionItems.length); return }
   if (key.upArrow && composer.editor.value.includes("\n")) { const moved = moveEditorVertical(composer.editor, -1); if (moved.cursor !== composer.editor.cursor) { state.setEditor(moved); return } }
   if (key.downArrow && composer.editor.value.includes("\n")) { const moved = moveEditorVertical(composer.editor, 1); if (moved.cursor !== composer.editor.cursor) { state.setEditor(moved); return } }
-  if (key.upArrow && composer.history.length) { const index = composer.historyIndex === null ? composer.history.length - 1 : Math.max(0, composer.historyIndex - 1); if (composer.historyIndex === null) state.setHistoryDraft(composer.editor.value); state.setHistoryIndex(index); state.setEditor(createEditor(composer.history[index] ?? "")); return }
-  if (key.downArrow && composer.historyIndex !== null) { const index = composer.historyIndex + 1; if (index >= composer.history.length) { state.setHistoryIndex(null); state.setEditor(createEditor(composer.historyDraft)) } else { state.setHistoryIndex(index); state.setEditor(createEditor(composer.history[index] ?? "")) }; return }
+  if (key.upArrow && composer.history.length) { const index = composer.historyIndex === null ? composer.history.length - 1 : Math.max(0, composer.historyIndex - 1); if (composer.historyIndex === null) state.setHistoryDraft(currentDraft(state)); state.setHistoryIndex(index); restoreDraft(state, composer.history[index] ?? { value: "", nodes: [] }); return }
+  if (key.downArrow && composer.historyIndex !== null) { const index = composer.historyIndex + 1; if (index >= composer.history.length) { state.setHistoryIndex(null); restoreDraft(state, composer.historyDraft) } else { state.setHistoryIndex(index); restoreDraft(state, composer.history[index] ?? { value: "", nodes: [] }) }; return }
   if (!key.ctrl && !key.meta && !key.super && input) state.setEditor((current) => insertEditorText(current, input))
 }

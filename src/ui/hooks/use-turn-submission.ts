@@ -2,7 +2,7 @@ import { useCallback, useEffect } from "react"
 import { MaxSessionTurnsError } from "../../turn-limits.js"
 import { createToolPresentation } from "../../tool-presentation.js"
 import { expandPromptExtension } from "../../extension-registry.js"
-import { stripAttachmentTokens } from "../attachment-model.js"
+import { composerDraftEqual, expandComposerValue, stripAttachmentTokens, type ComposerDraft } from "../attachment-model.js"
 import { createEditor } from "../editor.js"
 import { enqueueMessage, takeNextMessage } from "../message-queue.js"
 import { routeSlashCommand } from "../slash-command-router.js"
@@ -17,18 +17,20 @@ import type { ChatAppState } from "./use-chat-app-state.js"
 import type { SessionActions } from "./use-session-actions.js"
 import type { TranscriptController } from "./use-transcript-controller.js"
 
+const EMPTY_DRAFT: ComposerDraft = { value: "", nodes: [] }
+
 export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, transcript: TranscriptController, sessions: SessionActions, exit: () => void) {
   const SHELL_TOOL_NAME = "shell"
-  const submit = useCallback((rawInput: string) => {
-    const input = stripAttachmentTokens(rawInput).trim()
+  const submit = useCallback((rawInput: string | ComposerDraft) => {
     const composer = state.composerOwner.getSnapshot()
-    const images = composer.attachments
-    const disposition = turnSubmissionDisposition(input, images.length, state.turnOwner.getSnapshot().running)
+    const draft = typeof rawInput === "string" ? { value: rawInput, nodes: composer.nodes } : rawInput
+    const input = stripAttachmentTokens(draft.value).trim()
+    const disposition = turnSubmissionDisposition(input, draft.nodes.length, state.turnOwner.getSnapshot().running)
     if (disposition === "ignore") return
     if (disposition === "queue") {
-      state.setQueuedInputs((current) => enqueueMessage(current, input)); state.setEditor(createEditor()); state.setHistoryIndex(null); state.setHistoryDraft(""); return
+      state.setQueuedInputs((current) => enqueueMessage(current, draft)); state.setEditor(createEditor()); state.updateInlineNodes([]); state.setHistoryIndex(null); state.setHistoryDraft(EMPTY_DRAFT); return
     }
-    state.setEditor(createEditor()); state.setHistory((current) => [...current.filter((value) => value !== input), input]); state.setHistoryIndex(null); state.setHistoryDraft("")
+    state.setEditor(createEditor()); state.updateInlineNodes([]); state.setHistory((current) => current.some((entry) => composerDraftEqual(entry, draft)) ? current : [...current, draft]); state.setHistoryIndex(null); state.setHistoryDraft(EMPTY_DRAFT)
     if (state.activeModel === "未配置模型" && !input.startsWith("/") && !input.startsWith("!")) {
       state.append({ kind: "info", text: t(state.activeLanguage, "No model is configured. Use /auth to configure a model provider before starting a task.") }); return
     }
@@ -36,12 +38,12 @@ export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, tran
 
     const route = routeSlashCommand(input, props.promptExtensions?.map((item) => item.name))
     const extension = route.kind === "extension" ? props.promptExtensions?.find((item) => item.name === route.command) : undefined
-    const expandedInput = extension && route.kind !== "none" ? expandPromptExtension(extension, route.argument) : input
-    const references = images.map((image) => `@${image.reference}`).join(" ")
-    const effectiveInput = [expandedInput, references].filter(Boolean).join("\n\n")
+    const expandedText = expandComposerValue(draft.value, draft.nodes, "model").trim()
+    const expandedRoute = routeSlashCommand(expandedText, props.promptExtensions?.map((item) => item.name))
+    const expandedInput = extension && expandedRoute.kind === "extension" ? expandPromptExtension(extension, expandedRoute.argument) : expandedText
+    const displayInput = expandComposerValue(draft.value, draft.nodes, "display").trim()
     transcript.flushPendingTools()
-    state.append({ kind: "user", text: input || images.map((image) => image.name).join(" · ") })
-    state.updateAttachedImages([])
+    state.append({ kind: "user", text: displayInput })
     const signal = state.turnOwner.begin()
     void (async () => {
       try {
@@ -52,7 +54,7 @@ export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, tran
         } else if (input === DIFF_COMMAND) state.append({ kind: "info", text: (await commandOutput("git", ["diff", "--no-ext-diff", "--", "."], props.workspace)) || t(state.activeLanguage, "There are no Git changes.") })
         else if (input === CLEAR_COMMAND) { await props.conversation.clear(); state.append({ kind: "info", text: t(state.activeLanguage, "Conversation context cleared. File changes were preserved.") }) }
         else {
-          const answer = await props.conversation.run(effectiveInput, { signal })
+          const answer = await props.conversation.run(expandedInput, { signal, displayInput })
           if (!transcript.hasAssistantOutput() && answer.trim()) state.append({ kind: "assistant", text: answer })
           const stats = props.conversation.stats(); state.setContextPercent(Math.round(stats.currentContextTokens / stats.contextWindow * 100))
         }
@@ -72,5 +74,5 @@ export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, tran
     if (next.message) queueMicrotask(() => submit(next.message!))
   }, [state.activeDialog, state.queuedInputs, state.running, state.setQueuedInputs, submit])
 
-  return submit
+  return (input: string) => submit(input)
 }

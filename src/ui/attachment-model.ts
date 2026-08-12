@@ -3,6 +3,29 @@ import { graphemes, replaceEditorRange, type EditorState } from "./editor.js"
 export const IMAGE_ATTACHMENT_TOKEN = "\uFFFC"
 
 export type ImageAttachment = { reference: string; name: string; size?: number }
+export type PastedTextAttachment = { kind: "pasted-text"; text: string; lineCount: number }
+export type ComposerInlineNode = ({ kind: "image" } & ImageAttachment) | PastedTextAttachment
+export type ComposerDraft = { value: string; nodes: ComposerInlineNode[] }
+
+export function imageNodes(nodes: ComposerInlineNode[]): ImageAttachment[] {
+  return nodes.flatMap((node) => node.kind === "image" ? [{ reference: node.reference, name: node.name, ...(node.size === undefined ? {} : { size: node.size }) }] : [])
+}
+
+export function pastedTextLineCount(text: string) {
+  return text.split(/\r\n|\r|\n/).length
+}
+
+export function shouldFoldPastedText(text: string) {
+  return pastedTextLineCount(text) >= 3 || text.length > 150
+}
+
+export function pastedTextNode(text: string): PastedTextAttachment {
+  return { kind: "pasted-text", text, lineCount: pastedTextLineCount(text) }
+}
+
+export function pastedTextLabel(lineCount: number) {
+  return `[Pasted ~${lineCount} lines]`
+}
 
 export function attachmentIndex(attachments: ImageAttachment[], query: string) {
   const normalized = query.trim()
@@ -43,6 +66,29 @@ export function removeAttachmentToken(editor: EditorState, index: number) {
 
 export function stripAttachmentTokens(value: string) {
   return value.replaceAll(IMAGE_ATTACHMENT_TOKEN, "")
+}
+
+export function expandComposerValue(value: string, nodes: ComposerInlineNode[], mode: "model" | "display") {
+  let nodeIndex = 0
+  let imageIndex = 0
+  return graphemes(value).map((part) => {
+    if (part !== IMAGE_ATTACHMENT_TOKEN) return part
+    const node = nodes[nodeIndex++]
+    if (!node) return ""
+    if (node.kind === "image") return mode === "model" ? `@${node.reference}` : `[Image #${++imageIndex}]`
+    return mode === "model" ? node.text : pastedTextLabel(node.lineCount)
+  }).join("")
+}
+
+export function composerDraftEqual(left: ComposerDraft, right: ComposerDraft) {
+  if (left.value !== right.value || left.nodes.length !== right.nodes.length) return false
+  return left.nodes.every((node, index) => {
+    const other = right.nodes[index]
+    if (!other || node.kind !== other.kind) return false
+    if (node.kind === "pasted-text" && other.kind === "pasted-text") return node.text === other.text && node.lineCount === other.lineCount
+    return node.kind === "image" && other.kind === "image"
+      && node.reference === other.reference && node.name === other.name && node.size === other.size
+  })
 }
 
 export function attachmentBytes(attachments: ImageAttachment[]) {

@@ -1,7 +1,7 @@
 import React from "react"
 import type { ReactNode } from "react"
 import { Text } from "ink"
-import { IMAGE_ATTACHMENT_TOKEN } from "../attachment-model.js"
+import { IMAGE_ATTACHMENT_TOKEN, pastedTextLabel, type ComposerInlineNode } from "../attachment-model.js"
 import { composerStatusText } from "../chat-presentation.js"
 import { showInteractiveComposer, showRunningActivity } from "../dialog-coordinator.js"
 import { graphemes } from "../editor.js"
@@ -12,10 +12,11 @@ import { Composer } from "./composer.js"
 import type { ChatAppProps } from "../chat-app-types.js"
 import type { ChatAppState } from "../hooks/use-chat-app-state.js"
 
-export function composerInputContent(value: string, cursor: number): ReactNode[] {
+export function composerInputContent(value: string, cursor: number, nodes: ComposerInlineNode[] = []): ReactNode[] {
   const content: ReactNode[] = []
   const parts = graphemes(value)
   let text = ""
+  let nodeIndex = 0
   let imageIndex = 0
   const flushText = () => {
     if (!text) return
@@ -29,9 +30,12 @@ export function composerInputContent(value: string, cursor: number): ReactNode[]
       continue
     }
     flushText()
-    const isImage = part === IMAGE_ATTACHMENT_TOKEN
-    const label = isImage ? ` [Image #${++imageIndex}] ` : part
-    content.push(isImage && index !== cursor
+    const isNode = part === IMAGE_ATTACHMENT_TOKEN
+    const node = isNode ? nodes[nodeIndex++] : undefined
+    const label = node?.kind === "pasted-text"
+      ? ` ${pastedTextLabel(node.lineCount)} `
+      : isNode ? ` [Image #${++imageIndex}] ` : part
+    content.push(isNode && index !== cursor
       ? <Text key={index} color={tuiTheme.accent}>{label}</Text>
       : <Text key={index} inverse={index === cursor}>{label}</Text>)
   }
@@ -41,7 +45,7 @@ export function composerInputContent(value: string, cursor: number): ReactNode[]
 }
 
 function ComposerInput({ state }: { state: ChatAppState }) {
-  return <Text>{composerInputContent(state.editor.value, state.editor.cursor)}
+  return <Text>{composerInputContent(state.editor.value, state.editor.cursor, state.inlineNodes)}
     {!state.editor.value ? <Text dimColor> {t(state.activeLanguage, state.running ? "Current task is running; press Enter to queue a message" : "Enter a task or @file path")}</Text> : null}
   </Text>
 }

@@ -37,8 +37,8 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
   const activeSessionId = runtime.session.id
   const activeSessionTitle = runtime.session.title ?? ""
   const { snapshot: composer, owner: composerOwner } = useComposerOwner()
-  const { editor, attachments: attachedImages, history, historyIndex, historyDraft, queuedInputs, completionIndex, exitConfirmation } = composer
-  const { setEditor, setAttachments: updateAttachedImages, setHistory, setHistoryIndex, setHistoryDraft, setQueuedInputs, setCompletionIndex, armExitConfirmation, clearExitConfirmation } = composerOwner
+  const { editor, nodes: inlineNodes, history, historyIndex, historyDraft, queuedInputs, completionIndex, exitConfirmation } = composer
+  const { setEditor, setNodes: updateInlineNodes, setHistory, setHistoryIndex, setHistoryDraft, setQueuedInputs, setCompletionIndex, armExitConfirmation, clearExitConfirmation } = composerOwner
   const { snapshot: turn, owner: turnOwner } = useTurnOwner()
   const running = turn.running
   const updateRunning = turnOwner.setRunning
@@ -101,8 +101,8 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
     pendingToolGroup, liveAssistant, transcriptOwner, activeDialog, setActiveDialog, getActiveDialog,
     history, setHistory, historyIndex, setHistoryIndex, historyDraft, setHistoryDraft, workspaceFiles, setWorkspaceFiles, completionIndex, setCompletionIndex,
     sessionPickerItems, sessionPickerIndex, sessionPickerQuery, memoryCount, setMemoryCount,
-    contextPercent, setContextPercent, dialogInputHandlers, queuedInputs, setQueuedInputs, activeModel, activeModelPresets, attachedImages,
-    updateAttachedImages, activeEffort, activeDefaultEffort,
+    contextPercent, setContextPercent, dialogInputHandlers, queuedInputs, setQueuedInputs, activeModel, activeModelPresets, inlineNodes,
+    updateInlineNodes, activeEffort, activeDefaultEffort,
     activeThinkingMode, activeLanguage, activeApprovalMode, activePlanMode, viewerItems,
     viewerOffset, externalViewportActiveRef, exitConfirmation, armExitConfirmation, clearExitConfirmation,
     applyApprovalMode, applyPlanMode, append, appendMany, customCompletions, argumentCompletions,
