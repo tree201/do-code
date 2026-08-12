@@ -22,6 +22,7 @@ test("help uses the alternate screen without growing primary scrollback", { time
   let raw = ""
   let opened = false, closed = false, typed = false
   let primaryBaseY = -1
+  let screenBeforeTyping = ""
   let writes = Promise.resolve()
   child.onData((data) => {
     raw += data
@@ -36,7 +37,13 @@ test("help uses the alternate screen without growing primary scrollback", { time
     }
     if (!typed && raw.includes("\u001b[?1049l")) {
       typed = true
-      setTimeout(() => child.write("after-help"), 250)
+      setTimeout(() => {
+        const start = Math.max(0, terminal.buffer.active.length - terminal.rows)
+        const lines: string[] = []
+        for (let row = start; row < terminal.buffer.active.length; row++) lines.push(terminal.buffer.active.getLine(row)?.translateToString(true) ?? "")
+        screenBeforeTyping = lines.join("\n")
+      }, 150)
+      setTimeout(() => child.write("after-help"), 300)
       setTimeout(() => child.kill(), 900)
     }
   })
@@ -53,6 +60,8 @@ test("help uses the alternate screen without growing primary scrollback", { time
     assert.equal(terminal.buffer.active.baseY, primaryBaseY)
     assert.match(raw, /\u001b\[\?1049h/)
     assert.match(raw, /\u001b\[\?1049l/)
+    assert.match(screenBeforeTyping, /Enter a task|输入任务/, screenBeforeTyping)
+    assert.match(screenBeforeTyping, /Ctrl\+H/, screenBeforeTyping)
     const screen = terminalText(terminal)
     assert.match(screen, /after-help/)
     assert.equal((screen.match(/after-help/g) ?? []).length, 1, screen)
