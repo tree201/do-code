@@ -6,6 +6,7 @@ import test from "node:test"
 import { runAgentSession } from "../src/session.js"
 import type { ChatModel } from "../src/protocol.js"
 import type { Message } from "../src/protocol.js"
+import { sessionsRoot } from "../src/sessions.js"
 import { createInteractiveSessionStore, durableSessionEvent, sessionMessageWriteMode } from "../src/ui/interactive-session-store.js"
 
 test("agent session trace is ordered, sequenced, and records tool lifecycle", async () => {
@@ -55,10 +56,14 @@ test("interactive session persistence appends stable history and skips transient
   const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-session-store-"))
   const messages: Message[] = [{ role: "system", content: "system" }]
   const conversation = { history: () => [...messages], restore: (next: Message[]) => { messages.splice(0, messages.length, ...next) } }
+  const modelConfig = { source: "config" as const, sourceLabel: "test", preset: "test/model", provider: "test", modelId: "model", baseUrl: "https://example.com", apiKey: "hidden", reasoningEffort: "medium" as const, effectiveReasoningEffort: "medium" as const, thinkingMode: "auto" as const, effectiveThinkingMode: "auto" as const }
+  const session = { id: "session_test", workspace, model: modelConfig.preset, createdAt: "2026-08-12T00:00:00.000Z", updatedAt: "2026-08-12T00:00:00.000Z", directory: path.join(sessionsRoot(workspace), "session_test") }
   const store = await createInteractiveSessionStore({
     workspace,
+    requestedSessionId: session.id,
     continueSession: false,
-    modelConfig: { source: "config", sourceLabel: "test", preset: "test/model", provider: "test", modelId: "model", baseUrl: "https://example.com", apiKey: "hidden", reasoningEffort: "medium", effectiveReasoningEffort: "medium", thinkingMode: "auto", effectiveThinkingMode: "auto" },
+    modelConfig,
+    runtime: () => ({ session, modelConfig, approvalMode: "full-access" }),
     conversation: () => conversation as never,
   })
   store.recordEvent({ protocolVersion: 1, turnId: "turn", type: "message.delta", step: 1, delta: "temporary" })
@@ -68,8 +73,10 @@ test("interactive session persistence appends stable history and skips transient
   await store.save()
 
   const directory = store.session().directory
+  const metadata = JSON.parse(await readFile(path.join(directory, "session.json"), "utf8")) as { approvalMode?: string }
   const storedMessages = (await readFile(path.join(directory, "messages.jsonl"), "utf8")).trim().split("\n").map((line) => JSON.parse(line) as Message)
   const storedEvents = (await readFile(path.join(directory, "events.jsonl"), "utf8")).trim().split("\n").map((line) => JSON.parse(line) as { event: { type: string } })
+  assert.equal(metadata.approvalMode, "full-access")
   assert.deepEqual(storedMessages.map((message) => message.role), ["system", "user"])
   assert.deepEqual(storedEvents.map((record) => record.event.type), ["turn.started"])
 })

@@ -135,13 +135,14 @@ test("permission menu supports number selection and Escape cancellation", async 
   await tick(); await tick()
   view.stdin.write("2")
   await tick(); await tick()
-  assert.match(visibleFrame(view), /Approval mode: auto/)
+  assert.match(visibleFrame(view), /test-model · default · 0% · auto/)
+  assert.doesNotMatch(visibleFrame(view), /Approval mode:/)
   view.stdin.write("/permissions\r")
   await tick(); await tick()
   view.stdin.write("\u001b")
   await tick(); await tick()
   assert.doesNotMatch(visibleFrame(view), /Update Model Permissions/)
-  assert.match(visibleFrame(view), /Approval mode: auto/)
+  assert.match(visibleFrame(view), /test-model · default · 0% · auto/)
 })
 
 test("question dialog uses Escape to return from custom input and then cancel", async (t) => {

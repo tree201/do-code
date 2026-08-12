@@ -35,6 +35,20 @@ test("Kitty Shift+Tab and uppercase Ctrl+H work through the central input route"
   assert.doesNotMatch(view.lastFrame() ?? "", /Keyboard shortcuts and help/)
 })
 
+test("Ctrl+P cycles approval mode without appending a transcript notice", async (t) => {
+  const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
+  const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
+  const view = render(React.createElement(ChatApp, props("session_approval_cycle", conversation)))
+  t.after(() => view.unmount())
+  view.stdin.write("\u0010"); await tick(); await tick()
+  assert.match(visibleFrame(view), /test-model · default · 0% · auto/)
+  assert.doesNotMatch(visibleFrame(view), /Approval mode:/)
+  view.stdin.write("\u001b[80;5u"); await tick(); await tick()
+  assert.match(visibleFrame(view), /full-access/)
+  view.stdin.write("\u0010"); await tick(); await tick()
+  assert.match(visibleFrame(view), /test-model · default · 0% · ask/)
+})
+
 test("alternate help closes and navigates through the shared viewport input bridge", async (t) => {
   for (const [input, key] of [["q", {}], ["c", { ctrl: true }], ["h", { ctrl: true }], ["", { escape: true }]] as const) {
     let closed = false

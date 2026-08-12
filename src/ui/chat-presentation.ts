@@ -26,21 +26,13 @@ export function composerStatusText(options: {
   const intensity = reasoningIntensity === "default" ? t(language, "default") : reasoningIntensity
   const context = `${contextPercent}%`
   const candidates = [
-    [model, intensity, context],
-    [model, context],
-    [model],
+    [model, intensity, context, options.approvalMode],
+    [model, context, options.approvalMode],
+    [model, options.approvalMode],
+    [options.approvalMode],
   ].map((parts) => parts.filter(Boolean).join(" · "))
   const available = Math.max(1, width - 4)
   return candidates.find((candidate) => displayWidth(candidate) <= available) ?? truncateTerminal(model, available)
-}
-
-export function approvalModeNotice(mode: ApprovalMode, language: DoCodeLanguage) {
-  const descriptions: Record<ApprovalMode, string> = {
-    ask: "Allow current-workspace reads, edits, and ordinary commands; ask before network, outside-workspace, and high-risk actions.",
-    auto: "Automatically run ordinary edits, shell commands, and network access; ask only for potentially unsafe actions.",
-    "full-access": "Allow edits outside the workspace and network access without ordinary approval prompts; catastrophic system commands remain blocked.",
-  }
-  return `${t(language, "Approval mode: {label} ({mode})", { label: mode, mode })}\n${t(language, descriptions[mode])}`
 }
 
 export function formatElapsedTime(seconds: number) {
