@@ -15,8 +15,8 @@ export function routeDialogInput(rawInput: string, input: string, key: ChatInput
   const isEscape = key.escape || rawInput === "\u001b" || input === "\u001b"
   const isHelpToggle = isHelpShortcut(input, key)
   const isViewerToggle = key.ctrl && (input.toLowerCase() === "t" || rawInput === "\u0014")
-  if (state.externalViewerActiveRef.current) {
-    props.forwardTranscriptViewerInput?.(rawInput, {
+  if (state.externalViewportActiveRef.current) {
+    props.forwardViewportInput?.(rawInput, {
       ...(key.ctrl === undefined ? {} : { ctrl: key.ctrl }),
       ...(key.escape === undefined ? {} : { escape: key.escape }),
       ...(key.upArrow === undefined ? {} : { upArrow: key.upArrow }),
@@ -42,7 +42,13 @@ export function routeDialogInput(rawInput: string, input: string, key: ChatInput
     else if (key.end) state.setActiveDialog({ kind: "help", offset: maximum })
     return true
   }
-  if (isHelpToggle && canOpenHelp(dialog)) { state.setActiveDialog({ kind: "help", offset: 0 }); return true }
+  if (isHelpToggle && canOpenHelp(dialog)) {
+    if (props.openHelp) {
+      state.externalViewportActiveRef.current = true
+      void props.openHelp(state.activeLanguage).finally(() => { state.externalViewportActiveRef.current = false })
+    } else state.setActiveDialog({ kind: "help", offset: 0 })
+    return true
+  }
   if (dialog.kind === "viewer") {
     if (isViewerToggle || key.escape) state.setActiveDialog({ kind: "none" })
     else if (key.upArrow) state.setActiveDialog({ ...dialog, offset: Math.max(0, state.effectiveViewerOffset - 1) })
@@ -55,8 +61,8 @@ export function routeDialogInput(rawInput: string, input: string, key: ChatInput
   }
   if (isViewerToggle && canOpenTranscriptViewer(dialog)) {
     if (props.openTranscriptViewer) {
-      state.externalViewerActiveRef.current = true
-      void props.openTranscriptViewer([...state.items], state.activeLanguage).finally(() => { state.externalViewerActiveRef.current = false })
+      state.externalViewportActiveRef.current = true
+      void props.openTranscriptViewer([...state.items], state.activeLanguage).finally(() => { state.externalViewportActiveRef.current = false })
     } else state.setActiveDialog({ kind: "viewer", items: state.items, offset: Number.MAX_SAFE_INTEGER })
     return true
   }

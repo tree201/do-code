@@ -55,7 +55,7 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
   const activeLanguage = runtime.language
   const activeApprovalMode = runtime.approvalMode
   const activePlanMode = runtime.planMode
-  const externalViewerActiveRef = useRef(false)
+  const externalViewportActiveRef = useRef(false)
 
   const applyApprovalMode = runtimeStore.setApprovalMode
   const applyPlanMode = runtimeStore.setPlanMode
@@ -104,7 +104,7 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
     contextPercent, setContextPercent, dialogInputHandlers, queuedInputs, setQueuedInputs, activeModel, activeModelPresets, attachedImages,
     updateAttachedImages, activeEffort, activeDefaultEffort,
     activeThinkingMode, activeLanguage, activeApprovalMode, activePlanMode, viewerItems,
-    viewerOffset, externalViewerActiveRef, exitConfirmation, armExitConfirmation, clearExitConfirmation,
+    viewerOffset, externalViewportActiveRef, exitConfirmation, armExitConfirmation, clearExitConfirmation,
     applyApprovalMode, applyPlanMode, append, appendMany, customCompletions, argumentCompletions,
     completionItems, completionWindowStart, visibleCompletionItems: completionItems.slice(completionWindowStart, completionWindowStart + 6), cursorParts,
     viewerHeight, viewerRows, viewerLines,
