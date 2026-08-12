@@ -1,6 +1,7 @@
 import React from "react"
 import { highlight, supportsLanguage } from "cli-highlight"
 import { Box, Text } from "ink"
+import { render } from "markdansi"
 import { marked, type Token, type Tokens } from "marked"
 import { MarkdownTable } from "./markdown-table.js"
 import { tuiTheme } from "./theme.js"
@@ -9,39 +10,29 @@ export function parseMarkdownBlocks(source: string) {
   return marked.lexer(source, { gfm: true, breaks: false })
 }
 
-function InlineTokens({ tokens }: { tokens: Token[] }) {
-  return (
-    <Text>
-      {tokens.map((token, index) => {
-        const key = `${token.type}-${index}`
-        if (token.type === "strong") {
-          const value = token as Tokens.Strong
-          return <Text key={key} bold><InlineTokens tokens={value.tokens} /></Text>
-        }
-        if (token.type === "em") {
-          const value = token as Tokens.Em
-          return <Text key={key} italic><InlineTokens tokens={value.tokens} /></Text>
-        }
-        if (token.type === "del") {
-          const value = token as Tokens.Del
-          return <Text key={key} strikethrough><InlineTokens tokens={value.tokens} /></Text>
-        }
-        if (token.type === "codespan") return <Text key={key} color={tuiTheme.accent}>`{(token as Tokens.Codespan).text}`</Text>
-        if (token.type === "link") {
-          const value = token as Tokens.Link
-          return <Text key={key} color={tuiTheme.accent} underline><InlineTokens tokens={value.tokens} /></Text>
-        }
-        if (token.type === "image") return <Text key={key} color={tuiTheme.accent}>[Image: {(token as Tokens.Image).text}]</Text>
-        if (token.type === "br") return <Text key={key}>{"\n"}</Text>
-        if (token.type === "escape") return <Text key={key}>{(token as Tokens.Escape).text}</Text>
-        if (token.type === "text") {
-          const value = token as Tokens.Text
-          return value.tokens?.length ? <InlineTokens key={key} tokens={value.tokens} /> : <Text key={key}>{value.text}</Text>
-        }
-        return <Text key={key}>{"text" in token && typeof token.text === "string" ? token.text : token.raw}</Text>
-      })}
-    </Text>
-  )
+function renderAnsiMarkdown(source: string, width?: number, compactList = false) {
+  const imagePlaceholders = source.replace(/!\[([^\]]*)\]\([^)]*\)/g, "[Image: $1]")
+  const rendered = render(imagePlaceholders, {
+    color: true,
+    hyperlinks: false,
+    inlineCodeMarkers: true,
+    wrap: width !== undefined,
+    ...(width ? { width } : {}),
+    theme: {
+      heading: { bold: true },
+      strong: { bold: true },
+      emph: { italic: true },
+      inlineCode: { color: tuiTheme.accent },
+      link: { color: tuiTheme.accent, underline: true },
+      quote: { dim: true },
+      hr: { dim: true },
+      listMarker: { color: tuiTheme.accent },
+    },
+  }).replace(/^\n+/, "").trimEnd()
+  if (!compactList) return rendered
+  return rendered
+    .replace(/(^|\n)(\s*)\x1b\[36m-\x1b\[39m /g, "$1$2\x1b[36m•\x1b[39m ")
+    .replace(/\n{2,}/g, "\n")
 }
 
 function DiffBlock({ source, width }: { source: string; width?: number }) {
@@ -85,56 +76,16 @@ function CodeBlock({ source, language, width, pendingRows }: { source: string; l
 
 type BlockTokenProps = { token: Token; contentWidth?: number; pendingCodeRows?: number }
 
-function ListToken({ value, contentWidth, pendingCodeRows }: { value: Tokens.List; contentWidth?: number; pendingCodeRows?: number }) {
-  return <Box flexDirection="column">{value.items.map((item, index) => {
-    const marker = value.ordered ? `${Number(value.start || 1) + index}.` : "•"
-    return <Box key={index} paddingLeft={1}>
-      <Text color={tuiTheme.accent}>{marker} </Text>
-      <Box flexDirection="column" flexGrow={1}>
-        {item.tokens.map((child, childIndex) => {
-          if (child.type === "paragraph") return <InlineTokens key={childIndex} tokens={(child as Tokens.Paragraph).tokens} />
-          if (child.type === "text") {
-            const text = child as Tokens.Text
-            return text.tokens ? <InlineTokens key={childIndex} tokens={text.tokens} /> : <Text key={childIndex}>{text.text}</Text>
-          }
-          return <BlockToken key={childIndex} token={child} {...(contentWidth ? { contentWidth: Math.max(1, contentWidth - 3) } : {})} {...(pendingCodeRows ? { pendingCodeRows } : {})} />
-        })}
-      </Box>
-    </Box>
-  })}</Box>
-}
-
 function BlockToken({ token, contentWidth, pendingCodeRows }: BlockTokenProps) {
   if (token.type === "def") return null
   if (token.type === "space") return <Box height={1} flexShrink={0} />
-  if (token.type === "heading") {
-    const value = token as Tokens.Heading
-    return <Text bold><InlineTokens tokens={value.tokens} /></Text>
-  }
-  if (token.type === "paragraph") {
-    const value = token as Tokens.Paragraph
-    return <InlineTokens tokens={value.tokens} />
-  }
   if (token.type === "code") {
     const value = token as Tokens.Code
     return <CodeBlock source={value.text} {...(value.lang ? { language: value.lang } : {})} {...(contentWidth ? { width: contentWidth } : {})} {...(pendingCodeRows ? { pendingRows: pendingCodeRows } : {})} />
   }
-  if (token.type === "blockquote") {
-    const value = token as Tokens.Blockquote
-    return <Box flexDirection="column" borderStyle="single" borderTop={false} borderRight={false} borderBottom={false} borderColor={tuiTheme.accent} paddingLeft={1}>{value.tokens.map((child, index) => <BlockToken key={index} token={child} {...(contentWidth ? { contentWidth: Math.max(1, contentWidth - 2) } : {})} {...(pendingCodeRows ? { pendingCodeRows } : {})} />)}</Box>
-  }
-  if (token.type === "list") {
-    const value = token as Tokens.List
-    return <ListToken value={value} {...(contentWidth ? { contentWidth } : {})} {...(pendingCodeRows ? { pendingCodeRows } : {})} />
-  }
   if (token.type === "table") return <MarkdownTable value={token as Tokens.Table} {...(contentWidth ? { width: contentWidth } : {})} />
-  if (token.type === "hr") return <Text dimColor>{"─".repeat(40)}</Text>
   if (token.type === "html") return <Text dimColor>{(token as Tokens.HTML).text}</Text>
-  if (token.type === "text") {
-    const value = token as Tokens.Text
-    return <Text>{value.tokens ? <InlineTokens tokens={value.tokens} /> : value.text}</Text>
-  }
-  return <Text>{token.raw}</Text>
+  return <Text>{renderAnsiMarkdown(token.raw, contentWidth, token.type === "list")}</Text>
 }
 
 function hasOpenFinalFence(tokens: Token[]) {

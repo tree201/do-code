@@ -65,6 +65,30 @@ test("markdown recursively renders nested lists instead of exposing raw markers 
   assert.doesNotMatch(frame, /Parent.*- Child one/)
 })
 
+test("markdown hard-wraps long inline content by terminal cells", (t) => {
+  const width = 24
+  const samples = [
+    "`resolveRonaReasonIdWithConfigurationFallback`",
+    "https://example.com/averylongpathwithoutspaces",
+    "这是一个完全没有空格的超长中文段落用于验证终端换行行为",
+    "👨‍👩‍👧‍👦🚀🎉✅👩🏽‍💻🌏🧪📦🔧",
+  ]
+  for (const children of samples) {
+    const view = render(React.createElement(MarkdownText, { children, width }))
+    t.after(() => view.unmount())
+    assert.ok(visibleFrame(view).split("\n").every((line) => displayWidth(line) <= width))
+  }
+})
+
+test("markdown preserves image placeholders", (t) => {
+  const view = render(React.createElement(MarkdownText, {
+    children: "查看 ![布局截图](./layout.png) 后继续。",
+    width: 40,
+  }))
+  t.after(() => view.unmount())
+  assert.match(visibleFrame(view), /\[Image: 布局截图\]/)
+})
+
 test("pending code blocks stay within their dynamic row budget", (t) => {
   const source = `\`\`\`ts\n${Array.from({ length: 20 }, (_, index) => `line-${index}`).join("\n")}`
   const view = render(React.createElement(MarkdownText, {

@@ -42,6 +42,7 @@
   "dependencies": {
     "cli-highlight": "^2.1.11",
     "ink": "npm:@jrichman/ink@6.6.9",
+    "markdansi": "git+https://github.com/tree201/Markdansi.git#4f6c689f422781b24b3946490e0d7c9ac0d2bc12",
     "marked": "^18.0.9",
     "string-width": "^7.2.0"
   },
