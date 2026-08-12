@@ -29,6 +29,7 @@ test("queued messages localize queue status", (t) => {
   assert.match(frame, /4 en attente/)
   assert.match(frame, /…et 1 de plus/)
   assert.doesNotMatch(frame, /queued|and 1 more/)
+  assert.doesNotMatch(frame, /^•/m)
 })
 
 test("auth dialog localizes provider descriptions and regions", async (t) => {

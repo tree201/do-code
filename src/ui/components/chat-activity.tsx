@@ -3,7 +3,7 @@ import { Box, Text } from "ink"
 import type { DoCodeLanguage } from "../../config.js"
 import { activeToolSummary } from "../tool-summary.js"
 import { formatElapsedTime, preview } from "../chat-presentation.js"
-import { MESSAGE_PREFIX_WIDTH, MessageContinuation, MessageRow, STATUS_DOT, StatusMessage } from "./message-layout.js"
+import { MESSAGE_PREFIX_WIDTH, MessageContinuation, MessageRow, STATUS_DOT } from "./message-layout.js"
 import { THINKING_BREATH_INTERVAL_MS, thinkingBreathColors, tuiTheme } from "../theme.js"
 import { t } from "../i18n.js"
 import { MarkdownText } from "../markdown.js"
@@ -47,5 +47,5 @@ export function RunningStatus({ activityEpoch, activeTool, reasoningCharacters, 
 
 export function QueuedMessages({ messages, language }: { messages: string[]; language: DoCodeLanguage }) {
   if (!messages.length) return null
-  return <StatusMessage kind="info" marginBottom={0}><Text dimColor>{t(language, "{count} queued (↑ to edit the latest)", { count: messages.length })}</Text>{messages.slice(0, 3).map((message, index) => <Text key={`${index}-${message}`} dimColor>{index + 1}. {preview(message.replace(/\s+/g, " "), 100)}</Text>)}{messages.length > 3 ? <Text dimColor>{t(language, "…and {count} more", { count: messages.length - 3 })}</Text> : null}</StatusMessage>
+  return <Box flexDirection="column"><Text dimColor>{t(language, "{count} queued (↑ to edit the latest)", { count: messages.length })}</Text>{messages.slice(0, 3).map((message, index) => <Text key={`${index}-${message}`} dimColor>{index + 1}. {preview(message.replace(/\s+/g, " "), 100)}</Text>)}{messages.length > 3 ? <Text dimColor>{t(language, "…and {count} more", { count: messages.length - 3 })}</Text> : null}</Box>
 }

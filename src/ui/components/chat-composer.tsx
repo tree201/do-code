@@ -7,7 +7,7 @@ import { showInteractiveComposer, showRunningActivity } from "../dialog-coordina
 import { graphemes } from "../editor.js"
 import { t } from "../i18n.js"
 import { tuiTheme } from "../theme.js"
-import { RunningStatus } from "./chat-activity.js"
+import { QueuedMessages, RunningStatus } from "./chat-activity.js"
 import { Composer } from "./composer.js"
 import type { ChatAppProps } from "../chat-app-types.js"
 import type { ChatAppState } from "../hooks/use-chat-app-state.js"
@@ -53,6 +53,7 @@ export function ChatComposer({ props, state }: { props: ChatAppProps; state: Cha
     running={state.running}
     input={state.viewerItems ? <Text dimColor>{t(state.activeLanguage, "Viewing messages; press Ctrl+T or Esc to return to input")}</Text> : <ComposerInput state={state} />}
     activity={!state.viewerItems && state.running && showRunningActivity(state.activeDialog) ? <RunningStatus activityEpoch={state.activityEpoch} activeTool={state.activeTool} reasoningCharacters={state.reasoningCharacters} language={state.activeLanguage} /> : undefined}
+    queue={!state.viewerItems ? <QueuedMessages messages={state.queuedInputs} language={state.activeLanguage} /> : undefined}
     suggestions={state.viewerItems ? undefined : <>{state.visibleCompletionItems.map((item, windowIndex) => { const index = state.completionWindowStart + windowIndex; return <Text key={item.label} inverse={index === state.completionIndex} color={index === state.completionIndex ? tuiTheme.accent : tuiTheme.border}>{index === state.completionIndex ? "›" : " "} {item.label}  <Text dimColor>{item.description}</Text></Text> })}</>}
     attachments={undefined}
     status={<>{state.exitConfirmation
