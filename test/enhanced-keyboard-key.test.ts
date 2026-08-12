@@ -43,7 +43,7 @@ test("normalizes a plain Escape byte", () => {
 })
 
 test("normalizes ordinary Ctrl-letter control bytes", () => {
-  const controls: Array<[string, string]> = [["\u0008", "h"], ["\u0010", "p"], ["\u0012", "r"], ["\u0014", "t"], ["\u0015", "u"], ["\u0016", "v"], ["\u0019", "y"]]
+  const controls: Array<[string, string]> = [["\u0007", "g"], ["\u0008", "h"], ["\u0012", "r"], ["\u0014", "t"], ["\u0015", "u"], ["\u0016", "v"], ["\u0019", "y"]]
   for (const [rawInput, letter] of controls) {
     const normalized = normalizeEnhancedKeyboardKey(rawInput, emptyKey)
     assert.equal(normalized.input, letter)
@@ -52,7 +52,7 @@ test("normalizes ordinary Ctrl-letter control bytes", () => {
 })
 
 test("normalizes uppercase enhanced Ctrl letters for all editor shortcuts", () => {
-  const shortcuts: Array<[number, string]> = [[65, "a"], [67, "c"], [68, "d"], [69, "e"], [72, "h"], [74, "j"], [80, "p"], [82, "r"], [84, "t"], [85, "u"], [86, "v"], [89, "y"], [90, "z"]]
+  const shortcuts: Array<[number, string]> = [[65, "a"], [67, "c"], [68, "d"], [69, "e"], [71, "g"], [72, "h"], [74, "j"], [82, "r"], [84, "t"], [85, "u"], [86, "v"], [89, "y"], [90, "z"]]
   for (const [codepoint, expected] of shortcuts) {
     const normalized = normalizeEnhancedKeyboardKey(`[${codepoint};5u`, emptyKey)
     assert.equal(normalized.input, expected)

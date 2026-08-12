@@ -49,7 +49,7 @@ export function isReasoningEffortShortcut(input: string, key: { ctrl?: boolean }
 }
 
 export function isApprovalModeShortcut(input: string, key: { ctrl?: boolean }) {
-  return key.ctrl === true && input.toLowerCase() === "p"
+  return key.ctrl === true && input.toLowerCase() === "g"
 }
 
 export function isHelpShortcut(input: string, key: { backspace?: boolean; ctrl?: boolean }) {
