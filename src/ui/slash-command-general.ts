@@ -10,7 +10,10 @@ export function executeGeneralSlashCommand(input: string, context: SlashCommandC
   const { props, state, transcript, exit } = context
   if (input === EXIT_COMMAND) { exit(); return true }
   if (input === HELP_COMMAND) {
-    state.setActiveDialog({ kind: "help", offset: 0 })
+    if (props.openHelp) {
+      state.externalViewportActiveRef.current = true
+      void props.openHelp(state.activeLanguage).finally(() => { state.externalViewportActiveRef.current = false })
+    } else state.setActiveDialog({ kind: "help", offset: 0 })
     return true
   }
   if (input === LANGUAGE_COMMAND) {

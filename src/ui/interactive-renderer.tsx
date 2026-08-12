@@ -2,7 +2,9 @@ import React from "react"
 import { render } from "ink"
 import { createPausableOutput } from "./pausable-output.js"
 import { enableEnhancedKeyboardInput } from "./enhanced-keyboard-input.js"
-import { AlternateTranscriptViewer, ViewerInputBridge, type ViewerInputKey } from "./components/transcript-viewer.js"
+import { AlternateTranscriptViewer } from "./components/transcript-viewer.js"
+import { AlternateHelpDialog } from "./components/help-dialog.js"
+import { ViewportInputBridge, type ViewportInputKey } from "./viewport-surface.js"
 import type { DoCodeLanguage } from "../config.js"
 import type { TranscriptItem } from "./transcript-model.js"
 
@@ -13,33 +15,45 @@ export function createInteractiveRenderer(createApp: () => React.ReactElement) {
   let mainInstance: ReturnType<typeof render> | undefined
   let restoreKeyboardInput: (() => void) | undefined
   let revision = 0
-  let alternateOpen = false
-  let viewerInput: ((input: string, key: ViewerInputKey) => void) | undefined
+  let viewportOpen = false
+  let viewportInput: ((input: string, key: ViewportInputKey) => void) | undefined
 
-  const openTranscriptViewer = async (items: TranscriptItem[], language: DoCodeLanguage) => {
-    if (alternateOpen) return
-    alternateOpen = true
-    mainInstance?.clear(); mainOutput.pause()
-    let closeViewer: (() => void) | undefined
-    const closed = new Promise<void>((resolve) => { closeViewer = resolve })
-    const inputBridge = new ViewerInputBridge()
-    viewerInput = (input, key) => inputBridge.dispatch(input, key)
-    let viewer: ReturnType<typeof render> | undefined
+  const openViewportSurface = async (surface: (onClose: () => void, inputBridge: ViewportInputBridge) => React.ReactElement) => {
+    if (viewportOpen) return
+    viewportOpen = true
+    mainInstance?.clear()
+    mainOutput.pause()
+    let closeSurface: (() => void) | undefined
+    const closed = new Promise<void>((resolve) => { closeSurface = resolve })
+    const inputBridge = new ViewportInputBridge()
+    viewportInput = (input, key) => inputBridge.dispatch(input, key)
+    let instance: ReturnType<typeof render> | undefined
     let restored = false
     const restorePrimary = () => { if (restored) return; restored = true; process.stdout.write("\u001b[?7h\u001b[?1049l") }
     process.once("exit", restorePrimary)
     try {
       process.stdout.write("\u001b[?1049h\u001b[?7l\u001b[2J\u001b[H")
-      viewer = render(<AlternateTranscriptViewer items={items} language={language} onClose={() => closeViewer?.()} inputBridge={inputBridge} />, {
+      instance = render(surface(() => closeSurface?.(), inputBridge), {
         stdout: process.stdout, stderr: process.stderr, stdin: process.stdin, exitOnCtrlC: false, patchConsole: false, standardReactLayoutTiming: true,
       })
       await closed
     } finally {
-      if (viewer) { viewer.clear(); viewer.unmount() }
-      restorePrimary(); process.off("exit", restorePrimary)
-      viewerInput = undefined; alternateOpen = false; mainOutput.resume(); mainInstance?.rerender(createApp())
+      if (instance) { instance.clear(); instance.unmount() }
+      restorePrimary()
+      process.off("exit", restorePrimary)
+      viewportInput = undefined
+      viewportOpen = false
+      mainOutput.resume()
+      mainInstance?.rerender(createApp())
     }
   }
+
+  const openTranscriptViewer = async (items: TranscriptItem[], language: DoCodeLanguage) => await openViewportSurface(
+    (onClose, inputBridge) => <AlternateTranscriptViewer items={items} language={language} onClose={onClose} inputBridge={inputBridge} />,
+  )
+  const openHelp = async (language: DoCodeLanguage) => await openViewportSurface(
+    (onClose, inputBridge) => <AlternateHelpDialog language={language} onClose={onClose} inputBridge={inputBridge} />,
+  )
 
   return {
     start() {
@@ -52,7 +66,8 @@ export function createInteractiveRenderer(createApp: () => React.ReactElement) {
       restoreKeyboardInput = undefined
     },
     openTranscriptViewer,
-    forwardViewerInput(input: string, key: ViewerInputKey) { viewerInput?.(input, key) },
+    openHelp,
+    forwardViewportInput(input: string, key: ViewportInputKey) { viewportInput?.(input, key) },
     revision() { return revision },
   }
 }

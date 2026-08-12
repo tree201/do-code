@@ -1,10 +1,11 @@
-import React from "react"
-import { Box, Text } from "ink"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
+import { Box, Text, useStdout } from "ink"
 import type { DoCodeLanguage } from "../../config.js"
 import { t } from "../i18n.js"
 import { helpText } from "../slash-command-help.js"
 import { padTerminalEnd, wrapTerminalLines } from "../terminal-text.js"
 import { tuiTheme } from "../theme.js"
+import type { ViewportInputBridge, ViewportInputKey } from "../viewport-surface.js"
 import { DialogManager, DialogSurface } from "./dialog-manager.js"
 
 const COLUMN_GAP = 4
@@ -58,6 +59,41 @@ export function HelpDialog({ language, width, height, offset }: { language: DoCo
       <Text dimColor wrap="truncate-end">{t(language, "↑↓ · PgUp/PgDn · Home/End · Ctrl+H/Esc Close")}</Text>
     </DialogSurface></DialogManager>
   )
+}
+
+export function AlternateHelpDialog({ language, onClose, inputBridge }: { language: DoCodeLanguage; onClose: () => void; inputBridge: ViewportInputBridge }) {
+  const { stdout } = useStdout()
+  const [width, setWidth] = useState(() => stdout.columns || 80)
+  const [height, setHeight] = useState(() => stdout.rows || 24)
+  const [offset, setOffset] = useState(0)
+  const lines = useMemo(() => helpDialogLines(language, width), [language, width])
+  const rows = helpDialogRows(height)
+  const maximum = Math.max(0, lines.length - rows)
+  const effectiveOffset = Math.min(maximum, Math.max(0, offset))
+
+  useEffect(() => {
+    const updateSize = () => { setWidth(stdout.columns || 80); setHeight(stdout.rows || 24) }
+    stdout.on("resize", updateSize)
+    return () => { stdout.off("resize", updateSize) }
+  }, [stdout])
+
+  const handleInput = useCallback((input: string, key: ViewportInputKey) => {
+    const isCtrlH = key.ctrl && (input.toLowerCase() === "h" || input === "\u0008")
+    if (isCtrlH || key.escape || input === "q" || (key.ctrl && input.toLowerCase() === "c")) { onClose(); return }
+    if (key.upArrow) { setOffset(Math.max(0, effectiveOffset - 1)); return }
+    if (key.downArrow) { setOffset(Math.min(maximum, effectiveOffset + 1)); return }
+    if (key.pageUp) { setOffset(Math.max(0, effectiveOffset - rows)); return }
+    if (key.pageDown) { setOffset(Math.min(maximum, effectiveOffset + rows)); return }
+    if (key.home) { setOffset(0); return }
+    if (key.end) setOffset(maximum)
+  }, [effectiveOffset, maximum, onClose, rows])
+
+  useEffect(() => {
+    inputBridge.attach(handleInput)
+    return () => { inputBridge.attach(null) }
+  }, [handleInput, inputBridge])
+
+  return <HelpDialog language={language} width={width} height={height} offset={effectiveOffset} />
 }
 
 function columnHeight(groups: string[][]) {

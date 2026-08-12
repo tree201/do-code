@@ -5,6 +5,7 @@ import { t } from "../i18n.js"
 import type { TranscriptItem } from "../transcript-model.js"
 import { cachedTranscriptViewerLines } from "../transcript-viewer-cache.js"
 import { tuiTheme } from "../theme.js"
+import type { ViewportInputBridge, ViewportInputKey } from "../viewport-surface.js"
 
 export const TranscriptViewer = React.memo(function TranscriptViewer({ items, offset, width, height, language, preparedLines }: { items: TranscriptItem[]; offset: number; width: number; height: number; language: DoCodeLanguage; preparedLines?: string[] }) {
   const contentWidth = Math.max(8, width - 4)
@@ -35,34 +36,11 @@ export const TranscriptViewer = React.memo(function TranscriptViewer({ items, of
   </Box>
 })
 
-export type ViewerInputKey = {
-  ctrl?: boolean
-  escape?: boolean
-  upArrow?: boolean
-  downArrow?: boolean
-  pageUp?: boolean
-  pageDown?: boolean
-  home?: boolean
-  end?: boolean
-}
-
-export class ViewerInputBridge {
-  private handler: ((input: string, key: ViewerInputKey) => void) | null = null
-
-  attach(handler: ((input: string, key: ViewerInputKey) => void) | null) {
-    this.handler = handler
-  }
-
-  dispatch(input: string, key: ViewerInputKey) {
-    this.handler?.(input, key)
-  }
-}
-
 export function AlternateTranscriptViewer({ items, language, onClose, inputBridge }: {
   items: TranscriptItem[]
   language: DoCodeLanguage
   onClose: () => void
-  inputBridge: ViewerInputBridge
+  inputBridge: ViewportInputBridge
 }) {
   const { stdout } = useStdout()
   const [width, setWidth] = useState(() => stdout.columns || 80)
@@ -86,7 +64,7 @@ export function AlternateTranscriptViewer({ items, language, onClose, inputBridg
     return () => { stdout.off("resize", updateSize) }
   }, [stdout])
 
-  const handleInput = useCallback((input: string, key: ViewerInputKey) => {
+  const handleInput = useCallback((input: string, key: ViewportInputKey) => {
     const isCtrlT = key.ctrl && (input.toLowerCase() === "t" || input === "\u0014")
     if (isCtrlT || key.escape || input === "q" || (key.ctrl && input.toLowerCase() === "c")) { onClose(); return }
     if (key.upArrow) { setOffset(Math.max(0, effectiveOffset - 1)); return }

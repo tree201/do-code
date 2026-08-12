@@ -10,7 +10,7 @@ import type { PromptExtension } from "../extension-registry.js"
 import type { ApprovalBridge, PlanReviewBridge, QuestionBridge } from "./async-bridges.js"
 import type { ImageAttachment } from "./attachment-model.js"
 import type { TranscriptItem } from "./transcript-model.js"
-import type { ViewerInputKey } from "./components/transcript-viewer.js"
+import type { ViewportInputKey } from "./viewport-surface.js"
 import type { RuntimeStore } from "./runtime-store.js"
 
 export type ChatAppProps = {
@@ -52,7 +52,8 @@ export type ChatAppProps = {
   language?: DoCodeLanguage
   setLanguage?: (language: DoCodeLanguage) => Promise<void>
   openTranscriptViewer?: (items: TranscriptItem[], language: DoCodeLanguage) => Promise<void>
-  forwardTranscriptViewerInput?: (input: string, key: ViewerInputKey) => void
+  openHelp?: (language: DoCodeLanguage) => Promise<void>
+  forwardViewportInput?: (input: string, key: ViewportInputKey) => void
   renderRevision?: number
   runtimeStore?: RuntimeStore
 }
