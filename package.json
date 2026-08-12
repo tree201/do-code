@@ -1,6 +1,6 @@
 {
   "name": "do-code",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "private": true,
   "type": "module",
   "bin": {
@@ -19,7 +19,7 @@
   "scripts": {
     "postinstall": "node scripts/postinstall.mjs",
     "build": "npm run build:agent",
-    "build:agent": "tsc -p tsconfig.json",
+    "build:agent": "node scripts/build-agent.mjs",
     "check:file-size": "node scripts/check-file-size.js",
     "check:hardcoded": "node scripts/check-hardcoded-values.js",
     "check:architecture": "node scripts/check-architecture.js",
