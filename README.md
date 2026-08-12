@@ -67,6 +67,13 @@ Type `/` to browse commands and `@` to attach workspace files:
 
 Use `/thinking` and `/effort` to tune reasoning during a session; add `--persist` to save the choice as the default for future sessions. The interface supports English, Simplified Chinese, Japanese, Korean, Spanish, and French through `--language` or `/language`.
 
+## Latest improvements
+
+- **Keep working while a task runs** — queued prompts now remain directly above the composer, ready to review or recall with `↑`.
+- **Handle large paste safely** — long pasted text folds into a compact preview in the composer instead of pushing the input surface away.
+- **Read terminal Markdown reliably** — long inline code, URLs, unspaced CJK text, and emoji wrap by terminal display width without losing content.
+- **Keep approval intent with the work** — each session remembers its approval mode; use the left-hand `Ctrl+G` shortcut to change it while working.
+
 ## Run it your way
 
 ### Interactive terminal

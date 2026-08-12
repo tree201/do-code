@@ -6,6 +6,7 @@ import path from "node:path"
 import test from "node:test"
 import { resolveRuntimeModelConfig } from "../src/config.js"
 import { parseArgs } from "../src/cli-args.js"
+import { DO_CODE_VERSION } from "../src/version.js"
 import { deleteSession, exportSession, listSessions, loadSession, projectDataRoot, renameSession, searchSessions, sessionsRoot } from "../src/sessions.js"
 
 process.env.DO_CODE_DATA_DIR = await mkdtemp(path.join(os.tmpdir(), "do-code-data-"))
@@ -18,6 +19,7 @@ test("production launcher uses the active Node runtime and starts the compiled C
   assert.equal(rootPackage.engines.node, "^20.19.0 || >=22.12.0")
   assert.equal(cliPackage.engines.node, rootPackage.engines.node)
   assert.equal(cliPackage.version, rootPackage.version)
+  assert.equal(DO_CODE_VERSION, rootPackage.version)
   assert.equal(cliPackage.dependencies.ink, "npm:@jrichman/ink@6.6.9")
 
   const launched = spawnSync(process.execPath, ["scripts/cli-entry.js", "--version"], {

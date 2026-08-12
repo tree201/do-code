@@ -67,6 +67,13 @@ Saisissez `/` pour parcourir les commandes et `@` pour joindre des fichiers de l
 
 Utilisez `/thinking` et `/effort` pour ajuster le raisonnement pendant une session ; ajoutez `--persist` pour enregistrer ce choix comme valeur par défaut pour les sessions futures. L’interface prend en charge l’anglais, le chinois simplifié, le japonais, le coréen, l’espagnol et le français via `--language` ou `/language`.
 
+## Améliorations récentes
+
+- **Continuez à travailler pendant l’exécution d’une tâche** — les prompts en attente restent désormais juste au-dessus du composeur, prêts à être relus ou rappelés avec `↑`.
+- **Gérez les longs collages en toute sécurité** — le texte très long collé est replié en aperçu compact dans le composeur sans repousser la zone de saisie.
+- **Lisez le Markdown de terminal de façon fiable** — le code en ligne long, les URL, le texte CJK sans espace et les emoji se replient selon la largeur visible du terminal sans perte de contenu.
+- **Conservez le choix d’autorisation avec le travail** — chaque session mémorise son mode d’approbation ; utilisez le raccourci main gauche `Ctrl+G` pour le modifier pendant le travail.
+
 ## Exécutez-le comme vous le souhaitez
 
 ### Terminal interactif

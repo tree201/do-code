@@ -6,6 +6,13 @@ All notable changes to do-code are documented here. The project follows [Semanti
 
 - Improve public documentation and release automation.
 
+## 0.3.5 — 2026-08-12
+
+- Keep queued prompts with the composer so they stay visible and can be recalled while another task runs.
+- Fold large pasted text into a compact composer preview instead of displacing the input surface.
+- Render terminal Markdown with display-width-safe wrapping for long inline code, URLs, unspaced CJK text, and emoji.
+- Persist the approval mode per session and add the left-hand `Ctrl+G` shortcut for changing it.
+
 ## 0.3.0 — Public Beta
 
 - Interactive terminal Coding Agent with sessions, file context, planning, approvals, checkpoints, context compaction, error reports, and Chinese/English UI.

@@ -24,9 +24,9 @@ test("approval mode shortcut cycles ask, auto, and full-access", () => {
   assert.equal(nextApprovalMode("ask"), "auto")
   assert.equal(nextApprovalMode("auto"), "full-access")
   assert.equal(nextApprovalMode("full-access"), "ask")
-  assert.equal(isApprovalModeShortcut("p", { ctrl: true }), true)
-  assert.equal(isApprovalModeShortcut("P", { ctrl: true }), true)
-  assert.equal(isApprovalModeShortcut("p", { ctrl: false }), false)
+  assert.equal(isApprovalModeShortcut("g", { ctrl: true }), true)
+  assert.equal(isApprovalModeShortcut("G", { ctrl: true }), true)
+  assert.equal(isApprovalModeShortcut("g", { ctrl: false }), false)
 })
 
 test("reasoning effort shortcut uses Ctrl+R without matching plain R", () => {

@@ -67,6 +67,13 @@ Escribe `/` para explorar comandos y `@` para adjuntar archivos del espacio de t
 
 Usa `/thinking` y `/effort` para ajustar el razonamiento durante una sesión; añade `--persist` para guardar la elección como predeterminada para futuras sesiones. La interfaz admite inglés, chino simplificado, japonés, coreano, español y francés mediante `--language` o `/language`.
 
+## Mejoras recientes
+
+- **Sigue trabajando mientras se ejecuta una tarea** — los prompts en cola ahora permanecen justo encima del compositor, listos para revisar o recuperar con `↑`.
+- **Gestiona pegados grandes con seguridad** — el texto pegado muy largo se pliega en una vista previa compacta dentro del compositor sin desplazar la zona de entrada.
+- **Lee Markdown de terminal de forma fiable** — el código en línea largo, las URL, el texto CJK sin espacios y los emoji se ajustan al ancho visible del terminal sin perder contenido.
+- **Conserva la preferencia de aprobación con el trabajo** — cada sesión recuerda su modo de aprobación; usa el atajo para la mano izquierda `Ctrl+G` para cambiarlo mientras trabajas.
+
 ## Ejecútalo a tu manera
 
 ### Terminal interactiva

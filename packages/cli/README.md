@@ -33,6 +33,14 @@ In chat, type `/` to browse commands and `@` to attach workspace files. Use
 `/resume` to continue a prior session, `/language zh` or `/language en` to
 switch language, and `/bug` to create a redacted local error report.
 
+## Recent improvements
+
+Queued prompts stay directly above the composer and can be recalled with `↑`.
+Large pasted text folds into a compact preview instead of displacing the input.
+Long inline code, URLs, unspaced CJK text, and emoji wrap safely for terminal
+display width. Each session also remembers its approval mode; use `Ctrl+G` to
+change it while working.
+
 ## Safe automation
 
 The default permission mode asks before risky operations. `--yes` enables full
