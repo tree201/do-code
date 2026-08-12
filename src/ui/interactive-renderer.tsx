@@ -21,7 +21,6 @@ export function createInteractiveRenderer(createApp: () => React.ReactElement) {
   const openViewportSurface = async (surface: (onClose: () => void, inputBridge: ViewportInputBridge) => React.ReactElement) => {
     if (viewportOpen) return
     viewportOpen = true
-    mainInstance?.clear()
     mainOutput.pause()
     let closeSurface: (() => void) | undefined
     const closed = new Promise<void>((resolve) => { closeSurface = resolve })
