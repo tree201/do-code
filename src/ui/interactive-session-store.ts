@@ -43,7 +43,7 @@ export async function createInteractiveSessionStore(options: {
   let persistedDurableEvents = durableEvents.length
   let persisted = Boolean(restored)
   let saveQueue = Promise.resolve()
-  const runtimeState = () => options.runtime?.() ?? { session: activeSession, modelConfig: initialModelConfig, approvalMode: activeSession.approvalMode ?? "ask", planMode: activeSession.planMode ?? false }
+  const runtimeState = () => options.runtime?.() ?? { session: activeSession, modelConfig: initialModelConfig, approvalMode: activeSession.approvalMode ?? "ask", planMode: false }
 
   const performSave = async (force = false) => {
     const messages = options.conversation().history()
@@ -57,7 +57,7 @@ export async function createInteractiveSessionStore(options: {
     if (sessionMessageWriteMode(messages, persistedMessages) === "append") await appendJsonLines(messageFile, messages.slice(persistedMessages.length))
     else await writeFileAtomic(messageFile, `${messages.map((message) => JSON.stringify(message)).join("\n")}${messages.length ? "\n" : ""}`)
     await appendJsonLines(eventFile, durableEvents.slice(persistedDurableEvents))
-    const metadata = { id: activeSession.id, workspace: options.workspace, model: runtime.modelConfig.preset, approvalMode: runtime.approvalMode, ...(runtime.planMode ? { planMode: true } : {}), ...(title ? { title } : {}), createdAt: activeSession.createdAt ?? updatedAt, updatedAt, messageCount: messages.length }
+    const metadata = { id: activeSession.id, workspace: options.workspace, model: runtime.modelConfig.preset, approvalMode: runtime.approvalMode, ...(runtime.modelConfig.reasoningEffort ? { reasoningEffort: runtime.modelConfig.reasoningEffort } : {}), ...(runtime.modelConfig.thinkingMode ? { thinkingMode: runtime.modelConfig.thinkingMode } : {}), ...(title ? { title } : {}), createdAt: activeSession.createdAt ?? updatedAt, updatedAt, messageCount: messages.length }
     await writeFileAtomic(path.join(activeSession.directory, "session.json"), `${JSON.stringify(metadata, null, 2)}\n`)
     activeSession = { ...metadata, directory: activeSession.directory }
     persistedMessages = [...messages]

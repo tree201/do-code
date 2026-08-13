@@ -33,7 +33,13 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
   const requestedApprovalMode: ApprovalMode = args.approvalMode
   const restoredSession = args.continueSession ? await loadSession(args.workspace, args.sessionId) : undefined
   const initialApprovalMode = restoredSession?.session.approvalMode ?? requestedApprovalMode
-  const initialPlanMode = restoredSession?.session.planMode ?? false
+  const restoredEffort = restoredSession?.session.reasoningEffort
+  const restoredThinkingMode = restoredSession?.session.thinkingMode
+  if (restoredEffort || restoredThinkingMode) {
+    modelConfig = await resolveRuntimeModelConfig(args.workspace, modelConfig.preset, undefined, restoredEffort, restoredThinkingMode, config)
+    model.switchTo(modelConfig.preset, createChatModel(modelConfig))
+  }
+  const initialPlanMode = false
   const policy = await createPolicyEngine(args.workspace, initialApprovalMode)
   const extensions = await loadPromptExtensions(args.workspace)
   const activeSandbox = () => policy.mode === "full-access" ? { type: "local" as const, network: "full" as const } : { ...config.sandbox, network: "full" as const }
@@ -100,8 +106,6 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
     approveTool: async (request) => await approvalBridge.request(request),
     approveShell: async (command) => await approvalBridge.request(approvalRequest(SHELL_TOOL, { command }, policy.evaluate(SHELL_TOOL, { command }))),
     askUser: async (question, options) => await questionBridge.request(question, options),
-    enterPlanMode: async () => { runtimeStore.setPlanMode(true); return runtimeStore.getSnapshot().approvalMode },
-    publishPlan: (proposal) => { planPublisher.publish(proposal) },
     onEvent: (event) => { store.recordEvent(event); eventSink?.(event) },
   })
   if (store.restored) conversation.restore(store.restored.messages)

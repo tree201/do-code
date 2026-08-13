@@ -73,11 +73,13 @@ test("interactive session persistence appends stable history and skips transient
   await store.save()
 
   const directory = store.session().directory
-  const metadata = JSON.parse(await readFile(path.join(directory, "session.json"), "utf8")) as { approvalMode?: string; planMode?: boolean }
+  const metadata = JSON.parse(await readFile(path.join(directory, "session.json"), "utf8")) as { approvalMode?: string; reasoningEffort?: string; thinkingMode?: string; planMode?: boolean }
   const storedMessages = (await readFile(path.join(directory, "messages.jsonl"), "utf8")).trim().split("\n").map((line) => JSON.parse(line) as Message)
   const storedEvents = (await readFile(path.join(directory, "events.jsonl"), "utf8")).trim().split("\n").map((line) => JSON.parse(line) as { event: { type: string } })
   assert.equal(metadata.approvalMode, "full-access")
-  assert.equal(metadata.planMode, true)
+  assert.equal(metadata.reasoningEffort, "medium")
+  assert.equal(metadata.thinkingMode, "auto")
+  assert.equal(metadata.planMode, undefined)
   assert.deepEqual(storedMessages.map((message) => message.role), ["system", "user"])
   assert.deepEqual(storedEvents.map((record) => record.event.type), ["turn.started"])
 })

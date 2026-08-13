@@ -255,32 +255,35 @@ test("runtime store owns model, session, language, approval, and plan state", as
   const store = createRuntimeStore({ session, modelConfig, modelPresets: ["test/a"], approvalMode: "ask", planMode: false, language: "en" }, {
     switchModel: async (preset, effort, thinking) => ({ ...modelConfig, preset, modelId: preset.split("/").at(-1)!, ...(effort ? { reasoningEffort: effort } : {}), ...(thinking ? { thinkingMode: thinking } : {}) }),
     setLanguage: async () => {}, setApprovalMode: () => {}, setPlanMode: () => {},
-    resumeSession: async () => ({ session: { ...session, id: "session_b", directory: "/tmp/session_b" }, messages: [], events: [] }),
+    resumeSession: async () => ({ session: { ...session, id: "session_b", reasoningEffort: "max", thinkingMode: "on", planMode: true, directory: "/tmp/session_b" }, messages: [], events: [] }),
   })
-  await store.switchEffort("high")
   store.setApprovalMode("full-access")
   store.setPlanMode(true)
   await store.setLanguage("zh")
   await store.resumeSession("session_b")
   const snapshot = store.getSnapshot()
-  assert.equal(snapshot.modelConfig.reasoningEffort, "high")
+  assert.equal(snapshot.modelConfig.reasoningEffort, "max")
+  assert.equal(snapshot.modelConfig.thinkingMode, "on")
   assert.equal(snapshot.approvalMode, "full-access")
   assert.equal(snapshot.planMode, false)
   assert.equal(snapshot.language, "zh")
   assert.equal(snapshot.session.id, "session_b")
 })
 
-test("runtime store restores a session model before publishing the resumed session", async () => {
-  const modelConfig = { source: "config" as const, sourceLabel: "test", preset: "test/a", provider: "test", modelId: "a", baseUrl: "https://example.com", apiKey: "hidden" }
+test("runtime store restores a session model and its model preferences before publishing", async () => {
+  const modelConfig = { source: "config" as const, sourceLabel: "test", preset: "test/a", provider: "test", modelId: "a", baseUrl: "https://example.com", apiKey: "hidden", reasoningEffort: "medium" as const, thinkingMode: "auto" as const }
   const session = { id: "session_a", workspace: "/tmp", model: "test/a", createdAt: "now", updatedAt: "now", directory: "/tmp/session_a" }
-  const switched: string[] = []
+  const switched: Array<[string, string | undefined, string | undefined]> = []
   const store = createRuntimeStore({ session, modelConfig, modelPresets: ["test/a", "test/b"], approvalMode: "ask", planMode: false, language: "en" }, {
-    switchModel: async (preset) => { switched.push(preset); return { ...modelConfig, preset, modelId: preset.split("/").at(-1)! } },
-    resumeSession: async () => ({ session: { ...session, id: "session_b", model: "test/b", directory: "/tmp/session_b" }, messages: [], events: [] }),
+    switchModel: async (preset, effort, thinking) => { switched.push([preset, effort, thinking]); return { ...modelConfig, preset, modelId: preset.split("/").at(-1)!, ...(effort ? { reasoningEffort: effort } : {}), ...(thinking ? { thinkingMode: thinking } : {}) } },
+    resumeSession: async () => ({ session: { ...session, id: "session_b", model: "test/b", reasoningEffort: "max", thinkingMode: "on", planMode: true, directory: "/tmp/session_b" }, messages: [], events: [] }),
   })
   await store.resumeSession("session_b")
-  assert.deepEqual(switched, ["test/b"])
+  assert.deepEqual(switched, [["test/b", "max", "on"]])
   assert.equal(store.getSnapshot().modelConfig.preset, "test/b")
+  assert.equal(store.getSnapshot().modelConfig.reasoningEffort, "max")
+  assert.equal(store.getSnapshot().modelConfig.thinkingMode, "on")
+  assert.equal(store.getSnapshot().planMode, false)
   assert.equal(store.getSnapshot().session.id, "session_b")
 })
 

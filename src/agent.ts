@@ -63,7 +63,7 @@ export class AgentConversation {
   }
 
   private async refreshSystemMessage() {
-    const content = buildSystemPrompt(this.options.workspace, await this.memory.prompt(), this.options.profileInstructions, Boolean(this.options.enterPlanMode && this.options.publishPlan))
+    const content = buildSystemPrompt(this.options.workspace, await this.memory.prompt(), this.options.profileInstructions)
     if (!this.messages) this.messages = [{ role: "system", content }]
     else if (this.messages[0]?.role === "system") {
       if (this.messages[0].content !== content) this.messages[0] = { role: "system", content }

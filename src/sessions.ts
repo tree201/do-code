@@ -4,6 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import { contentText, type Message } from "./protocol.js"
 import { validateImageFile } from "./image-attachments.js"
+import type { ReasoningEffort, ThinkingMode } from "./config.js"
 import type { ApprovalMode } from "./policy.js"
 
 export type SavedSession = {
@@ -11,7 +12,8 @@ export type SavedSession = {
   workspace: string
   model?: string
   approvalMode?: ApprovalMode
-  planMode?: boolean
+  reasoningEffort?: ReasoningEffort
+  thinkingMode?: ThinkingMode
   title?: string
   createdAt?: string
   updatedAt: string

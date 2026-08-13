@@ -34,7 +34,7 @@ test("reasoning effort shortcut uses Ctrl+R without matching plain R", () => {
   assert.equal(isReasoningEffortShortcut("e", { ctrl: true }), false)
 })
 
-test("runtime resume restores saved Plan and approval modes while legacy sessions stay executable", async () => {
+test("runtime resume restores approval mode but leaves Plan mode under user control", async () => {
   const modelConfig = { source: "config" as const, sourceLabel: "test", preset: "test/a", provider: "test", modelId: "a", baseUrl: "https://example.com", apiKey: "hidden" }
   const session = { id: "session_a", workspace: "/tmp", model: "test/a", createdAt: "now", updatedAt: "now", directory: "/tmp/session_a" }
   const applied: string[] = []
@@ -46,11 +46,11 @@ test("runtime resume restores saved Plan and approval modes while legacy session
   })
   await store.resumeSession("saved")
   assert.equal(store.getSnapshot().approvalMode, "full-access")
-  assert.equal(store.getSnapshot().planMode, true)
+  assert.equal(store.getSnapshot().planMode, false)
   await store.resumeSession("legacy")
   assert.equal(store.getSnapshot().planMode, false)
   assert.deepEqual(applied, ["full-access", "full-access"])
-  assert.deepEqual(plans, [true, false])
+  assert.deepEqual(plans, [false, false])
 })
 
 test("Ctrl+H is recognized from Ink's backspace key event", () => {

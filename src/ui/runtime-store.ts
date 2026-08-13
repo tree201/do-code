@@ -92,15 +92,17 @@ export function createRuntimeStore(initial: RuntimeSnapshot, commands: RuntimeCo
       if (!commands.resumeSession) throw new Error("Session resume is unavailable")
       const loaded = await commands.resumeSession(id)
       const restoreModel = commands.restoreModel ?? commands.switchModel
-      if (loaded.session.model && loaded.session.model !== snapshot.modelConfig.preset && restoreModel) {
-        const restored = await restoreModel(loaded.session.model, snapshot.modelConfig.reasoningEffort, snapshot.modelConfig.thinkingMode).catch(() => null)
+      const reasoningEffort = loaded.session.reasoningEffort ?? snapshot.modelConfig.reasoningEffort
+      const thinkingMode = loaded.session.thinkingMode ?? snapshot.modelConfig.thinkingMode
+      const restoresModelPreferences = loaded.session.reasoningEffort !== undefined || loaded.session.thinkingMode !== undefined
+      if (loaded.session.model && restoreModel && (loaded.session.model !== snapshot.modelConfig.preset || restoresModelPreferences)) {
+        const restored = await restoreModel(loaded.session.model, reasoningEffort, thinkingMode).catch(() => null)
         if (restored) applyModelConfig(restored)
       }
       const approvalMode = loaded.session.approvalMode ?? snapshot.approvalMode
-      const planMode = loaded.session.planMode ?? false
       commands.setApprovalMode?.(approvalMode)
-      commands.setPlanMode?.(planMode)
-      publish({ session: loaded.session, approvalMode, planMode })
+      commands.setPlanMode?.(false)
+      publish({ session: loaded.session, approvalMode, planMode: false })
       return loaded
     },
     async renameSession(title: string) {
