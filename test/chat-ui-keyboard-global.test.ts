@@ -47,6 +47,26 @@ test("Ctrl+G no longer changes interaction mode", async (t) => {
   assert.doesNotMatch(visibleFrame(view), /Approval mode:/)
 })
 
+test("Escape interrupts a running task while the message viewer is open", async (t) => {
+  let aborted = false
+  const model: ChatModel = { async complete(_input, options) {
+    await new Promise<void>((resolve) => options?.signal?.addEventListener("abort", () => { aborted = true; resolve() }, { once: true }))
+    if (options?.signal?.aborted) throw new Error("aborted")
+    return { content: "unused", toolCalls: [] }
+  } }
+  const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
+  const view = render(React.createElement(ChatApp, props("session_viewer_escape_interrupt", conversation)))
+  t.after(() => view.unmount())
+  await tick()
+  view.stdin.write("run task\r"); await tick()
+  assert.match(view.lastFrame() ?? "", /Current task is running/)
+  view.stdin.write("\u0014"); await tick(); await tick()
+  assert.match(view.lastFrame() ?? "", /Message viewer/)
+  view.stdin.write("\u001b"); await tick()
+  assert.equal(aborted, true)
+  assert.match(view.lastFrame() ?? "", /Message viewer/)
+})
+
 test("alternate help closes and navigates through the shared viewport input bridge", async (t) => {
   for (const [input, key] of [["q", {}], ["c", { ctrl: true }], ["h", { ctrl: true }], ["", { escape: true }]] as const) {
     let closed = false
