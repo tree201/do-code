@@ -161,6 +161,19 @@ test("narrow markdown tables use vertical layout without dropping content", (t) 
   assert.ok(frame.split("\n").every((line) => displayWidth(line) <= 28))
 })
 
+test("markdown tables use free grid width before truncating content", (t) => {
+  const detail = "abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMN"
+  const view = render(React.createElement(MarkdownText, {
+    width: 96,
+    children: `| 页面 | 最小能力 |\n| --- | --- |\n| 总览 | ${detail} |`,
+  }))
+  t.after(() => view.unmount())
+  const frame = visibleFrame(view)
+  assert.match(frame, new RegExp(detail))
+  assert.doesNotMatch(frame, /…/)
+  assert.ok(frame.split("\n").every((line) => displayWidth(line) <= 96))
+})
+
 test("markdown table supports centered and right aligned columns", (t) => {
   const view = render(React.createElement(MarkdownText, {
     width: 40,
