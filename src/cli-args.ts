@@ -43,6 +43,7 @@ export type Args = {
   configAction?: "show" | "setup"
   errorAction?: "list" | "show"
   errorId?: string
+  errorToday?: boolean
   model?: string
   provider?: string
   worktree?: string
@@ -70,7 +71,7 @@ export function usage(language: DoCodeLanguage = "en") {
   do-code config setup                 ${translate("Same guided model setup")}
   do-code config [show]                ${translate("Show model configuration (secrets hidden)")}
   do-code doctor                       ${translate("Check the model, workspace, and local tools")}
-  do-code errors [list]                ${translate("List recent error reports")}
+  do-code errors [list] [--today]      ${translate("List global error reports")}
   do-code errors show <error-id>       ${translate("Show a bad case and reproduction context")}
   do-code extensions                   ${translate("Show commands, skills, and MCP extensions")}
   do-code agents                       ${translate("List configured agent profiles")}
@@ -150,6 +151,7 @@ export function parseArgs(input: string[]): Args {
     if(arg==="--image"){const image=argv[++index];if(!image)argumentError(displayLanguage, "--image requires a path");images.push(image);continue}
     if(arg==="--worktree"){worktree="";continue}
     if(arg.startsWith("--worktree=")){worktree=arg.slice("--worktree=".length);continue}
+    if(command==="errors"&&arg==="--today"){task.push(arg);continue}
     if(arg.startsWith("-"))argumentError(displayLanguage, "Unknown argument: {argument}", { argument: arg })
     task.push(arg)
   }
@@ -176,7 +178,7 @@ export function parseArgs(input: string[]): Args {
       if(task.length)argumentError(displayLanguage, "Usage: do-code sessions export <session-id> [md|json] [output]")
     }else if(task.length)argumentError(displayLanguage, "Usage: do-code sessions [list]")
   }
-  let errorAction:Args["errorAction"],errorIdValue:string|undefined
+  let errorAction:Args["errorAction"],errorIdValue:string|undefined,errorToday=false
   if(command==="errors"){
     const action=task.shift()??"list"
     if(action!=="list"&&action!=="show")argumentError(displayLanguage, "Unknown errors action: {action}", { action })
@@ -184,7 +186,10 @@ export function parseArgs(input: string[]): Args {
     if(action==="show"){
       errorIdValue=task.shift()
       if(!errorIdValue||task.length)argumentError(displayLanguage, "Usage: do-code errors show <error-id>")
-    }else if(task.length)argumentError(displayLanguage, "Usage: do-code errors [list]")
+    }else {
+      if(task[0]==="--today"){ errorToday=true; task.shift() }
+      if(task.length)argumentError(displayLanguage, "Usage: do-code errors [list] [--today]")
+    }
   }
   let updateAction:Args["updateAction"],updateChannel:Args["updateChannel"]
   if(command==="update"){
@@ -195,5 +200,5 @@ export function parseArgs(input: string[]): Args {
   if(command!=="run"&&command!=="chat"&&command!=="sessions"&&command!=="errors"&&command!=="update"&&task.length)argumentError(displayLanguage, "Unknown argument: {argument}", { argument: task[0] ?? "" })
   if(command!=="run"&&command!=="chat"&&(taskFile||json||outputFormat!=="text"||artifactDirectory))argumentError(displayLanguage, "Task and output options are only available in headless mode")
   if(command==="resume")continueSession=true
-  return {command,workspace:path.resolve(workspace),yes,approvalMode,json,outputFormat,maxSteps,timeoutSeconds,continueSession,...((command==="run"||command==="chat")&&task.length?{task:task.join(" ")}:{ }),...(taskFile?{taskFile:path.resolve(taskFile)}:{}),...(artifactDirectory?{artifactDirectory:path.resolve(artifactDirectory)}:{}),...(sessionId?{sessionId}:{}),...(sessionAction?{sessionAction}:{}),...(sessionQuery?{sessionQuery}:{}),...(sessionTitle?{sessionTitle}:{}),...(exportFormat?{exportFormat}:{}),...(output?{output}:{}),...(configAction?{configAction}:{}),...(errorAction?{errorAction}:{}),...(errorIdValue?{errorId:errorIdValue}:{}),...(model?{model}:{}),...(provider?{provider}:{}),...(agent?{agent}:{}),...(images.length?{images}:{}),...(language?{language}:{}),...(updateAction?{updateAction}:{}),...(updateChannel?{updateChannel}:{}),...(worktree!==undefined?{worktree}:{})}
+  return {command,workspace:path.resolve(workspace),yes,approvalMode,json,outputFormat,maxSteps,timeoutSeconds,continueSession,...((command==="run"||command==="chat")&&task.length?{task:task.join(" ")}:{ }),...(taskFile?{taskFile:path.resolve(taskFile)}:{}),...(artifactDirectory?{artifactDirectory:path.resolve(artifactDirectory)}:{}),...(sessionId?{sessionId}:{}),...(sessionAction?{sessionAction}:{}),...(sessionQuery?{sessionQuery}:{}),...(sessionTitle?{sessionTitle}:{}),...(exportFormat?{exportFormat}:{}),...(output?{output}:{}),...(configAction?{configAction}:{}),...(errorAction?{errorAction}:{}),...(errorIdValue?{errorId:errorIdValue}:{}),...(errorToday?{errorToday}:{}),...(model?{model}:{}),...(provider?{provider}:{}),...(agent?{agent}:{}),...(images.length?{images}:{}),...(language?{language}:{}),...(updateAction?{updateAction}:{}),...(updateChannel?{updateChannel}:{}),...(worktree!==undefined?{worktree}:{})}
 }

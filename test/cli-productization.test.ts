@@ -147,8 +147,9 @@ test("parses session management subcommands", () => {
   assert.equal(exported.output, "output.json")
 })
 
-test("parses local error report commands", () => {
+test("parses global error report commands", () => {
   assert.equal(parseArgs(["errors"]).errorAction, "list")
+  assert.equal(parseArgs(["errors", "list", "--today"]).errorToday, true)
   const shown = parseArgs(["errors", "show", "err_20260806_12345678"])
   assert.equal(shown.errorAction, "show")
   assert.equal(shown.errorId, "err_20260806_12345678")

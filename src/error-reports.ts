@@ -4,7 +4,7 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { promisify } from "node:util"
 import type { DoCodeLanguage } from "./config.js"
-import { projectDataPath, prepareProjectData } from "./sessions.js"
+import { projectDataPath, userDataRoot } from "./sessions.js"
 import { t } from "./ui/i18n.js"
 import { DO_CODE_VERSION } from "./version.js"
 
@@ -28,8 +28,12 @@ export type ErrorReport = {
   file: string
 }
 
-export function errorReportsRoot(workspace = process.cwd()) {
-  return process.env.DO_CODE_ERROR_DIR ?? projectDataPath(workspace, "errors")
+export function errorReportsRoot() {
+  return process.env.DO_CODE_ERROR_DIR ?? path.join(userDataRoot(), "errors")
+}
+
+function legacyErrorReportsRoot(workspace: string) {
+  return projectDataPath(workspace, "errors")
 }
 
 function errorId(now = new Date()) {
@@ -81,8 +85,7 @@ export async function reportError(input: {
     git: { revision, status: status ? redactText(status) : null, diff: diff ? redactText(diff).slice(0, 500_000) : null },
     context: safeContext(input.context),
   }
-  await prepareProjectData(input.workspace)
-  const file = path.join(errorReportsRoot(input.workspace), `${id}.json`)
+  const file = path.join(errorReportsRoot(), `${id}.json`)
   try {
     await mkdir(path.dirname(file), { recursive: true })
     const report: ErrorReport = { ...base, file }
@@ -93,22 +96,45 @@ export async function reportError(input: {
   }
 }
 
-export async function loadErrorReport(id: string, workspace = process.cwd()) {
-  if (!/^err_\d{8}_[a-f0-9]{8}$/.test(id)) throw new Error(`Invalid error ID: ${id}`)
-  await prepareProjectData(workspace)
-  const value = await readFile(path.join(errorReportsRoot(workspace), `${id}.json`), "utf8").catch(() => null)
-  if (value) return JSON.parse(value) as ErrorReport
-  throw new Error(`Error report not found: ${id}`)
+async function readErrorReport(root: string, id: string) {
+  const value = await readFile(path.join(root, `${id}.json`), "utf8").catch(() => null)
+  return value ? JSON.parse(value) as ErrorReport : null
 }
 
-export async function listErrorReports(workspace = process.cwd(), limit = 20) {
-  await prepareProjectData(workspace)
-  const root = errorReportsRoot(workspace)
+async function reportsIn(root: string) {
   const entries = await readdir(root, { withFileTypes: true }).catch(() => [])
   const reports = await Promise.all(entries.filter((entry) => entry.isFile() && /^err_.*\.json$/.test(entry.name)).map(async (entry) => {
     try { return JSON.parse(await readFile(path.join(root, entry.name), "utf8")) as ErrorReport } catch { return null }
   }))
-  return reports.filter((item): item is ErrorReport => Boolean(item)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit)
+  return reports.filter((item): item is ErrorReport => Boolean(item))
+}
+
+async function legacyReportRoots() {
+  const projectsRoot = path.join(userDataRoot(), "projects")
+  const entries = await readdir(projectsRoot, { withFileTypes: true }).catch(() => [])
+  return entries.filter((entry) => entry.isDirectory()).map((entry) => path.join(projectsRoot, entry.name, "errors"))
+}
+
+export async function loadErrorReport(id: string, workspace = process.cwd()) {
+  if (!/^err_\d{8}_[a-f0-9]{8}$/.test(id)) throw new Error(`Invalid error ID: ${id}`)
+  const global = await readErrorReport(errorReportsRoot(), id)
+  if (global) return global
+  const local = await readErrorReport(legacyErrorReportsRoot(workspace), id)
+  if (local) return local
+  for (const root of await legacyReportRoots()) {
+    const report = await readErrorReport(root, id)
+    if (report) return report
+  }
+  throw new Error(`Error report not found: ${id}`)
+}
+
+export async function listErrorReports(limit = 20, today = false) {
+  const reports = [...await reportsIn(errorReportsRoot()), ...(await Promise.all((await legacyReportRoots()).map(reportsIn))).flat()]
+  const date = new Date().toISOString().slice(0, 10)
+  return [...new Map(reports.map((report) => [report.id, report])).values()]
+    .filter((report) => !today || report.createdAt.startsWith(date))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit)
 }
 
 export function formatErrorReport(report: ErrorReport, language: DoCodeLanguage = "en") {

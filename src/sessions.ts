@@ -27,12 +27,15 @@ export type LoadedSession = {
   events: unknown[]
 }
 
+export function userDataRoot() {
+  return process.env.DO_CODE_DATA_DIR ?? path.join(os.homedir(), ".local", "share", "do-code")
+}
+
 export function projectDataRoot(workspace: string) {
   const resolved = path.resolve(workspace)
   const slug = path.basename(resolved).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "project"
   const hash = createHash("sha256").update(resolved).digest("hex").slice(0, 12)
-  const dataRoot = process.env.DO_CODE_DATA_DIR ?? path.join(os.homedir(), ".local", "share", "do-code")
-  return path.join(dataRoot, "projects", `${slug}-${hash}`)
+  return path.join(userDataRoot(), "projects", `${slug}-${hash}`)
 }
 
 export function projectDataPath(workspace: string, ...segments: string[]) {
