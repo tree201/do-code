@@ -52,6 +52,20 @@ test("existing session image references are reused without copying", async () =>
   assert.deepEqual(await readFile(path.join(path.dirname(attachmentDirectory), image.path)), PNG)
 })
 
+test("session image references stop at the image extension before adjacent text", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-session-attachment-adjacent-text-"))
+  const attachmentDirectory = path.join(workspace, ".do-code", "sessions", "test", "attachments")
+  await mkdir(attachmentDirectory, { recursive: true })
+  await writeFile(path.join(attachmentDirectory, "image.png"), PNG)
+  const content = await expandPromptContent("@attachments/image.png没有", workspace, attachmentDirectory)
+  assert.ok(Array.isArray(content))
+  if (!Array.isArray(content)) return
+  const image = content.find((part) => part.type === "image")
+  assert.equal(image?.type, "image")
+  if (image?.type !== "image") return
+  assert.equal(image.path, "attachments/image.png")
+})
+
 test("image references enforce count and total size limits", async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-image-limits-"))
   const attachmentDirectory = path.join(workspace, ".do-code", "sessions", "test", "attachments")

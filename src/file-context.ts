@@ -7,9 +7,10 @@ import { resolveInside } from "./workspace-paths.js"
 const MAX_REFERENCED_FILE_BYTES = 100_000
 const MAX_REFERENCED_TOTAL_BYTES = 300_000
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"])
+const PROMPT_REFERENCE = /(?:^|\s)@(?:(attachments\/[^\s@]*?\.(?:png|jpe?g|gif|webp))|([^\s@]+))/gi
 
 export async function expandPromptContent(prompt: string, workspace: string, attachmentDirectory?: string): Promise<UserContent> {
-  const references = [...prompt.matchAll(/(?:^|\s)@([^\s@]+)/g)].map((match) => match[1]!).filter(Boolean)
+  const references = [...prompt.matchAll(PROMPT_REFERENCE)].map((match) => match[1] ?? match[2]!).filter(Boolean)
   const unique = [...new Set(references)]
   if (!unique.length) return prompt
   const textSections: string[] = []
