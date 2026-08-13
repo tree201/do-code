@@ -1,7 +1,6 @@
 export type {
   BackgroundProcessController,
   PlanProposal,
-  PlanReviewDecision,
   ShellSpawnSpec,
   TodoItem,
   TodoStatus,

@@ -5,7 +5,7 @@ import React from "react"
 import { render } from "ink-testing-library"
 import { AgentConversation } from "../src/agent.js"
 import type { ChatModel } from "../src/protocol.js"
-import { ApprovalBridge, ChatApp, PlanReviewBridge, QuestionBridge, type ChatAppProps } from "../src/ui/chat-app.js"
+import { ApprovalBridge, ChatApp, QuestionBridge, type ChatAppProps } from "../src/ui/chat-app.js"
 import { tick, visibleFrame } from "./support/chat-ui.js"
 
 test("editor shortcuts move, delete, clear, undo, redo, and insert newlines", async (t) => {
@@ -110,26 +110,6 @@ test("approval dialog supports numeric, y/n, and Escape shortcuts", async (t) =>
   assert.equal(await escaped, "deny")
 })
 
-test("plan review supports numeric confirmation and Escape cancellation", async (t) => {
-  const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
-  const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
-  const bridge = new PlanReviewBridge()
-  const view = render(React.createElement(ChatApp, {
-    workspace: process.cwd(), model: "test-model", approvalMode: "ask", sessionId: "session_plan_keys", restored: false,
-    initialMessages: [], conversation, language: "en", approvalBridge: new ApprovalBridge(), planReviewBridge: bridge, attachEventSink: () => {},
-    runShellShortcut: async () => ({ ok: true, output: "" }), listSessions: async () => [], resumeSession: async () => { throw new Error("unused") },
-    renameCurrentSession: async () => { throw new Error("unused") }, exportCurrentSession: async () => "unused", save: async () => {},
-    reportError: async () => ({ id: "err_test", file: "/tmp/error.json" }),
-  } satisfies ChatAppProps))
-  t.after(() => view.unmount())
-  const plan = { title: "Plan", summary: "Summary", steps: ["Step"], files: [], verification: [], risks: [] }
-  const revised = bridge.request(plan)
-  await tick(); view.stdin.write("2")
-  assert.equal(await revised, "revise")
-  const cancelled = bridge.request(plan)
-  await tick(); view.stdin.write("\u001b")
-  assert.equal(await cancelled, "cancel")
-})
 
 test("permission menu supports number selection and Escape cancellation", async (t) => {
   const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }

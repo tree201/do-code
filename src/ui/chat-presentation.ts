@@ -25,11 +25,12 @@ export function composerStatusText(options: {
   const reasoningIntensity = options.reasoningIntensity ?? "default"
   const intensity = reasoningIntensity === "default" ? t(language, "default") : reasoningIntensity
   const context = `${contextPercent}%`
+  const interactionMode = options.planMode ? t(language, "Plan") : options.approvalMode
   const candidates = [
-    [model, intensity, context, options.approvalMode],
-    [model, context, options.approvalMode],
-    [model, options.approvalMode],
-    [options.approvalMode],
+    [model, intensity, context, interactionMode],
+    [model, context, interactionMode],
+    [model, interactionMode],
+    [interactionMode],
   ].map((parts) => parts.filter(Boolean).join(" · "))
   const available = Math.max(1, width - 4)
   return candidates.find((candidate) => displayWidth(candidate) <= available) ?? truncateTerminal(model, available)

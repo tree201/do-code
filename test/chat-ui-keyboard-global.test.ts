@@ -20,33 +20,31 @@ function props(sessionId: string, conversation: AgentConversation): ChatAppProps
   }
 }
 
-test("Kitty Shift+Tab and uppercase Ctrl+H work through the central input route", async (t) => {
+test("Kitty Shift+Tab cycles Plan and execution modes through the central input route", async (t) => {
   const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
   const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
   const view = render(React.createElement(ChatApp, props("session_keyboard_global", conversation)))
   t.after(() => view.unmount())
   view.stdin.write("\u001b[9;2u"); await tick(); await tick()
-  assert.match(stripVTControlCharacters(view.lastFrame() ?? ""), /Plan/)
+  assert.match(visibleFrame(view), /test-model · default · 0% · auto/)
   view.stdin.write("\u001b[9;2u"); await tick(); await tick()
-  assert.doesNotMatch(stripVTControlCharacters(view.lastFrame() ?? ""), /Plan/)
+  assert.match(visibleFrame(view), /test-model · default · 0% · full-access/)
+  view.stdin.write("\u001b[9;2u"); await tick(); await tick()
+  assert.match(visibleFrame(view), /test-model · default · 0% · Plan/)
   view.stdin.write("\u001b[72;5u"); await tick(); await tick()
   assert.match(view.lastFrame() ?? "", /Keyboard shortcuts and help/)
   view.stdin.write("\u001b[72;5u"); await tick(); await tick()
   assert.doesNotMatch(view.lastFrame() ?? "", /Keyboard shortcuts and help/)
 })
 
-test("Ctrl+G cycles approval mode without appending a transcript notice", async (t) => {
+test("Ctrl+G no longer changes interaction mode", async (t) => {
   const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
   const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
   const view = render(React.createElement(ChatApp, props("session_approval_cycle", conversation)))
   t.after(() => view.unmount())
   view.stdin.write("\u0007"); await tick(); await tick()
-  assert.match(visibleFrame(view), /test-model · default · 0% · auto/)
-  assert.doesNotMatch(visibleFrame(view), /Approval mode:/)
-  view.stdin.write("\u001b[71;5u"); await tick(); await tick()
-  assert.match(visibleFrame(view), /full-access/)
-  view.stdin.write("\u0007"); await tick(); await tick()
   assert.match(visibleFrame(view), /test-model · default · 0% · ask/)
+  assert.doesNotMatch(visibleFrame(view), /Approval mode:/)
 })
 
 test("alternate help closes and navigates through the shared viewport input bridge", async (t) => {

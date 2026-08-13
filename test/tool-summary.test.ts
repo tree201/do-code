@@ -19,13 +19,13 @@ test("active tool summaries use a concise localized verb", () => {
   assert.equal(activeToolSummary("edit_file", { path: "src/app.ts" }, "en"), "Editing  src/app.ts")
 })
 
-test("composer status retains approval mode when space permits and degrades gracefully", () => {
+test("composer status shows the active interaction mode and degrades gracefully", () => {
   const base = { language: "zh" as const, running: true, command: false, model: "ark/glm-5.2", contextPercent: 23, approvalMode: "full-access" as const }
   assert.equal(composerStatusText({ ...base, width: 100 }), "glm-5.2 · 默认 · 23% · full-access")
   assert.equal(composerStatusText({ ...base, width: 38 }), "glm-5.2 · 默认 · 23% · full-access")
   assert.equal(composerStatusText({ ...base, width: 18 }), "full-access")
   assert.equal(composerStatusText({ ...base, language: "en", reasoningIntensity: "high", width: 100 }), "glm-5.2 · high · 23% · full-access")
-  assert.match(composerStatusText({ ...base, planMode: true, width: 100 }), /full-access/)
+  assert.equal(composerStatusText({ ...base, planMode: true, width: 100 }), "glm-5.2 · 默认 · 23% · 计划")
 })
 
 test("activity summaries group exploration into a user-facing outline", () => {
@@ -38,6 +38,11 @@ test("activity summaries group exploration into a user-facing outline", () => {
   assert.match(summary.lines.map((line) => line.text).join("\n"), /src\/main\.ts/)
   assert.match(summary.lines.map((line) => line.text).join("\n"), /createApp/)
   assert.equal(activityGroupKey("read_file"), activityGroupKey("search"))
+})
+
+test("activity summaries describe published plans without review wording", () => {
+  const summary = buildActivitySummary([{ name: "exit_plan_mode", args: {}, ok: true, output: "Published the plan." }], "zh")
+  assert.equal(summary.title, "计划已发布")
 })
 
 test("activity summaries expose compact edit stats and command excerpts", () => {

@@ -15,7 +15,7 @@ export type AgentContextOptions = {
   workspace: string
   profileInstructions?: string
   enterPlanMode?: unknown
-  reviewPlan?: unknown
+  publishPlan?: unknown
 }
 
 export function buildSystemPrompt(workspace: string, projectInstructions: string, profileInstructions = "", planningEnabled = false) {
@@ -27,8 +27,8 @@ export function buildSystemPrompt(workspace: string, projectInstructions: string
     "Do not claim a command passed unless you observed its tool result. In the final answer, summarize changes and verification.",
     "Never return an empty response. After thinking, either call a tool or provide a final user-facing answer.",
     planningEnabled ? "For a genuinely ambiguous, architectural, cross-cutting, or high-risk task, proactively call enter_plan_mode before making changes. Do not enter plan mode for small, obvious tasks." : "",
-    planningEnabled ? "While planning, research with read-only tools, discuss material trade-offs with the user through ask_user, and only then submit one concrete implementation plan through exit_plan_mode." : "",
-    planningEnabled ? "exit_plan_mode performs the formal approval interaction. Do not separately ask whether the plan is approved. If approved, continue implementing immediately with the unchanged approval mode; if revision or cancellation is requested, stop without editing." : "",
+    planningEnabled ? "While planning, research with read-only tools, discuss material trade-offs with the user through ask_user, and only then publish one concrete implementation plan through exit_plan_mode." : "",
+    planningEnabled ? "exit_plan_mode publishes the plan to the conversation and keeps Plan mode active. The user switches to an execution mode with Shift+Tab when ready; do not ask for a separate plan approval." : "",
     profileInstructions ? "Follow the active agent profile instructions below." : "",
     profileInstructions,
     projectInstructions ? "Follow the loaded hierarchical instructions below. More specific project or subdirectory instructions override broader project instructions; project instructions override global preferences when they conflict." : "",
@@ -45,7 +45,7 @@ export async function initialAgentMessages(options: AgentContextOptions, memory:
       options.workspace,
       await memory.prompt(),
       options.profileInstructions,
-      Boolean(options.enterPlanMode && options.reviewPlan),
+      Boolean(options.enterPlanMode && options.publishPlan),
     ),
   }]
 }

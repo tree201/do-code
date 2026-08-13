@@ -6,7 +6,6 @@ import { EffortDialog } from "./effort-dialog.js"
 import { ApprovalDialog } from "./approval-dialog.js"
 import { HelpDialog } from "./help-dialog.js"
 import { PermissionModeDialog } from "./permission-mode-dialog.js"
-import { PlanReviewDialog } from "./plan-review-dialog.js"
 import { QuestionDialog } from "./question-dialog.js"
 import { DialogManager, DialogSurface } from "./dialog-manager.js"
 import { t } from "../i18n.js"
@@ -24,7 +23,6 @@ export function ChatDialogs({ props, state }: { props: ChatAppProps; state: Chat
     {dialog.kind === "effort" && state.runtimeStore.canSwitchEffort ? <EffortDialog efforts={["low", "medium", "high", "xhigh", "max"]} currentEffort={state.activeEffort === "default" ? "medium" : state.activeEffort} language={state.activeLanguage} onClose={() => state.setActiveDialog({ kind: "none" })} onSelect={state.runtimeStore.switchEffort} registerInputHandler={(handler) => { state.dialogInputHandlers.current.effort = handler }} {...(state.activeDefaultEffort ? { defaultEffort: state.activeDefaultEffort } : {})} {...(state.runtimeStore.canPersistDefaultReasoningEffort ? { onPersist: state.runtimeStore.persistDefaultReasoningEffort } : {})} /> : null}
     {dialog.kind === "approval" ? <ApprovalDialog request={dialog.request} selectedIndex={dialog.selectedIndex} language={state.activeLanguage} width={state.terminalWidth} /> : null}
     {dialog.kind === "question" ? <QuestionDialog question={dialog.request.question} options={dialog.request.options} selectedIndex={dialog.selectedIndex} draft={dialog.draft} customAnswer={dialog.customAnswer} language={state.activeLanguage} /> : null}
-    {dialog.kind === "plan-review" ? <PlanReviewDialog plan={dialog.request.plan} selectedIndex={dialog.selectedIndex} language={state.activeLanguage} width={state.terminalWidth} /> : null}
     {dialog.kind === "permission-menu" ? <PermissionModeDialog currentMode={state.activeApprovalMode} selectedIndex={dialog.selectedIndex} language={state.activeLanguage} /> : null}
     {dialog.kind === "session-picker" && !state.running ? <DialogManager><DialogSurface>
       <Text bold>{t(state.activeLanguage, "Resume a previous session")}</Text><Text dimColor>{t(state.activeLanguage, "Search: {query}  ↑↓ Select · Enter Resume · Esc Cancel", { query: state.sessionPickerQuery || t(state.activeLanguage, "type a title or ID") })}</Text>

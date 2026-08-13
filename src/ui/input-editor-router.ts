@@ -2,8 +2,8 @@ import { applyCompletion, completionsForEditor } from "./completion.js"
 import { attachmentTokenIndex, type ComposerDraft } from "./attachment-model.js"
 import { backspaceEditor, createEditor, deleteEditor, insertEditorText, moveEditorCursor, moveEditorEnd, moveEditorHome, moveEditorVertical, redoEditor, undoEditor } from "./editor.js"
 import { takeLastMessage } from "./message-queue.js"
-import { nextApprovalMode, nextReasoningEffort } from "./model-actions.js"
-import { isApprovalModeShortcut, isReasoningEffortShortcut } from "./shortcut-command-policy.js"
+import { nextReasoningEffort } from "./model-actions.js"
+import { isReasoningEffortShortcut } from "./shortcut-command-policy.js"
 import { t } from "./i18n.js"
 import type { ChatInputKey } from "./input-routing-types.js"
 import type { ChatAppProps } from "./chat-app-types.js"
@@ -40,10 +40,6 @@ export function routeEditorInput(rawInput: string, input: string, key: ChatInput
   if (isClipboardImageShortcut) {
     state.composerOwner.markPaste()
     void attachments.attachClipboardImage().catch(() => {})
-    return
-  }
-  if (isApprovalModeShortcut(input, key)) {
-    state.applyApprovalMode(nextApprovalMode(state.activeApprovalMode))
     return
   }
   if (isReasoningEffortShortcut(input, key)) {

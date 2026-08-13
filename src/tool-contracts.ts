@@ -21,7 +21,6 @@ export type PlanProposal = {
   risks?: string[]
 }
 
-export type PlanReviewDecision = "execute" | "revise" | "cancel"
 export type ShellSpawnSpec = { executable: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv }
 
 export type BackgroundProcessController = {
@@ -53,7 +52,7 @@ export type ToolContext = {
   beforeFileWrite?: (tool: string, requestedPath: string) => Promise<void>
   delegateTask?: (task: string, signal?: AbortSignal) => Promise<string>
   enterPlanMode?: (reason: string) => Promise<ApprovalMode>
-  reviewPlan?: (plan: PlanProposal) => Promise<PlanReviewDecision>
+  publishPlan?: (plan: PlanProposal) => void
   isPlanMode?: () => boolean
   /** Set only for a single policy-approved call that may cross the workspace boundary. */
   allowOutsideWorkspace?: boolean

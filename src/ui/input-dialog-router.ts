@@ -1,6 +1,6 @@
 import type { ApprovalChoice, ApprovalMode } from "../policy.js"
-import type { PlanReviewDecision } from "../tools.js"
 import { canOpenHelp, canOpenTranscriptViewer } from "./dialog-coordinator.js"
+import { nextInteractionMode } from "./model-actions.js"
 import { isHelpShortcut } from "./shortcut-command-policy.js"
 import { helpDialogLines, helpDialogRows } from "./components/help-dialog.js"
 import type { ChatInputKey } from "./input-routing-types.js"
@@ -65,7 +65,12 @@ export function routeDialogInput(rawInput: string, input: string, key: ChatInput
     } else state.setActiveDialog({ kind: "viewer", items: state.items, offset: Number.MAX_SAFE_INTEGER })
     return true
   }
-  if ((key.tab && key.shift) || rawInput === "\u001b[Z") { state.applyPlanMode(!state.activePlanMode); return true }
+  if (((key.tab && key.shift) || rawInput === "\u001b[Z") && dialog.kind === "none") {
+    const next = nextInteractionMode(state.activePlanMode ? "plan" : state.activeApprovalMode)
+    if (next === "plan") state.applyPlanMode(true)
+    else { state.applyPlanMode(false); state.applyApprovalMode(next) }
+    return true
+  }
   if (dialog.kind === "approval") {
     const choices: ApprovalChoice[] = ["once", "session", "always", "deny"]
     if (key.upArrow) state.setActiveDialog({ ...dialog, selectedIndex: Math.max(0, dialog.selectedIndex - 1) })
@@ -74,15 +79,6 @@ export function routeDialogInput(rawInput: string, input: string, key: ChatInput
     else if (/^[1-4]$/.test(input)) transcript.finishApproval(choices[Number(input) - 1]!)
     else if (input.toLowerCase() === "y") transcript.finishApproval("once")
     else if (input.toLowerCase() === "n" || key.escape) transcript.finishApproval("deny")
-    return true
-  }
-  if (dialog.kind === "plan-review") {
-    const decisions: PlanReviewDecision[] = ["execute", "revise", "cancel"]
-    if (key.upArrow) state.setActiveDialog({ ...dialog, selectedIndex: Math.max(0, dialog.selectedIndex - 1) })
-    else if (key.downArrow) state.setActiveDialog({ ...dialog, selectedIndex: Math.min(decisions.length - 1, dialog.selectedIndex + 1) })
-    else if (key.return) transcript.finishPlanReview(decisions[dialog.selectedIndex]!)
-    else if (/^[1-3]$/.test(input)) transcript.finishPlanReview(decisions[Number(input) - 1]!)
-    else if (key.escape) transcript.finishPlanReview("cancel")
     return true
   }
   if (dialog.kind === "permission-menu") {

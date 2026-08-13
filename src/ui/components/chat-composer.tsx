@@ -63,6 +63,5 @@ export function ChatComposer({ props, state }: { props: ChatAppProps; state: Cha
     status={<>{state.exitConfirmation
       ? t(state.activeLanguage, "Press Ctrl+C again to exit")
       : composerStatusText({ language: state.activeLanguage, running: state.running, command: state.editor.value.trimStart().startsWith("/"), width: state.terminalWidth, model: state.activeModel, reasoningIntensity: state.activeEffort, thinkingMode: state.activeThinkingMode, contextPercent: state.contextPercent, approvalMode: state.activeApprovalMode, planMode: state.activePlanMode })}{props.renderRevision ? props.renderRevision % 2 ? "\u200B" : "\u200C" : null}</>}
-    statusRight={state.activePlanMode ? <Text color={tuiTheme.accent}>{t(state.activeLanguage, "Plan")}</Text> : null}
   />
 }

@@ -1,5 +1,5 @@
 import type { SavedSession } from "../sessions.js"
-import type { ApprovalRequest, PlanReviewRequest, UserQuestion } from "./async-bridges.js"
+import type { ApprovalRequest, UserQuestion } from "./async-bridges.js"
 import type { TranscriptItem } from "./transcript-model.js"
 
 export type ActiveDialog =
@@ -10,7 +10,6 @@ export type ActiveDialog =
   | { kind: "model" }
   | { kind: "effort" }
   | { kind: "permission-menu"; selectedIndex: number }
-  | { kind: "plan-review"; request: PlanReviewRequest; selectedIndex: number }
   | { kind: "question"; request: UserQuestion; selectedIndex: number; draft: string; customAnswer: boolean; returnToOptions: boolean }
   | { kind: "session-picker"; items: SavedSession[]; selectedIndex: number; query: string }
   | { kind: "viewer"; items: TranscriptItem[]; offset: number }

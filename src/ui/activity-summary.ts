@@ -175,7 +175,7 @@ function buildActivitySummaryBase(items: ToolSummaryItem[], language: DoCodeLang
   }
   if (kind === "plan") {
     if (first.name === "enter_plan_mode") return { title: t(language, "Entered read-only planning"), lines: [] }
-    if (first.name === "exit_plan_mode") return { title: t(language, "Plan review completed"), lines: [] }
+    if (first.name === "exit_plan_mode") return { title: t(language, "Plan published"), lines: [] }
     if (first.name === "todo_write") {
       if (!first.ok) return { title: t(language, "Failed to update task progress"), lines: [] }
       const blocked = first.output.split("\n").filter((line) => line.trimStart().startsWith("!")).length

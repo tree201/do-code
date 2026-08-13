@@ -63,7 +63,7 @@ test("interactive session persistence appends stable history and skips transient
     requestedSessionId: session.id,
     continueSession: false,
     modelConfig,
-    runtime: () => ({ session, modelConfig, approvalMode: "full-access" }),
+    runtime: () => ({ session, modelConfig, approvalMode: "full-access", planMode: true }),
     conversation: () => conversation as never,
   })
   store.recordEvent({ protocolVersion: 1, turnId: "turn", type: "message.delta", step: 1, delta: "temporary" })
@@ -73,10 +73,11 @@ test("interactive session persistence appends stable history and skips transient
   await store.save()
 
   const directory = store.session().directory
-  const metadata = JSON.parse(await readFile(path.join(directory, "session.json"), "utf8")) as { approvalMode?: string }
+  const metadata = JSON.parse(await readFile(path.join(directory, "session.json"), "utf8")) as { approvalMode?: string; planMode?: boolean }
   const storedMessages = (await readFile(path.join(directory, "messages.jsonl"), "utf8")).trim().split("\n").map((line) => JSON.parse(line) as Message)
   const storedEvents = (await readFile(path.join(directory, "events.jsonl"), "utf8")).trim().split("\n").map((line) => JSON.parse(line) as { event: { type: string } })
   assert.equal(metadata.approvalMode, "full-access")
+  assert.equal(metadata.planMode, true)
   assert.deepEqual(storedMessages.map((message) => message.role), ["system", "user"])
   assert.deepEqual(storedEvents.map((record) => record.event.type), ["turn.started"])
 })

@@ -15,7 +15,7 @@ import { createSandboxShellRunner, createSandboxShellSpawnSpec } from "../sandbo
 import { listSessions, loadSession } from "../sessions.js"
 import { executeTool } from "../tools.js"
 import { CheckpointManager } from "../checkpoints.js"
-import { ApprovalBridge, PlanReviewBridge, QuestionBridge } from "./async-bridges.js"
+import { ApprovalBridge, PlanPublisherBridge, QuestionBridge } from "./async-bridges.js"
 import { ChatApp } from "./chat-app-component.js"
 import { t } from "./i18n.js"
 import { createInteractiveRenderer } from "./interactive-renderer.js"
@@ -33,6 +33,7 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
   const requestedApprovalMode: ApprovalMode = args.approvalMode
   const restoredSession = args.continueSession ? await loadSession(args.workspace, args.sessionId) : undefined
   const initialApprovalMode = restoredSession?.session.approvalMode ?? requestedApprovalMode
+  const initialPlanMode = restoredSession?.session.planMode ?? false
   const policy = await createPolicyEngine(args.workspace, initialApprovalMode)
   const extensions = await loadPromptExtensions(args.workspace)
   const activeSandbox = () => policy.mode === "full-access" ? { type: "local" as const, network: "full" as const } : { ...config.sandbox, network: "full" as const }
@@ -46,7 +47,7 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
   const store = await createInteractiveSessionStore({ workspace: args.workspace, ...(args.sessionId ? { requestedSessionId: args.sessionId } : {}), continueSession: args.continueSession, modelConfig, conversation: () => conversation, runtime: () => runtimeStore?.getSnapshot() })
   const approvalBridge = new ApprovalBridge()
   const questionBridge = new QuestionBridge()
-  const planReviewBridge = new PlanReviewBridge()
+  const planPublisher = new PlanPublisherBridge()
   let eventSink: ((event: AgentEvent) => void) | null = null
   await hookRunner.fire("sessionStart", { mode: "interactive", model: modelConfig.preset })
 
@@ -61,7 +62,7 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
     return next
   }
   runtimeStore = createRuntimeStore({
-    session: store.session(), modelConfig, modelPresets: listModelPresets(config), ...(config.defaultReasoningEffort ? { defaultReasoningEffort: config.defaultReasoningEffort } : {}), approvalMode: initialApprovalMode, planMode: false, language: initialLanguage,
+    session: store.session(), modelConfig, modelPresets: listModelPresets(config), ...(config.defaultReasoningEffort ? { defaultReasoningEffort: config.defaultReasoningEffort } : {}), approvalMode: initialApprovalMode, planMode: initialPlanMode, language: initialLanguage,
   }, {
     switchModel: switchRuntimeModel,
     persistDefaultModel: async (preset) => { await saveDefaultModel(preset) },
@@ -100,7 +101,7 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
     approveShell: async (command) => await approvalBridge.request(approvalRequest(SHELL_TOOL, { command }, policy.evaluate(SHELL_TOOL, { command }))),
     askUser: async (question, options) => await questionBridge.request(question, options),
     enterPlanMode: async () => { runtimeStore.setPlanMode(true); return runtimeStore.getSnapshot().approvalMode },
-    reviewPlan: async (proposal) => { const decision = await planReviewBridge.request(proposal); if (decision === "execute" || decision === "cancel") runtimeStore.setPlanMode(false); return decision },
+    publishPlan: (proposal) => { planPublisher.publish(proposal) },
     onEvent: (event) => { store.recordEvent(event); eventSink?.(event) },
   })
   if (store.restored) conversation.restore(store.restored.messages)
@@ -114,9 +115,9 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
   let renderer: ReturnType<typeof createInteractiveRenderer>
   const createApp = () => <ChatApp
     workspace={args.workspace} model={store.modelConfig().preset} reasoningEffort={store.modelConfig().reasoningEffort ?? "medium"} thinkingMode={store.modelConfig().thinkingMode ?? "auto"}
-    approvalMode={initialApprovalMode} initialPlanMode={false} sessionId={store.sessionId} {...(store.restored?.session.title ? { sessionTitle: store.restored.session.title } : {})}
+    approvalMode={initialApprovalMode} initialPlanMode={initialPlanMode} sessionId={store.sessionId} {...(store.restored?.session.title ? { sessionTitle: store.restored.session.title } : {})}
     restored={Boolean(store.restored)} {...(profile?.name ? { agent: profile.name } : {})} initialMessages={store.restored?.messages ?? []} initialEvents={store.restored?.events ?? []}
-    conversation={conversation} approvalBridge={approvalBridge} questionBridge={questionBridge} planReviewBridge={planReviewBridge} policy={policy}
+    conversation={conversation} approvalBridge={approvalBridge} questionBridge={questionBridge} planPublisher={planPublisher} policy={policy}
     attachEventSink={(sink) => { eventSink = sink }} runtimeStore={runtimeStore}
     runShellShortcut={async (command) => await executeTool(SHELL_TOOL, { command }, { workspace: args.workspace, policy, approvalMode: runtimeStore.getSnapshot().approvalMode, isPlanMode: () => runtimeStore.getSnapshot().planMode, approveTool: async (request) => await approvalBridge.request(request), approveShell: async (requested) => await approvalBridge.request(approvalRequest(SHELL_TOOL, { command: requested }, policy.evaluate(SHELL_TOOL, { command: requested }))), runShell: shellRunner, shellSpawnSpec: spawnSpec })}
     listSessions={async () => await listSessions(args.workspace)} resumeSession={store.resume} renameCurrentSession={store.rename} exportCurrentSession={store.exportCurrent} save={async () => { await store.save() }}

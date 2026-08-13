@@ -180,7 +180,7 @@ test("agent tool visibility preserves registry order and applies allow, deny, an
     toolAllowList: ["read_file", "external_check"],
     toolDenyList: ["external_check"],
     enterPlanMode: async () => "ask",
-    reviewPlan: async () => "cancel",
+    publishPlan: () => {},
   })
   assert.deepEqual(requests[0], ["read_file"])
 

@@ -5,7 +5,7 @@ import { render } from "ink-testing-library"
 import { Box, Text } from "ink"
 import { AgentConversation } from "../src/agent.js"
 import type { ChatModel } from "../src/protocol.js"
-import { ApprovalBridge, ApprovalDialog, askAnswerPairs, ChatApp, PermissionModeDialog, PlanReviewBridge, PlanReviewDialog, QuestionBridge, QuestionDialog, TranscriptLine, planMarkdown, type ChatAppProps } from "../src/ui/chat-app.js"
+import { ApprovalBridge, ApprovalDialog, askAnswerPairs, ChatApp, PermissionModeDialog, PlanPublisherBridge, QuestionBridge, QuestionDialog, TranscriptLine, planMarkdown, type ChatAppProps } from "../src/ui/chat-app.js"
 import { DialogManager, DialogSurface } from "../src/ui/components/dialog-manager.js"
 import { displayWidth } from "../src/ui/terminal-text.js"
 import { tick, visibleFrame } from "./support/chat-ui.js"
@@ -48,20 +48,17 @@ test("agent questions separate title, prompt, options, and localized controls", 
   assert.ok(lines.every((line) => displayWidth(line) <= 60))
 })
 
-test("new locales translate common question and plan dialogs", (t) => {
+test("new locales translate common question dialogs", (t) => {
   const cases = [
-    ["ja", "入力が必要です", "提案された計画"],
-    ["ko", "입력이 필요합니다", "제안된 계획"],
-    ["es", "El agente necesita tu respuesta", "Plan propuesto"],
-    ["fr", "L’agent a besoin de votre réponse", "Plan proposé"],
+    ["ja", "入力が必要です"],
+    ["ko", "입력이 필요합니다"],
+    ["es", "El agente necesita tu respuesta"],
+    ["fr", "L’agent a besoin de votre réponse"],
   ] as const
-  for (const [language, questionTitle, planTitle] of cases) {
+  for (const [language, questionTitle] of cases) {
     const question = render(React.createElement(QuestionDialog, { question: "Choose", options: ["One"], selectedIndex: 0, draft: "", customAnswer: false, language }))
-    const plan = render(React.createElement(PlanReviewDialog, { plan: { title: "Plan", summary: "", steps: [], files: [], verification: [], risks: [] }, selectedIndex: 0, language }))
     t.after(() => question.unmount())
-    t.after(() => plan.unmount())
     assert.match(visibleFrame(question), new RegExp(questionTitle))
-    assert.match(visibleFrame(plan), new RegExp(planTitle))
   }
 })
 
@@ -98,7 +95,7 @@ test("file approval uses a localized restrained Codex-style diff", (t) => {
   assert.ok(frame.split("\n").every((line) => displayWidth(line) <= 72))
 })
 
-test("plan review keeps the dynamic confirmation compact while the full plan stays in scrollback", (t) => {
+test("plans render directly in the transcript", (t) => {
   const plan = {
     title: "拆分认证模块",
     summary: "保持行为兼容，拆分策略与传输层。",
@@ -107,23 +104,6 @@ test("plan review keeps the dynamic confirmation compact while the full plan sta
     verification: ["npm test"],
     risks: ["会话兼容性"],
   }
-  const view = render(React.createElement(PlanReviewDialog, {
-    plan,
-    selectedIndex: 0,
-    language: "zh",
-  }))
-  t.after(() => view.unmount())
-  const frame = visibleFrame(view)
-  assert.match(frame, /建议计划/)
-  assert.doesNotMatch(frame, /拆分认证模块/)
-  assert.doesNotMatch(frame, /完整计划已写入上方对话历史/)
-  assert.match(frame, /1\. 执行/)
-  assert.match(frame, /2\. 修改/)
-  assert.match(frame, /取消/)
-  assert.doesNotMatch(frame, /1\. 提取策略/)
-  assert.doesNotMatch(frame, /逐项确认|自动编辑/)
-  assert.ok(frame.split("\n").length <= 14, "the transient plan confirmation must stay viewport-safe")
-
   const transcript = render(React.createElement(TranscriptLine, {
     item: { id: 99, kind: "plan", plan },
     width: 80,
@@ -160,53 +140,30 @@ test("plan markdown preserves structured steps without duplicate numbering", () 
   assert.doesNotMatch(markdown, /### 2\. -/)
 })
 
-test("plan review pauses animated activity so terminal scrollback is not pulled back", async (t) => {
-  let finishModel: (() => void) | undefined
-  const model: ChatModel = {
-    async complete() {
-      await new Promise<void>((resolve) => { finishModel = resolve })
-      return { content: "done", toolCalls: [] }
-    },
-  }
-  const planReviewBridge = new PlanReviewBridge()
+test("published plans enter scrollback without opening a review dialog", async (t) => {
+  const model: ChatModel = { async complete() { return { content: "done", toolCalls: [] } } }
+  const planPublisher = new PlanPublisherBridge()
   const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
   const props: ChatAppProps = {
     workspace: process.cwd(), model: "test-model", approvalMode: "ask", sessionId: "session_plan_scroll", restored: false,
-    initialMessages: [], conversation, language: "zh", approvalBridge: new ApprovalBridge(), planReviewBridge,
+    initialMessages: [], conversation, language: "zh", approvalBridge: new ApprovalBridge(), planPublisher,
     attachEventSink: () => {}, runShellShortcut: async () => ({ ok: true, output: "" }), listSessions: async () => [],
     resumeSession: async () => { throw new Error("unused") }, renameCurrentSession: async () => { throw new Error("unused") },
     exportCurrentSession: async () => "unused", save: async () => {}, reportError: async () => ({ id: "err_test", file: "/tmp/error.json" }),
   }
   const view = render(React.createElement(ChatApp, props))
-  t.after(() => {
-    finishModel?.()
-    view.unmount()
-  })
-  await tick()
-  view.stdin.write("制定计划\r")
-  await tick()
-  assert.match(visibleFrame(view), /思考中/)
-
-  const decision = planReviewBridge.request({
+  t.after(() => view.unmount())
+  planPublisher.publish({
     title: "长计划滚动回归",
     summary: "计划正文必须进入稳定的终端历史。",
     steps: Array.from({ length: 30 }, (_, index) => `步骤 ${index + 1}`),
     files: [], verification: ["npm test"], risks: [],
   })
   await tick()
-  await tick()
   const frame = visibleFrame(view)
   assert.match(frame, /步骤 30/)
-  assert.doesNotMatch(frame, /思考中/, "the animated spinner must be unmounted while plan review waits")
-  await new Promise((resolve) => setTimeout(resolve, 160))
-  const stableFrameCount = view.frames.length
-  await new Promise((resolve) => setTimeout(resolve, 1_100))
-  assert.equal(view.frames.length, stableFrameCount, "plan review must not redraw on a timer")
-
-  view.stdin.write("\r")
-  assert.equal(await decision, "execute")
-  finishModel?.()
-  await tick()
+  assert.doesNotMatch(frame, /Proposed Plan/)
+  assert.match(frame, /test-model · 默认 · 0% · ask/)
 })
 
 test("permission menu presents the three real do-code approval levels", (t) => {

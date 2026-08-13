@@ -5,6 +5,9 @@ const REASONING_EFFORTS: ReasoningEffort[] = ["low", "medium", "high", "xhigh", 
 const APPROVAL_MODES: ApprovalMode[] = ["ask", "auto", "full-access"]
 const THINKING_MODES: ThinkingMode[] = ["auto", "on", "off"]
 
+export type InteractionMode = ApprovalMode | "plan"
+const INTERACTION_MODES: InteractionMode[] = ["plan", "ask", "auto", "full-access"]
+
 export function modelPresetArgument(argument: string) {
   return argument.trim()
 }
@@ -27,6 +30,11 @@ export function nextReasoningEffort(current: ReasoningEffort | "default") {
 export function nextApprovalMode(current: ApprovalMode) {
   const index = APPROVAL_MODES.indexOf(current)
   return APPROVAL_MODES[(index + 1) % APPROVAL_MODES.length]!
+}
+
+export function nextInteractionMode(current: InteractionMode) {
+  const index = INTERACTION_MODES.indexOf(current)
+  return INTERACTION_MODES[(index + 1) % INTERACTION_MODES.length]!
 }
 
 export function modelStateFromConfig(config: RuntimeModelConfig) {

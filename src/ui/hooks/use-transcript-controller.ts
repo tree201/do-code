@@ -1,6 +1,5 @@
 import { useCallback, useEffect } from "react"
 import type { ApprovalChoice } from "../../policy.js"
-import type { PlanReviewDecision } from "../../tools.js"
 import { t } from "../i18n.js"
 import type { ChatAppProps } from "../chat-app-types.js"
 import type { ChatAppState } from "./use-chat-app-state.js"
@@ -19,16 +18,15 @@ export function useTranscriptController(props: ChatAppProps, state: ChatAppState
       state.transcriptOwner.flushPendingTools()
       state.setActiveDialog({ kind: "question", request, selectedIndex: 0, draft: "", customAnswer: request.options.length === 0, returnToOptions: false })
     })
-    props.planReviewBridge?.attach((request) => {
+    props.planPublisher?.attach((plan) => {
       state.transcriptOwner.flushPendingTools()
-      state.append({ kind: "plan", plan: request.plan })
-      state.setActiveDialog({ kind: "plan-review", request, selectedIndex: 0 })
+      state.append({ kind: "plan", plan })
     })
     props.attachEventSink((event) => state.transcriptOwner.handleEvent(event, state.activeLanguage))
     return () => {
       props.approvalBridge.attach(null)
       props.questionBridge?.attach(null)
-      props.planReviewBridge?.attach(null)
+      props.planPublisher?.attach(null)
       props.attachEventSink(null)
     }
   }, [props, state.activeLanguage, state.append, state.setActiveDialog, state.transcriptOwner])
@@ -48,12 +46,6 @@ export function useTranscriptController(props: ChatAppProps, state: ChatAppState
     state.append({ kind: "info", text: `${ask}: ${dialog.request.question}\n${reply}: ${answer}` })
     state.setActiveDialog({ kind: "none" })
   }, [state.activeLanguage, state.append, state.getActiveDialog, state.setActiveDialog])
-  const finishPlanReview = useCallback((decision: PlanReviewDecision) => {
-    const dialog = state.getActiveDialog()
-    if (dialog.kind !== "plan-review") return
-    dialog.request.resolve(decision); state.setActiveDialog({ kind: "none" })
-  }, [state.getActiveDialog, state.setActiveDialog])
-
   return {
     appendReportedError,
     flushPendingTools: state.transcriptOwner.flushPendingTools,
@@ -61,7 +53,6 @@ export function useTranscriptController(props: ChatAppProps, state: ChatAppState
     hasAssistantOutput: state.transcriptOwner.hasAssistantOutput,
     finishApproval,
     finishQuestion,
-    finishPlanReview,
   }
 }
 

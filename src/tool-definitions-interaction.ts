@@ -31,11 +31,11 @@ const enterPlanModeTool: ToolImplementation = {
 const exitPlanModeTool: ToolImplementation = {
   definition: { type: "function", function: {
     name: TOOL_NAMES.EXIT_PLAN_MODE,
-    description: "Submit the finalized implementation plan for user review. This interaction asks whether to execute, revise, or cancel; do not separately ask whether the plan is approved.",
+    description: "Publish a finalized implementation plan to the conversation. Remain in read-only Plan mode; the user switches to an execution mode with Shift+Tab when ready to implement.",
     parameters: toolSchema({ title: { type: "string" }, summary: { type: "string" }, steps: { type: "array", minItems: 1, items: { type: "string" } }, files: { type: "array", items: { type: "string" } }, verification: { type: "array", items: { type: "string" } }, risks: { type: "array", items: { type: "string" } } }, ["title", "summary", "steps"]),
   } },
   async execute(args, context) {
-    if (!context.reviewPlan) return { ok: false, output: "Interactive plan review is unavailable in this run" }
+    if (!context.publishPlan) return { ok: false, output: "Interactive plan publishing is unavailable in this run" }
     const proposal: PlanProposal = {
       title: text(args, "title"),
       summary: text(args, "summary"),
@@ -44,10 +44,8 @@ const exitPlanModeTool: ToolImplementation = {
       verification: optionalStringArray(args, "verification"),
       risks: optionalStringArray(args, "risks"),
     }
-    const decision = await context.reviewPlan(proposal)
-    if (decision === "execute") return { ok: true, output: "The user approved the plan. Exit planning and implement it now using the approval mode that was already active; do not change permissions." }
-    if (decision === "revise") return { ok: true, output: "The user requested changes to the plan. Stay in read-only plan mode, stop this turn, and invite the user to provide feedback before submitting another plan." }
-    return { ok: true, output: "The user cancelled this plan. Stop without making changes." }
+    context.publishPlan(proposal)
+    return { ok: true, output: "Published the plan. Remain in read-only Plan mode; the user can switch to an execution mode with Shift+Tab when ready." }
   },
 }
 

@@ -103,13 +103,13 @@ test("agent reuses the filtered tool definitions across a multi-step turn", asyn
   assert.deepEqual(requests[0]!.tools.map((tool: any) => tool.function.name), ["external_check"])
 })
 
-test("agent advertises proactive plan transitions and explains the approval workflow", async () => {
+test("agent advertises proactive plan transitions without a separate approval workflow", async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-agent-plan-prompt-"))
   const model: ChatModel = {
     async complete(input) {
       const prompt = contentText(input.messages[0]?.content)
       assert.match(prompt, /proactively call enter_plan_mode/)
-      assert.match(prompt, /exit_plan_mode performs the formal approval interaction/)
+      assert.match(prompt, /exit_plan_mode publishes the plan to the conversation and keeps Plan mode active/)
       const names = input.tools.map((tool) => tool.function.name)
       assert.ok(names.includes("enter_plan_mode"))
       assert.ok(names.includes("exit_plan_mode"))
@@ -121,7 +121,7 @@ test("agent advertises proactive plan transitions and explains the approval work
     model,
     approveShell: async () => false,
     enterPlanMode: async () => "ask",
-    reviewPlan: async () => "cancel",
+    publishPlan: () => {},
   }), "Ready.")
 })
 

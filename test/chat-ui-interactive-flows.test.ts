@@ -66,6 +66,12 @@ test("composer stays visible while running and queues the next prompt", async (t
   view.stdin.write("\u001b[Z")
   await tick()
   assert.doesNotMatch(view.lastFrame() ?? "", /Entered read-only plan mode|approval mode remains/)
+  assert.match(view.lastFrame() ?? "", /other-model · default · 0% · auto/)
+  view.stdin.write("\u001b[Z")
+  await tick()
+  assert.match(view.lastFrame() ?? "", /other-model · default · 0% · full-access/)
+  view.stdin.write("\u001b[Z")
+  await tick()
   assert.match(view.lastFrame() ?? "", /other-model · default · 0%.*Plan/)
   await tick()
 

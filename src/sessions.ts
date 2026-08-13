@@ -11,6 +11,7 @@ export type SavedSession = {
   workspace: string
   model?: string
   approvalMode?: ApprovalMode
+  planMode?: boolean
   title?: string
   createdAt?: string
   updatedAt: string

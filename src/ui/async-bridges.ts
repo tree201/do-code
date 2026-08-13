@@ -1,9 +1,8 @@
 import type { ApprovalChoice, ToolApprovalRequest } from "../policy.js"
-import type { PlanProposal, PlanReviewDecision } from "../tools.js"
+import type { PlanProposal } from "../tools.js"
 
 export type ApprovalRequest = ToolApprovalRequest & { resolve: (choice: ApprovalChoice) => void }
 export type UserQuestion = { question: string; options: string[]; resolve: (answer: string) => void }
-export type PlanReviewRequest = { plan: PlanProposal; resolve: (decision: PlanReviewDecision) => void }
 
 export class ApprovalBridge {
   private handler: ((request: ApprovalRequest) => void) | null = null
@@ -35,17 +34,14 @@ export class QuestionBridge {
   }
 }
 
-export class PlanReviewBridge {
-  private handler: ((request: PlanReviewRequest) => void) | null = null
+export class PlanPublisherBridge {
+  private handler: ((plan: PlanProposal) => void) | null = null
 
-  attach(handler: ((request: PlanReviewRequest) => void) | null) {
+  attach(handler: ((plan: PlanProposal) => void) | null) {
     this.handler = handler
   }
 
-  async request(plan: PlanProposal) {
-    return await new Promise<PlanReviewDecision>((resolve) => {
-      if (!this.handler) return resolve("cancel")
-      this.handler({ plan, resolve })
-    })
+  publish(plan: PlanProposal) {
+    this.handler?.(plan)
   }
 }

@@ -16,7 +16,8 @@ test("slash command help groups commands into aligned, scannable sections", () =
   assert.match(help, /\n\n计划与权限\n  \/plan \[goal\|exit\]\s+进入只读规划模式或开始制定目标计划/)
   assert.match(help, /\n\n会话与工作区\n  \/resume \[name\]\s+浏览并恢复历史会话/)
   assert.match(help, /\n\n输入快捷方式\n  @path\s+添加工作区文件到上下文/)
-  assert.doesNotMatch(help, / · \/status| · Ctrl\+R/)
+  assert.match(help, /Shift\+Tab\s+切换交互模式/)
+  assert.doesNotMatch(help, /Ctrl\+G| · \/status| · Ctrl\+R/)
 
   for (const command of builtinCommandCompletions("zh")) {
     const matches = help.match(new RegExp(`${escapeRegex(command.description)}$`, "gm")) ?? []

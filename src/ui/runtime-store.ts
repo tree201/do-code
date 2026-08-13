@@ -97,8 +97,10 @@ export function createRuntimeStore(initial: RuntimeSnapshot, commands: RuntimeCo
         if (restored) applyModelConfig(restored)
       }
       const approvalMode = loaded.session.approvalMode ?? snapshot.approvalMode
+      const planMode = loaded.session.planMode ?? false
       commands.setApprovalMode?.(approvalMode)
-      publish({ session: loaded.session, approvalMode })
+      commands.setPlanMode?.(planMode)
+      publish({ session: loaded.session, approvalMode, planMode })
       return loaded
     },
     async renameSession(title: string) {

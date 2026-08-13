@@ -31,22 +31,22 @@ test("delegate task receives the active turn signal", async () => {
   assert.strictEqual(received, controller.signal)
 })
 
-test("plan tools enter read-only planning and return the user's execution decision", async () => {
+test("plan tools enter read-only planning and publish without a blocking review", async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-plan-tools-"))
   let enteredReason = ""
-  let reviewedTitle = ""
+  let publishedTitle = ""
   const context = {
     workspace,
     approveShell: async () => false,
     enterPlanMode: async (reason: string) => { enteredReason = reason; return "auto" as const },
-    reviewPlan: async (plan: { title: string }) => { reviewedTitle = plan.title; return "execute" as const },
+    publishPlan: (plan: { title: string }) => { publishedTitle = plan.title },
   }
   const entered = await executeTool("enter_plan_mode", { reason: "Cross-cutting refactor" }, context)
   assert.equal(entered.ok, true)
   assert.equal(enteredReason, "Cross-cutting refactor")
   assert.match(entered.output, /Approval mode remains auto/)
 
-  const reviewed = await executeTool("exit_plan_mode", {
+  const published = await executeTool("exit_plan_mode", {
     title: "Refactor authentication",
     summary: "Separate policy from transport.",
     steps: ["Extract policy", "Update callers"],
@@ -54,9 +54,9 @@ test("plan tools enter read-only planning and return the user's execution decisi
     verification: ["npm test"],
     risks: ["Session compatibility"],
   }, context)
-  assert.equal(reviewed.ok, true)
-  assert.equal(reviewedTitle, "Refactor authentication")
-  assert.match(reviewed.output, /approval mode that was already active/i)
+  assert.equal(published.ok, true)
+  assert.equal(publishedTitle, "Refactor authentication")
+  assert.match(published.output, /Remain in read-only Plan mode/)
 })
 
 test("plan interaction blocks mutations without changing the execution approval mode", async () => {

@@ -7,7 +7,7 @@ import type { LoadedSession, SavedSession } from "../sessions.js"
 import type { ToolResult } from "../tools.js"
 import type { ApprovalMode, PolicyEngine } from "../policy.js"
 import type { PromptExtension } from "../extension-registry.js"
-import type { ApprovalBridge, PlanReviewBridge, QuestionBridge } from "./async-bridges.js"
+import type { ApprovalBridge, PlanPublisherBridge, QuestionBridge } from "./async-bridges.js"
 import type { ImageAttachment } from "./attachment-model.js"
 import type { TranscriptItem } from "./transcript-model.js"
 import type { ViewportInputKey } from "./viewport-surface.js"
@@ -26,7 +26,7 @@ export type ChatAppProps = {
   conversation: AgentConversation
   approvalBridge: ApprovalBridge
   questionBridge?: QuestionBridge
-  planReviewBridge?: PlanReviewBridge
+  planPublisher?: PlanPublisherBridge
   policy?: PolicyEngine
   setApprovalMode?: (mode: ApprovalMode) => void
   setPlanMode?: (active: boolean) => void

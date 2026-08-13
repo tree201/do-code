@@ -6,7 +6,7 @@ import { render } from "ink-testing-library"
 import { AgentConversation } from "../src/agent.js"
 import { classifyPastedImagePaths } from "../src/image-attachments.js"
 import type { ChatModel } from "../src/protocol.js"
-import { ApprovalBridge, ChatApp, HelpDialog, helpDialogLines, helpDialogRows, isApprovalModeShortcut, isHelpShortcut, isReasoningEffortShortcut, nextApprovalMode, nextReasoningEffort, type ChatAppProps } from "../src/ui/chat-app.js"
+import { ApprovalBridge, ChatApp, HelpDialog, helpDialogLines, helpDialogRows, isHelpShortcut, isReasoningEffortShortcut, nextInteractionMode, nextReasoningEffort, type ChatAppProps } from "../src/ui/chat-app.js"
 import { displayWidth } from "../src/ui/terminal-text.js"
 import { tick, visibleFrame } from "./support/chat-ui.js"
 import { createRuntimeStore } from "../src/ui/runtime-store.js"
@@ -20,13 +20,11 @@ test("reasoning effort shortcut cycles through the configured levels", () => {
   assert.equal(nextReasoningEffort("default"), "low")
 })
 
-test("approval mode shortcut cycles ask, auto, and full-access", () => {
-  assert.equal(nextApprovalMode("ask"), "auto")
-  assert.equal(nextApprovalMode("auto"), "full-access")
-  assert.equal(nextApprovalMode("full-access"), "ask")
-  assert.equal(isApprovalModeShortcut("g", { ctrl: true }), true)
-  assert.equal(isApprovalModeShortcut("G", { ctrl: true }), true)
-  assert.equal(isApprovalModeShortcut("g", { ctrl: false }), false)
+test("interaction mode cycles Plan, Ask, Auto, and Full Access", () => {
+  assert.equal(nextInteractionMode("plan"), "ask")
+  assert.equal(nextInteractionMode("ask"), "auto")
+  assert.equal(nextInteractionMode("auto"), "full-access")
+  assert.equal(nextInteractionMode("full-access"), "plan")
 })
 
 test("reasoning effort shortcut uses Ctrl+R without matching plain R", () => {
@@ -36,18 +34,23 @@ test("reasoning effort shortcut uses Ctrl+R without matching plain R", () => {
   assert.equal(isReasoningEffortShortcut("e", { ctrl: true }), false)
 })
 
-test("runtime resume restores saved approval mode and keeps it for legacy sessions", async () => {
+test("runtime resume restores saved Plan and approval modes while legacy sessions stay executable", async () => {
   const modelConfig = { source: "config" as const, sourceLabel: "test", preset: "test/a", provider: "test", modelId: "a", baseUrl: "https://example.com", apiKey: "hidden" }
   const session = { id: "session_a", workspace: "/tmp", model: "test/a", createdAt: "now", updatedAt: "now", directory: "/tmp/session_a" }
   const applied: string[] = []
+  const plans: boolean[] = []
   const store = createRuntimeStore({ session, modelConfig, modelPresets: ["test/a"], approvalMode: "ask", planMode: false, language: "en" }, {
     setApprovalMode: (mode) => { applied.push(mode) },
-    resumeSession: async (id) => ({ session: { ...session, id, ...(id === "saved" ? { approvalMode: "full-access" as const } : {}) }, messages: [], events: [] }),
+    setPlanMode: (active) => { plans.push(active) },
+    resumeSession: async (id) => ({ session: { ...session, id, ...(id === "saved" ? { approvalMode: "full-access" as const, planMode: true } : {}) }, messages: [], events: [] }),
   })
   await store.resumeSession("saved")
-  await store.resumeSession("legacy")
   assert.equal(store.getSnapshot().approvalMode, "full-access")
+  assert.equal(store.getSnapshot().planMode, true)
+  await store.resumeSession("legacy")
+  assert.equal(store.getSnapshot().planMode, false)
   assert.deepEqual(applied, ["full-access", "full-access"])
+  assert.deepEqual(plans, [true, false])
 })
 
 test("Ctrl+H is recognized from Ink's backspace key event", () => {

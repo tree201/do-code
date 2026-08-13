@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import type { ToolApprovalRequest } from "../src/policy.js"
 import type { PlanProposal } from "../src/tools.js"
-import { ApprovalBridge, PlanReviewBridge, QuestionBridge } from "../src/ui/async-bridges.js"
+import { ApprovalBridge, PlanPublisherBridge, QuestionBridge } from "../src/ui/async-bridges.js"
 import { canRunSlashCommandDuringTask } from "../src/ui/shortcut-command-policy.js"
 import { createPausableOutput } from "../src/ui/pausable-output.js"
 import { acceptAttachments, attachmentIndex, attachmentInsertionIndex, attachmentTokenIndex, insertAttachmentTokens, removeAttachmentToken, stripAttachmentTokens } from "../src/ui/attachment-model.js"
@@ -42,7 +42,7 @@ const plan: PlanProposal = {
 test("async bridges provide safe answers when no UI handler is attached", async () => {
   assert.equal(await new ApprovalBridge().request(approvalRequest), "deny")
   assert.equal(await new QuestionBridge().request("Continue?"), "User input is unavailable")
-  assert.equal(await new PlanReviewBridge().request(plan), "cancel")
+  new PlanPublisherBridge().publish(plan)
 })
 
 test("async bridges resolve requests through the currently attached UI handler", async () => {
@@ -60,12 +60,11 @@ test("async bridges resolve requests through the currently attached UI handler",
   })
   assert.equal(await questions.request("What next?", ["Tests", "Types"]), "Types")
 
-  const plans = new PlanReviewBridge()
-  plans.attach((request) => {
-    assert.equal(request.plan.title, plan.title)
-    request.resolve("revise")
-  })
-  assert.equal(await plans.request(plan), "revise")
+  const plans = new PlanPublisherBridge()
+  let publishedTitle = ""
+  plans.attach((proposal) => { publishedTitle = proposal.title })
+  plans.publish(plan)
+  assert.equal(publishedTitle, plan.title)
 })
 
 test("running tasks allow only non-mutating control commands and bare model selection", () => {
@@ -266,7 +265,7 @@ test("runtime store owns model, session, language, approval, and plan state", as
   const snapshot = store.getSnapshot()
   assert.equal(snapshot.modelConfig.reasoningEffort, "high")
   assert.equal(snapshot.approvalMode, "full-access")
-  assert.equal(snapshot.planMode, true)
+  assert.equal(snapshot.planMode, false)
   assert.equal(snapshot.language, "zh")
   assert.equal(snapshot.session.id, "session_b")
 })
