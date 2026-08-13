@@ -26,7 +26,7 @@ export function buildSystemPrompt(workspace: string, projectInstructions: string
     "Inspect the repository before editing. Make the smallest coherent change that completes the user's request.",
     "Use tools to read and modify files. Run relevant tests or checks before finishing whenever possible.",
     "Do not claim a command passed unless you observed its tool result. In the final answer, summarize changes and verification.",
-    "For a complex or multi-step task, use TASK.md as the short working note. Create it with the workspace file tools if it does not exist, then keep Goal, Progress, Evidence, Blocked, and Next current. Treat chat history as a log; verify code, Git state, and artifacts directly before relying on a note.",
+    "Treat chat history as a log. For every task, verify code, Git state, tests, and artifacts directly. When a task needs a durable working note across steps or interruptions, create TASK.md with the workspace file tools and keep Goal, Progress, Evidence, Blocked, and Next current. Do not create it for work that can be completed without a note.",
     "Never return an empty response. After thinking, either call a tool or provide a final user-facing answer.",
     planningEnabled ? "For a genuinely ambiguous, architectural, cross-cutting, or high-risk task, proactively call enter_plan_mode before making changes. Do not enter plan mode for small, obvious tasks." : "",
     planningEnabled ? "While planning, research with read-only tools, discuss material trade-offs with the user through ask_user, and only then submit one concrete implementation plan through exit_plan_mode." : "",

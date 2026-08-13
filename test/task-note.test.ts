@@ -18,10 +18,11 @@ test("reads an existing TASK.md and bounds its model context", async () => {
   assert.match(note ?? "", /Task note truncated/)
 })
 
-test("adds TASK.md guidance to the system prompt", () => {
+test("adds unified TASK.md guidance to the system prompt", () => {
   const prompt = buildSystemPrompt("/workspace", "", "", false, "# Goal\nFinish the feature")
 
-  assert.match(prompt, /Create it with the workspace file tools/)
+  assert.match(prompt, /For every task, verify code, Git state, tests, and artifacts directly/)
+  assert.match(prompt, /Do not create it for work that can be completed without a note/)
   assert.match(prompt, /# Goal\nFinish the feature/)
 })
 
