@@ -11,6 +11,24 @@ export function normalizeEnhancedKeyboardKey(rawInput: string, inkKey: ChatInput
   if (controlCode >= 1 && controlCode <= 26 && ![9, 13].includes(controlCode)) {
     return { input: String.fromCharCode(96 + controlCode), key: { ...inkKey, ctrl: true } }
   }
+  const arrow = rawInput.match(/^(?:\u001b)?\[(?:1;)?(\d+)?([CD])$/)
+  if (arrow) {
+    const modifier = Number(arrow[1] ?? 1)
+    if (Number.isInteger(modifier) && modifier >= 1) {
+      const modifierBits = modifier - 1
+      return {
+        input: "",
+        key: {
+          ...inkKey,
+          shift: Boolean(modifierBits & 1),
+          meta: Boolean(modifierBits & 2),
+          ctrl: Boolean(modifierBits & 4),
+          super: Boolean(modifierBits & 8),
+          ...(arrow[2] === "C" ? { rightArrow: true } : { leftArrow: true }),
+        },
+      }
+    }
+  }
   const kitty = rawInput.match(/^(?:\u001b)?\[(\d+);(\d+)u$/)
   const modifyOtherKeys = rawInput.match(/^(?:\u001b)?\[27;(\d+);(\d+)~$/)
   const modifier = Number(kitty?.[2] ?? modifyOtherKeys?.[1])
@@ -30,5 +48,7 @@ export function normalizeEnhancedKeyboardKey(rawInput: string, inkKey: ChatInput
   if (codepoint === 9) key.tab = true
   if (codepoint === 13) key.return = true
   if (codepoint === 27) key.escape = true
-  return { input: codepoint === 9 || codepoint === 13 || codepoint === 27 ? codepoint === 13 ? "\r" : "" : key.ctrl ? normalizedInput : input, key }
+  if (codepoint === 57350) key.leftArrow = true
+  if (codepoint === 57351) key.rightArrow = true
+  return { input: codepoint === 9 || codepoint === 13 || codepoint === 27 || codepoint === 57350 || codepoint === 57351 ? codepoint === 13 ? "\r" : "" : key.ctrl ? normalizedInput : input, key }
 }

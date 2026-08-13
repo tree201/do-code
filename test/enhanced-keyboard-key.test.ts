@@ -36,6 +36,22 @@ test("normalizes Kitty Shift+Tab without inserting a control character", () => {
   assert.equal(normalized.key.tab, true)
 })
 
+test("normalizes terminal and Kitty arrow encodings without inserting escape sequences", () => {
+  const inputs: Array<[string, "leftArrow" | "rightArrow", { ctrl?: boolean }]> = [
+    ["\u001b[D", "leftArrow", {}],
+    ["[C", "rightArrow", {}],
+    ["\u001b[1;5D", "leftArrow", { ctrl: true }],
+    ["[57350;1u", "leftArrow", {}],
+    ["\u001b[57351;5u", "rightArrow", { ctrl: true }],
+  ]
+  for (const [rawInput, direction, modifiers] of inputs) {
+    const normalized = normalizeEnhancedKeyboardKey(rawInput, emptyKey)
+    assert.equal(normalized.input, "")
+    assert.equal(normalized.key[direction], true)
+    assert.equal(Boolean(normalized.key.ctrl), Boolean(modifiers.ctrl))
+  }
+})
+
 test("normalizes a plain Escape byte", () => {
   const normalized = normalizeEnhancedKeyboardKey("\u001b", emptyKey)
   assert.equal(normalized.input, "")
