@@ -1,6 +1,6 @@
 import type { ModelRequestOptions } from "./protocol.js"
 
-export const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 120_000
+export const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 300_000
 
 export class StreamInactivityTimeoutError extends Error {
   readonly code = "ETIMEDOUT" as const
@@ -58,7 +58,7 @@ export async function consumeSse(
   body: ReadableStream<Uint8Array>,
   optionsOrConsume: ModelRequestOptions | ((data: string) => void),
   consumeOrIdle: ((data: string) => void) | number,
-  idleTimeoutMs = 120_000,
+  idleTimeoutMs = DEFAULT_STREAM_IDLE_TIMEOUT_MS,
 ) {
   const options = typeof optionsOrConsume === "function" ? {} : optionsOrConsume
   const consume = typeof optionsOrConsume === "function" ? optionsOrConsume : consumeOrIdle as (data: string) => void

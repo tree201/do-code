@@ -31,6 +31,7 @@ export function createTranscriptOwner(initialItems: TranscriptItem[]) {
   let streamGroup = 0
   let streamCommittedLength = 0
   let streamFragmentCount = 0
+  let streamAttemptItemCount = initialItems.length
   const toolArgs = new Map<string, unknown>()
   const listeners = new Set<() => void>()
   const publish = (patch: Partial<TranscriptSnapshot>) => {
@@ -47,6 +48,10 @@ export function createTranscriptOwner(initialItems: TranscriptItem[]) {
     streamCommittedLength = 0
     streamFragmentCount = 0
     streamGroup++
+  }
+  const resetStreamingAttempt = () => {
+    if (snapshot.items.length > streamAttemptItemCount) publish({ items: snapshot.items.slice(0, streamAttemptItemCount) })
+    resetStreamingSegment()
   }
   const publishLiveAssistant = (value: string) => {
     publisher.flush(value)
@@ -89,6 +94,8 @@ export function createTranscriptOwner(initialItems: TranscriptItem[]) {
     const previous = liveState
     const transition = reduceLiveTranscript(previous, event, language)
     liveState = transition.state
+    if (event.type === "turn.started") streamAttemptItemCount = snapshot.items.length
+    if (event.type === "model.retrying") resetStreamingAttempt()
     if (event.type === "step.started" && snapshot.pendingToolGroup?.groupKey === "edit") flushPendingTools()
     if (transition.effects.flushPendingTools) flushPendingTools()
     if (transition.effects.commitAssistant) commitAssistant(previous.liveAssistant)

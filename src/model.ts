@@ -1,7 +1,7 @@
 import type { ChatModel, Message, ModelReply, ModelRequestOptions, ToolDefinition, UserContentPart } from "./protocol.js"
 import type { RuntimeModelConfig } from "./config.js"
 import { openAIThinkingFields } from "./model-request-normalization.js"
-import { configuredModelTimeout, MODEL_API_TIMEOUT_ENV, MODEL_STREAM_IDLE_TIMEOUT_ENV } from "./model-retry.js"
+import { configuredModelTimeout, isRetryableModelRequestError, MODEL_API_TIMEOUT_ENV, MODEL_STREAM_IDLE_TIMEOUT_ENV } from "./model-retry.js"
 import { anthropicContent, imageData, inlineImageUrl, openAIContent, requireImageSupport } from "./model-content.js"
 import { consumeSse, streamWithInactivityTimeout, StreamInactivityTimeoutError, DEFAULT_STREAM_IDLE_TIMEOUT_MS } from "./model-streaming.js"
 import { AnthropicCompatibleModel as NativeAnthropicModel, GeminiCompatibleModel as NativeGeminiModel } from "./model-native-providers.js"
@@ -14,7 +14,7 @@ export { isRetryableModelRequestError } from "./model-retry.js"
 
 export { MODEL_REQUEST_MAX_RETRIES, DEFAULT_MODEL_REQUEST_TIMEOUT_MS, ModelRequestTimeoutError } from "./model-request-transport.js"
 export { DEFAULT_STREAM_IDLE_TIMEOUT_MS } from "./model-streaming.js"
-export const STREAM_IDLE_INITIAL_RETRIES = 2
+export const STREAM_IDLE_RETRIES = 5
 
 type ModelRetryConfig = {
   maxRetries?: number
@@ -130,14 +130,15 @@ export class OpenAICompatibleModel implements ChatModel {
     }
 
     let result: ModelReply | undefined
-    for (let attempt = 0; attempt <= STREAM_IDLE_INITIAL_RETRIES; attempt++) {
+    for (let attempt = 0; attempt <= STREAM_IDLE_RETRIES; attempt++) {
       try {
         result = await completeOnce()
         break
       } catch (error) {
-        const retryableInitialStall = error instanceof StreamInactivityTimeoutError && error.chunksReceived === 0
-        if (!retryableInitialStall || attempt === STREAM_IDLE_INITIAL_RETRIES) throw error
-        await abortableDelay(Math.min(1_000 * 2 ** attempt, 4_000), options.signal)
+        if (!(error instanceof StreamInactivityTimeoutError || isRetryableModelRequestError(error)) || attempt === STREAM_IDLE_RETRIES) throw error
+        const delayMs = Math.min(1_000 * 2 ** attempt, 60_000)
+        options.onRetry?.(attempt + 1, delayMs, error instanceof Error ? error.message : String(error))
+        await abortableDelay(delayMs, options.signal)
       }
     }
     if (!result) throw new Error("Model request completed without a result")
