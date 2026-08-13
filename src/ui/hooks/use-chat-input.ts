@@ -1,5 +1,6 @@
 import { useInput } from "ink"
 import { normalizeEnhancedKeyboardKey } from "../enhanced-keyboard-key.js"
+import { hasBlockingDialog } from "../dialog-coordinator.js"
 import { routeDialogInput } from "../input-dialog-router.js"
 import { routeEditorInput } from "../input-editor-router.js"
 import type { ChatInputKey } from "../input-routing-types.js"
@@ -15,6 +16,10 @@ export function useChatInput(props: ChatAppProps, state: ChatAppState, transcrip
     const key = normalized.key
     const input = normalized.input.replaceAll("\u001b[200~", "").replaceAll("\u001b[201~", "")
     const dialog = state.getActiveDialog()
+    if (state.turnOwner.getSnapshot().running && key.escape && !hasBlockingDialog(dialog)) {
+      state.turnOwner.abort()
+      return
+    }
     if (dialog.kind === "auth" || dialog.kind === "model" || dialog.kind === "effort") {
       state.dialogInputHandlers.current[dialog.kind]?.(input, key)
       return
