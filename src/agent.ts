@@ -3,8 +3,8 @@ import type { BackgroundProcessController, TodoItem, ToolContext } from "./tools
 import { InstructionMemory, type InstructionSource } from "./instructions.js"
 import { CheckpointManager } from "./checkpoints.js"
 import { BackgroundProcessManager } from "./background-processes.js"
-import { buildCompactionPrompt, continuationState } from "./context-compaction.js"
-import { buildSystemPrompt, estimateMessages, initialAgentMessages } from "./agent-context.js"
+import { buildCompactionPrompt, continuationState, rollingCompactionSource } from "./context-compaction.js"
+import { estimateMessages, initialAgentMessages } from "./agent-context.js"
 import { runAgentTurn } from "./agent-turn.js"
 
 export type { AgentEvent } from "./protocol.js"
@@ -63,8 +63,11 @@ export class AgentConversation {
   }
 
   private async refreshSystemMessage() {
-    const content = buildSystemPrompt(this.options.workspace, await this.memory.prompt(), this.options.profileInstructions)
-    if (!this.messages) this.messages = [{ role: "system", content }]
+    const initial = await initialAgentMessages(this.options, this.memory)
+    const first = initial[0]!
+    if (first.role !== "system") throw new Error("Initial agent context must start with a system message")
+    const content = first.content
+    if (!this.messages) this.messages = initial
     else if (this.messages[0]?.role === "system") {
       if (this.messages[0].content !== content) this.messages[0] = { role: "system", content }
     }
@@ -97,6 +100,7 @@ export class AgentConversation {
         this.options.onModelUsage?.(usage)
       },
       beforeModelRequest: async (messages) => {
+        await this.refreshSystemMessage()
         this.usage.currentContextTokens = estimateMessages(messages)
         if (!this.compacting && this.usage.currentContextTokens >= this.usage.contextWindow * 0.8 && messages.length > 8) await this.compact()
         await this.options.beforeModelRequest?.(messages)
@@ -159,10 +163,12 @@ export class AgentConversation {
     try {
       const system = this.messages[0]?.role === "system" ? this.messages[0] : null
       const sourceMessages = this.messages.slice(system ? 1 : 0)
+      const source = rollingCompactionSource(sourceMessages, undefined, Math.floor(this.usage.contextWindow * 3.5 * 0.5))
+      if (!source) return false
       const reply = await this.options.model.complete({
         messages: [
           ...(system ? [system] : []),
-          { role: "user", content: buildCompactionPrompt(sourceMessages) },
+          { role: "user", content: buildCompactionPrompt(source.compacted) },
         ],
         tools: [],
       })
@@ -175,7 +181,8 @@ export class AgentConversation {
       }
       const compacted: Message[] = [
         ...(system ? [system] : []),
-        { role: "user", content: continuationState(sourceMessages, reply.content) },
+        { role: "user", content: continuationState(source.compacted, reply.content) },
+        ...source.retained,
       ]
       this.messages.splice(0, this.messages.length, ...compacted)
       this.usage.compactions += 1

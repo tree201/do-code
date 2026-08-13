@@ -141,24 +141,33 @@ test("conversation refreshes output-language instructions without losing history
   assert.equal(await conversation.run("第二轮"),"第二次")
 })
 
-test("manual compaction preserves a continuation summary and records usage", async () => {
+test("rolling compaction summarizes older turns and preserves the recent queue", async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-compact-"))
   let calls = 0
   const model: ChatModel = {
     async complete(input) {
       calls++
-      if (input.tools.length === 0) return { content: "Goal: finish feature. Changed: src/a.ts. Tests: pending.", toolCalls: [], usage: { inputTokens: 100, outputTokens: 20, cachedTokens: 5 } }
-      return { content: "Initial answer", toolCalls: [], usage: { inputTokens: 10, outputTokens: 3, cachedTokens: 0 } }
+      assert.equal(input.tools.length, 0)
+      assert.match(contentText(input.messages.at(-1)?.content), /turn-1/)
+      return { content: "Goal: finish feature. Changed: src/a.ts. Tests: pending.", toolCalls: [], usage: { inputTokens: 100, outputTokens: 20, cachedTokens: 5 } }
     },
   }
   const conversation = new AgentConversation({ workspace, model, approveShell: async () => false, instructionMemory: new InstructionMemory(workspace, null) })
-  await conversation.run("implement feature")
+  conversation.restore([
+    { role: "system", content: "system" },
+    ...Array.from({ length: 6 }, (_, index) => [
+      { role: "user" as const, content: `turn-${index + 1}` },
+      { role: "assistant" as const, content: `answer-${index + 1}` },
+    ]).flat(),
+  ])
+
   assert.equal(await conversation.compact(), true)
-  assert.equal(conversation.history().length, 2)
+  assert.equal(conversation.history().length, 10)
   assert.match(contentText(conversation.history()[1]?.content), /Changed: src\/a\.ts/)
+  assert.deepEqual(conversation.history().slice(2).map((message) => contentText(message.content)), ["turn-3", "answer-3", "turn-4", "answer-4", "turn-5", "answer-5", "turn-6", "answer-6"])
   assert.equal(conversation.stats().compactions, 1)
-  assert.equal(conversation.stats().requests, 2)
-  assert.equal(calls, 2)
+  assert.equal(conversation.stats().requests, 1)
+  assert.equal(calls, 1)
 })
 
 test("automatically compacts an oversized restored conversation before the next request", async () => {
