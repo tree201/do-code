@@ -26,8 +26,16 @@ export function ResumeMessage({ item, language }: ItemProps<Extract<TranscriptIt
   )
 }
 
+function userMessageContent(text: string) {
+  return text.split(/(\[Image #\d+\])/g).map((part, index) =>
+    /^\[Image #\d+\]$/.test(part)
+      ? <Text key={index} color={tuiTheme.accent}>{part}</Text>
+      : part,
+  )
+}
+
 export function UserMessage({ item, width }: ItemProps<Extract<TranscriptItem, { kind: "user" }>>) {
-  return <UserMessageRow width={width}><Text wrap="wrap">{item.text}</Text></UserMessageRow>
+  return <UserMessageRow width={width}><Text wrap="wrap">{userMessageContent(item.text)}</Text></UserMessageRow>
 }
 
 export function AssistantMessage({ item, width, language }: ItemProps<Extract<TranscriptItem, { kind: "assistant" }>>) {

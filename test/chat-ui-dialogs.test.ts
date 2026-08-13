@@ -140,6 +140,18 @@ test("plan markdown preserves structured steps without duplicate numbering", () 
   assert.doesNotMatch(markdown, /### 2\. -/)
 })
 
+test("historical messages keep image labels blue", (t) => {
+  const transcript = render(React.createElement(TranscriptLine, {
+    item: { id: 99, kind: "user", text: "请确认 [Image #1] 中的内容" },
+    width: 80,
+  }))
+  t.after(() => transcript.unmount())
+
+  const frame = transcript.lastFrame() ?? ""
+  assert.match(visibleFrame(transcript), /请确认 \[Image #1\] 中的内容/)
+  assert.match(frame, /\u001b\[36m\[Image #1\]\u001b\[39m/)
+})
+
 test("published plans enter scrollback without opening a review dialog", async (t) => {
   const model: ChatModel = { async complete() { return { content: "done", toolCalls: [] } } }
   const planPublisher = new PlanPublisherBridge()
