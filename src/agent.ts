@@ -3,7 +3,7 @@ import type { BackgroundProcessController, TodoItem, ToolContext } from "./tools
 import { InstructionMemory, type InstructionSource } from "./instructions.js"
 import { CheckpointManager } from "./checkpoints.js"
 import { BackgroundProcessManager } from "./background-processes.js"
-import { buildCompactionPrompt, continuationState } from "./context-compaction.js"
+import { buildCompactionPrompt, continuationState, rollingCompactionSource } from "./context-compaction.js"
 import { estimateMessages, initialAgentMessages } from "./agent-context.js"
 import { runAgentTurn } from "./agent-turn.js"
 
@@ -163,10 +163,12 @@ export class AgentConversation {
     try {
       const system = this.messages[0]?.role === "system" ? this.messages[0] : null
       const sourceMessages = this.messages.slice(system ? 1 : 0)
+      const source = rollingCompactionSource(sourceMessages, undefined, Math.floor(this.usage.contextWindow * 3.5 * 0.5))
+      if (!source) return false
       const reply = await this.options.model.complete({
         messages: [
           ...(system ? [system] : []),
-          { role: "user", content: buildCompactionPrompt(sourceMessages) },
+          { role: "user", content: buildCompactionPrompt(source.compacted) },
         ],
         tools: [],
       })
@@ -179,7 +181,8 @@ export class AgentConversation {
       }
       const compacted: Message[] = [
         ...(system ? [system] : []),
-        { role: "user", content: continuationState(sourceMessages, reply.content) },
+        { role: "user", content: continuationState(source.compacted, reply.content) },
+        ...source.retained,
       ]
       this.messages.splice(0, this.messages.length, ...compacted)
       this.usage.compactions += 1
