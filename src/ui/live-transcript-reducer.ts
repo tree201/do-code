@@ -40,6 +40,9 @@ export function reduceLiveTranscript(
     state.activityEpoch++
     state.reasoningCharacters = 0
   } else if (event.type === "model.retrying") {
+    state.liveAssistant = ""
+    state.reasoningCharacters = 0
+    state.assistantCommitted = false
     state.activeTool = t(language, "Retrying attempt #{attempt} · in {seconds}s", {
       attempt: event.attempt,
       seconds: Math.ceil(event.delayMs / 1000),

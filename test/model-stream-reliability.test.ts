@@ -114,12 +114,16 @@ test("model retries an initially silent stream twice and then recovers", async (
   assert.equal(requests, 3)
 })
 
-test("model does not replay a stream that stalls after receiving data", async (context) => {
+test("model reconnects a stream that stalls after receiving data", async (context) => {
   let requests = 0
   const server = createServer((_request, response) => {
     requests++
     response.writeHead(200, { "content-type": "text/event-stream" })
-    response.write(`data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: "working" } }] })}\n\n`)
+    if (requests === 1) {
+      response.write(`data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: "working" } }] })}\n\n`)
+      return
+    }
+    response.end(`data: ${JSON.stringify({ choices: [{ delta: { content: "recovered" }, finish_reason: "stop" }] })}\n\ndata: [DONE]\n\n`)
   })
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
   context.after(() => server.close())
@@ -133,13 +137,14 @@ test("model does not replay a stream that stalls after receiving data", async (c
     streamIdleTimeoutMs: 20,
     retry: { maxRetries: 0 },
   })
-  const reasoning: string[] = []
-  await assert.rejects(
-    model.complete({ messages: [{ role: "user", content: "test" }], tools: [] }, { onReasoningDelta: (delta) => reasoning.push(delta) }),
-    /No model stream activity/,
-  )
-  assert.deepEqual(reasoning, ["working"])
-  assert.equal(requests, 1, "replaying after partial output could duplicate tool calls")
+  const retries: Array<{ attempt: number; delayMs: number; message: string | undefined }> = []
+  const result = await model.complete({ messages: [{ role: "user", content: "test" }], tools: [] }, {
+    onRetry: (attempt, delayMs, message) => retries.push({ attempt, delayMs, message }),
+  })
+  assert.equal(result.content, "recovered")
+  assert.equal(requests, 2)
+  assert.deepEqual(retries.map((retry) => retry.attempt), [1])
+  assert.match(retries[0]?.message ?? "", /No model stream activity/)
 })
 
 test("model request times out while waiting for response headers", async (context) => {
