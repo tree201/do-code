@@ -13,14 +13,15 @@ do-code 遇到 Agent、会话、Checkpoint、上下文或配置异常时，会�
 /bug 没有运行测试就声称已经通过
 ```
 
-这会主动冻结当前 Bad Case 并生成相同格式的 ID。之后只需把 ID 提供给 Codex，即可在本机运行：
+这会主动冻结当前 Bad Case 并生成相同格式的 ID。之后可按 ID 调查，或在每日集中处理时查看全局队列：
 
 ```bash
 do-code errors show err_20260806_ab12cd34
 do-code errors list
+do-code errors list --today
 ```
 
-日志默认保存在 `~/.local/state/do-code/errors/<error-id>.json`，权限为当前用户可读写；如果全局目录不可写，会回退到当前项目的 `.do-code/errors/`。
+日志默认保存在 `~/.local/share/do-code/errors/<error-id>.json`，权限为当前用户可读写。每条记录保留工作区和会话 ID，因此 `do-code errors list` 可跨项目按时间聚合；`--today` 只显示当天报告。旧版按项目存储的报告也会继续出现在全局列表中。
 
 ## 日志内容
 
