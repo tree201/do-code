@@ -13,6 +13,10 @@ export const EXIT_PLAN_MODE_TOOL = "exit_plan_mode"
 export const ASK_USER_TOOL = "ask_user"
 export const TODO_WRITE_TOOL = "todo_write"
 export const TODO_READ_TOOL = "todo_read"
+export const MEMORY_LIST_TOOL = "memory_list"
+export const MEMORY_READ_TOOL = "memory_read"
+export const MEMORY_WRITE_TOOL = "memory_write"
+export const MEMORY_DELETE_TOOL = "memory_delete"
 export const APPLY_PATCH_TOOL = "apply_patch"
 export const SHELL_TOOL = "shell"
 export const SHELL_START_TOOL = "shell_start"
@@ -41,6 +45,10 @@ export const TOOL_NAMES = {
   ASK_USER: ASK_USER_TOOL,
   TODO_WRITE: TODO_WRITE_TOOL,
   TODO_READ: TODO_READ_TOOL,
+  MEMORY_LIST: MEMORY_LIST_TOOL,
+  MEMORY_READ: MEMORY_READ_TOOL,
+  MEMORY_WRITE: MEMORY_WRITE_TOOL,
+  MEMORY_DELETE: MEMORY_DELETE_TOOL,
   APPLY_PATCH: APPLY_PATCH_TOOL,
   SHELL: SHELL_TOOL,
   SHELL_START: SHELL_START_TOOL,

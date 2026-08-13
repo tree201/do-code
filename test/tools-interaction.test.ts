@@ -17,6 +17,30 @@ test("ask_user and todo tools expose structured interaction state", async () => 
   assert.match(read.output, /Implement/)
 })
 
+test("durable memory tools maintain scoped Markdown records and indexes", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-memory-tools-"))
+  const previous = process.env.DO_CODE_DATA_DIR
+  process.env.DO_CODE_DATA_DIR = await mkdtemp(path.join(os.tmpdir(), "do-code-memory-data-"))
+  try {
+    const context = { workspace, approveShell: async () => false }
+    const written = await executeTool("memory_write", {
+      scope: "user", type: "feedback", name: "design-first", description: "Discuss design before implementation.",
+      content: "Discuss design before implementation.\n\n**Why:** It avoids speculative work.\n\n**How to apply:** Present options before editing.",
+    }, context)
+    assert.equal(written.ok, true)
+    const listed = await executeTool("memory_list", {}, context)
+    assert.match(listed.output, /user\/feedback\/design-first/)
+    const read = await executeTool("memory_read", { scope: "user", path: "feedback/design-first" }, context)
+    assert.match(read.output, /Present options before editing/)
+    const removed = await executeTool("memory_delete", { scope: "user", path: "feedback/design-first" }, context)
+    assert.equal(removed.ok, true)
+    assert.equal((await executeTool("memory_list", {}, context)).output, "No durable memories")
+  } finally {
+    if (previous === undefined) delete process.env.DO_CODE_DATA_DIR
+    else process.env.DO_CODE_DATA_DIR = previous
+  }
+})
+
 test("delegate task receives the active turn signal", async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-delegate-signal-"))
   const controller = new AbortController()

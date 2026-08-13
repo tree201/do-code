@@ -5,6 +5,7 @@ import { CheckpointManager } from "./checkpoints.js"
 import { BackgroundProcessManager } from "./background-processes.js"
 import { buildCompactionPrompt, continuationState, rollingCompactionSource } from "./context-compaction.js"
 import { estimateMessages, initialAgentMessages } from "./agent-context.js"
+import { relevantDurableMemoryPrompt } from "./durable-memory.js"
 import { runAgentTurn } from "./agent-turn.js"
 
 export type { AgentEvent } from "./protocol.js"
@@ -54,6 +55,7 @@ export class AgentConversation {
   private compacting = false
   private readonly processManager: BackgroundProcessController
   private todos: TodoItem[] = []
+  private relevantMemories = ""
 
   constructor(private readonly options: AgentOptions) {
     this.memory = options.instructionMemory ?? new InstructionMemory(options.workspace)
@@ -62,8 +64,8 @@ export class AgentConversation {
     this.processManager = options.processManager ?? new BackgroundProcessManager()
   }
 
-  private async refreshSystemMessage() {
-    const initial = await initialAgentMessages(this.options, this.memory)
+  private async refreshSystemMessage(relevantMemories?: string) {
+    const initial = await initialAgentMessages(this.options, this.memory, relevantMemories)
     const first = initial[0]!
     if (first.role !== "system") throw new Error("Initial agent context must start with a system message")
     const content = first.content
@@ -75,13 +77,14 @@ export class AgentConversation {
   }
 
   async run(task: string, options: AgentTurnOptions = {}) {
-    if (!this.messages) this.messages = await initialAgentMessages(this.options, this.memory)
-    else await this.refreshSystemMessage()
+    this.relevantMemories = await relevantDurableMemoryPrompt(this.options.workspace, task)
+    if (!this.messages) this.messages = await initialAgentMessages(this.options, this.memory, this.relevantMemories)
+    else await this.refreshSystemMessage(this.relevantMemories)
     return await runAgentTurn(task, this.messages, {
       ...this.options,
       onPathAccess: async (requestedPath) => {
         const added = await this.memory.discover(requestedPath)
-        if (added.length > 0) await this.refreshSystemMessage()
+        if (added.length > 0) await this.refreshSystemMessage(this.relevantMemories)
         await this.options.onPathAccess?.(requestedPath)
       },
       beforeFileWrite: async (tool, requestedPath) => {
@@ -100,7 +103,7 @@ export class AgentConversation {
         this.options.onModelUsage?.(usage)
       },
       beforeModelRequest: async (messages) => {
-        await this.refreshSystemMessage()
+        await this.refreshSystemMessage(this.relevantMemories)
         this.usage.currentContextTokens = estimateMessages(messages)
         if (!this.compacting && this.usage.currentContextTokens >= this.usage.contextWindow * 0.8 && messages.length > 8) await this.compact()
         await this.options.beforeModelRequest?.(messages)

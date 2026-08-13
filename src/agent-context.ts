@@ -1,6 +1,7 @@
 import type { Message } from "./protocol.js"
 import type { InstructionMemory } from "./instructions.js"
 import { readTaskNote } from "./task-note.js"
+import { durableMemoryPrompt } from "./durable-memory.js"
 
 const estimatedCharacters = new WeakMap<Message, number>()
 
@@ -19,7 +20,7 @@ export type AgentContextOptions = {
   publishPlan?: unknown
 }
 
-export function buildSystemPrompt(workspace: string, projectInstructions: string, profileInstructions = "", planningEnabled = false, taskNote?: string) {
+export function buildSystemPrompt(workspace: string, projectInstructions: string, profileInstructions = "", planningEnabled = false, taskNote?: string, durableMemories?: string, relevantMemories?: string) {
   return [
     "You are a coding agent working directly in a software repository.",
     `Workspace: ${workspace}`,
@@ -30,17 +31,19 @@ export function buildSystemPrompt(workspace: string, projectInstructions: string
     "Never return an empty response. After thinking, either call a tool or provide a final user-facing answer.",
     planningEnabled ? "The user controls Plan mode with Shift+Tab. Do not enter or leave Plan mode yourself." : "",
     taskNote ? `Current TASK.md working note:\n\n${taskNote}\n\nUse this as the current task state. Confirm facts against the workspace before acting.` : "",
+    durableMemories,
     profileInstructions ? "Follow the active agent profile instructions below." : "",
     profileInstructions,
     projectInstructions ? "Follow the loaded hierarchical instructions below. More specific project or subdirectory instructions override broader project instructions; project instructions override global preferences when they conflict." : "",
     projectInstructions,
+    relevantMemories,
   ]
     .filter(Boolean)
     .join("\n\n")
 }
 
-export async function initialAgentMessages(options: AgentContextOptions, memory: InstructionMemory): Promise<Message[]> {
-  const taskNote = await readTaskNote(options.workspace)
+export async function initialAgentMessages(options: AgentContextOptions, memory: InstructionMemory, relevantMemories?: string): Promise<Message[]> {
+  const [taskNote, durableMemories] = await Promise.all([readTaskNote(options.workspace), durableMemoryPrompt(options.workspace)])
   return [{
     role: "system",
     content: buildSystemPrompt(
@@ -49,6 +52,8 @@ export async function initialAgentMessages(options: AgentContextOptions, memory:
       options.profileInstructions,
       Boolean(options.enterPlanMode && options.publishPlan),
       taskNote,
+      durableMemories,
+      relevantMemories,
     ),
   }]
 }

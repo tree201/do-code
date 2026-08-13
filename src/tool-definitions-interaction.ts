@@ -2,6 +2,72 @@ import type { PlanProposal, TodoStatus, ToolImplementation } from "./tool-contra
 import { optionalStringArray, stringArray, toolSchema } from "./tool-definition-helpers.js"
 import { text } from "./tool-input.js"
 import { TOOL_NAMES } from "./tool-names.js"
+import { deleteDurableMemory, listDurableMemories, readDurableMemory, writeDurableMemory, type MemoryScope, type MemoryType } from "./durable-memory.js"
+
+function memoryScope(value: unknown): MemoryScope {
+  if (value === "user" || value === "project") return value
+  throw new Error("scope must be user or project")
+}
+
+function memoryType(value: unknown): MemoryType {
+  if (value === "user" || value === "feedback" || value === "project" || value === "reference") return value
+  throw new Error("type must be user, feedback, project, or reference")
+}
+
+const memoryListTool: ToolImplementation = {
+  definition: { type: "function", function: {
+    name: TOOL_NAMES.MEMORY_LIST,
+    description: "List durable user and project memories. Use this when the user asks what is remembered or before reading a specific memory.",
+    parameters: toolSchema({ scope: { type: "string", enum: ["user", "project"] } }, []),
+  } },
+  async execute(args, context) {
+    const scope = (args as Record<string, unknown>).scope
+    const memories = await listDurableMemories(context.workspace, scope === undefined ? undefined : memoryScope(scope))
+    return { ok: true, output: memories.length ? memories.map((memory) => `${memory.scope}/${memory.path} — ${memory.name}`).join("\n") : "No durable memories" }
+  },
+}
+
+const memoryReadTool: ToolImplementation = {
+  definition: { type: "function", function: {
+    name: TOOL_NAMES.MEMORY_READ,
+    description: "Read a named durable memory. Use details from a memory only after reading it, and verify any current repository claims separately.",
+    parameters: toolSchema({ scope: { type: "string", enum: ["user", "project"] }, path: { type: "string" } }, ["scope", "path"]),
+  } },
+  async execute(args, context) {
+    const scope = memoryScope((args as Record<string, unknown>).scope)
+    const memory = await readDurableMemory(context.workspace, scope, text(args, "path"))
+    return { ok: true, output: memory.content }
+  },
+}
+
+const memoryWriteTool: ToolImplementation = {
+  definition: { type: "function", function: {
+    name: TOOL_NAMES.MEMORY_WRITE,
+    description: "Save or update one durable memory when the conversation reveals a lasting user preference, user background, project context, or external reference. Use user scope for cross-project user facts and preferences; use project scope for current-project context. Do not save code structure, transient task state, test logs, secrets, or speculation.",
+    parameters: toolSchema({ scope: { type: "string", enum: ["user", "project"] }, type: { type: "string", enum: ["user", "feedback", "project", "reference"] }, name: { type: "string" }, description: { type: "string" }, content: { type: "string" } }, ["scope", "type", "name", "description", "content"]),
+  } },
+  async execute(args, context) {
+    const scope = memoryScope((args as Record<string, unknown>).scope)
+    const type = memoryType((args as Record<string, unknown>).type)
+    const name = text(args, "name")
+    await writeDurableMemory(context.workspace, { scope, type, name, description: text(args, "description"), content: text(args, "content") })
+    return { ok: true, output: `Saved durable memory: ${scope}/${type}/${name}` }
+  },
+}
+
+const memoryDeleteTool: ToolImplementation = {
+  definition: { type: "function", function: {
+    name: TOOL_NAMES.MEMORY_DELETE,
+    description: "Delete a durable memory only when the user explicitly asks to forget it.",
+    parameters: toolSchema({ scope: { type: "string", enum: ["user", "project"] }, path: { type: "string" } }, ["scope", "path"]),
+  } },
+  async execute(args, context) {
+    const scope = memoryScope((args as Record<string, unknown>).scope)
+    const memoryPath = text(args, "path")
+    await deleteDurableMemory(context.workspace, scope, memoryPath)
+    return { ok: true, output: `Deleted durable memory: ${scope}/${memoryPath}` }
+  },
+}
 
 export const delegateTaskTool: ToolImplementation = {
   definition: { type: "function", function: {
@@ -113,4 +179,4 @@ const todoReadTool: ToolImplementation = {
   },
 }
 
-export const interactionTools = [enterPlanModeTool, exitPlanModeTool, askUserTool, todoWriteTool, todoReadTool] satisfies ToolImplementation[]
+export const interactionTools = [memoryListTool, memoryReadTool, memoryWriteTool, memoryDeleteTool, enterPlanModeTool, exitPlanModeTool, askUserTool, todoWriteTool, todoReadTool] satisfies ToolImplementation[]
