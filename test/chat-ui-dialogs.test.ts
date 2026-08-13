@@ -8,7 +8,7 @@ import type { ChatModel } from "../src/protocol.js"
 import { ApprovalBridge, ApprovalDialog, askAnswerPairs, ChatApp, PermissionModeDialog, PlanPublisherBridge, QuestionBridge, QuestionDialog, TranscriptLine, planMarkdown, type ChatAppProps } from "../src/ui/chat-app.js"
 import { DialogManager, DialogSurface } from "../src/ui/components/dialog-manager.js"
 import { displayWidth } from "../src/ui/terminal-text.js"
-import { tick, visibleFrame } from "./support/chat-ui.js"
+import { tick, visibleFrame, waitForFrame } from "./support/chat-ui.js"
 
 test("transient dialogs share one responsive control surface", (t) => {
   const width = 34
@@ -159,7 +159,7 @@ test("published plans enter scrollback without opening a review dialog", async (
     steps: Array.from({ length: 30 }, (_, index) => `步骤 ${index + 1}`),
     files: [], verification: ["npm test"], risks: [],
   })
-  await tick()
+  await waitForFrame(view, /建议计划/)
   const frame = visibleFrame(view)
   assert.match(frame, /步骤 30/)
   assert.doesNotMatch(frame, /Proposed Plan/)

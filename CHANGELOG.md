@@ -6,6 +6,12 @@ All notable changes to do-code are documented here. The project follows [Semanti
 
 - Improve public documentation and release automation.
 
+## 0.3.6 — 2026-08-14
+
+- Keep recent coding work intact during context compaction with a rolling summary and a bounded queue of complete task turns.
+- Reduce compaction requests by compacting older turns in batches and returning the active context to a lower watermark.
+- Let long-running work use an optional `TASK.md` note for the current goal, progress, evidence, blockers, and next step; refresh it before each model request.
+
 ## 0.3.5 — 2026-08-12
 
 - Keep queued prompts with the composer so they stay visible and can be recalled while another task runs.

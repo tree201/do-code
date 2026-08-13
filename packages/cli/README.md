@@ -39,7 +39,9 @@ Queued prompts stay directly above the composer and can be recalled with `↑`.
 Large pasted text folds into a compact preview instead of displacing the input.
 Long inline code, URLs, unspaced CJK text, and emoji wrap safely for terminal
 display width. Each session also remembers its approval mode; use `Ctrl+G` to
-change it while working.
+change it while working. Context compaction keeps a rolling summary plus recent
+complete task turns, and long-running work can use an optional `TASK.md` note
+for the current goal, progress, evidence, blockers, and next step.
 
 ## Safe automation
 

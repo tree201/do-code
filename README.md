@@ -73,6 +73,8 @@ Use `/thinking` and `/effort` to tune reasoning during a session; add `--persist
 - **Handle large paste safely** — long pasted text folds into a compact preview in the composer instead of pushing the input surface away.
 - **Read terminal Markdown reliably** — long inline code, URLs, unspaced CJK text, and emoji wrap by terminal display width without losing content.
 - **Keep approval intent with the work** — each session remembers its approval mode; use the left-hand `Ctrl+G` shortcut to change it while working.
+- **Keep long tasks focused** — compaction retains a rolling summary plus recent complete task turns, so the active work stays in context while older work is summarized in batches.
+- **Resume from a short working note** — when a task needs durable progress across steps, use an optional `TASK.md` with the goal, progress, evidence, blockers, and next step.
 
 ## Run it your way
 
@@ -96,7 +98,7 @@ do-code sessions delete <session-id>
 do-code sessions export <session-id> md ./session.md
 ```
 
-Use `/stats` to inspect context use and `/compact` to compact it on demand. Near the context limit, do-code compacts automatically while retaining important paths, commands, decisions, and verification state.
+Use `/stats` to inspect context use and `/compact` to compact it on demand. Near the context limit, do-code summarizes older complete turns in batches while retaining a rolling summary and the recent complete task queue. For work that needs a durable handoff, keep a short root `TASK.md`; do-code refreshes it before each model request.
 
 ### Project instructions and isolation
 

@@ -73,6 +73,8 @@ Usa `/thinking` y `/effort` para ajustar el razonamiento durante una sesión; a�
 - **Gestiona pegados grandes con seguridad** — el texto pegado muy largo se pliega en una vista previa compacta dentro del compositor sin desplazar la zona de entrada.
 - **Lee Markdown de terminal de forma fiable** — el código en línea largo, las URL, el texto CJK sin espacios y los emoji se ajustan al ancho visible del terminal sin perder contenido.
 - **Conserva la preferencia de aprobación con el trabajo** — cada sesión recuerda su modo de aprobación; usa el atajo para la mano izquierda `Ctrl+G` para cambiarlo mientras trabajas.
+- **Mantén el foco en tareas largas** — la compactación conserva un resumen continuo y los turnos completos recientes, mientras resume el trabajo anterior por lotes.
+- **Reanuda desde una nota breve** — cuando una tarea necesita progreso persistente entre pasos, usa un `TASK.md` opcional con el objetivo, progreso, evidencia, bloqueos y siguiente paso.
 
 ## Ejecútalo a tu manera
 
@@ -96,7 +98,7 @@ do-code sessions delete <session-id>
 do-code sessions export <session-id> md ./session.md
 ```
 
-Usa `/stats` para inspeccionar el uso de contexto y `/compact` para compactarlo cuando lo necesites. Cerca del límite de contexto, do-code compacta automáticamente mientras conserva rutas, comandos, decisiones y estado de verificación importantes.
+Usa `/stats` para inspeccionar el uso de contexto y `/compact` para compactarlo cuando lo necesites. Cerca del límite, do-code resume en lotes los turnos completos anteriores y conserva un resumen continuo con la cola de tareas completas recientes. Para un relevo persistente, mantén un `TASK.md` breve en la raíz; se actualiza antes de cada solicitud al modelo.
 
 ### Instrucciones del proyecto y aislamiento
 
