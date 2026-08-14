@@ -70,7 +70,7 @@ async function main() {
 
   const text = await readFile(changelog, "utf8")
   const updated = text.replace(
-    /^## Unreleased\n\n((?:- .+\n)+)/,
+    /^## Unreleased\n\n((?:- .+\n)+)/m,
     `## Unreleased\n\n## ${next} - ${date}\n\n$1`,
   )
   if (updated === text) die("could not find Unreleased section with entries in CHANGELOG.md")
