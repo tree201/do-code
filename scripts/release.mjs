@@ -5,6 +5,7 @@ import { execSync } from "node:child_process"
 const projectRoot = path.resolve(import.meta.dirname, "..")
 const rootPkg = path.join(projectRoot, "package.json")
 const cliPkg = path.join(projectRoot, "packages", "cli", "package.json")
+const versionFile = path.join(projectRoot, "src", "version.ts")
 const changelog = path.join(projectRoot, "CHANGELOG.md")
 
 function die(message) {
@@ -64,6 +65,7 @@ async function main() {
   cli.version = next
   cli.dependencies["@tree201/markdansi"] = root.dependencies["@tree201/markdansi"]
   await writeJson(cliPkg, cli)
+  await writeFile(versionFile, `export const DO_CODE_VERSION = "${next}"\n`)
   runNpm("install --package-lock-only --ignore-scripts")
 
   const text = await readFile(changelog, "utf8")
@@ -74,7 +76,7 @@ async function main() {
   if (updated === text) die("could not find Unreleased section with entries in CHANGELOG.md")
   await writeFile(changelog, updated)
 
-  runGit(`add ${path.relative(projectRoot, rootPkg)} ${path.relative(projectRoot, cliPkg)} ${path.relative(projectRoot, changelog)}`)
+  runGit(`add ${path.relative(projectRoot, rootPkg)} ${path.relative(projectRoot, cliPkg)} ${path.relative(projectRoot, versionFile)} package-lock.json ${path.relative(projectRoot, changelog)}`)
   runGit(`commit -m "release: v${next}"`)
   runGit(`tag v${next}`)
   runGit(`push origin main`)
