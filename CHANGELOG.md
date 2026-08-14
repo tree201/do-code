@@ -4,6 +4,7 @@ All notable changes to do-code are documented here. The project follows [Semanti
 
 ## Unreleased
 
+- Move the task note from the workspace root to do-code's managed project data directory so it no longer pollutes the repository. Legacy `TASK.md` files are migrated automatically on first read.
 - Improve public documentation and release automation.
 
 ## 0.3.6 — 2026-08-14

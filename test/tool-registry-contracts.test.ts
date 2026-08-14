@@ -17,6 +17,7 @@ const BUILT_IN_TOOL_ORDER = [
   "memory_read",
   "memory_write",
   "memory_delete",
+  "write_task_note",
   "enter_plan_mode",
   "exit_plan_mode",
   "ask_user",

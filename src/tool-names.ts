@@ -17,6 +17,7 @@ export const MEMORY_LIST_TOOL = "memory_list"
 export const MEMORY_READ_TOOL = "memory_read"
 export const MEMORY_WRITE_TOOL = "memory_write"
 export const MEMORY_DELETE_TOOL = "memory_delete"
+export const WRITE_TASK_NOTE_TOOL = "write_task_note"
 export const APPLY_PATCH_TOOL = "apply_patch"
 export const SHELL_TOOL = "shell"
 export const SHELL_START_TOOL = "shell_start"
@@ -49,6 +50,7 @@ export const TOOL_NAMES = {
   MEMORY_READ: MEMORY_READ_TOOL,
   MEMORY_WRITE: MEMORY_WRITE_TOOL,
   MEMORY_DELETE: MEMORY_DELETE_TOOL,
+  WRITE_TASK_NOTE: WRITE_TASK_NOTE_TOOL,
   APPLY_PATCH: APPLY_PATCH_TOOL,
   SHELL: SHELL_TOOL,
   SHELL_START: SHELL_START_TOOL,

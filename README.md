@@ -74,7 +74,7 @@ Use `/thinking` and `/effort` to tune reasoning during a session; add `--persist
 - **Read terminal Markdown reliably** — long inline code, URLs, unspaced CJK text, and emoji wrap by terminal display width without losing content.
 - **Keep approval intent with the work** — each session remembers its approval mode; use the left-hand `Ctrl+G` shortcut to change it while working.
 - **Keep long tasks focused** — compaction retains a rolling summary plus recent complete task turns, so the active work stays in context while older work is summarized in batches.
-- **Resume from a short working note** — when a task needs durable progress across steps, use an optional `TASK.md` with the goal, progress, evidence, blockers, and next step.
+- **Resume from a short working note** - when a task needs durable progress across steps, the agent maintains a task note with the goal, progress, evidence, blockers, and next step, stored outside the workspace.
 
 ## Run it your way
 
@@ -98,7 +98,7 @@ do-code sessions delete <session-id>
 do-code sessions export <session-id> md ./session.md
 ```
 
-Use `/stats` to inspect context use and `/compact` to compact it on demand. Near the context limit, do-code summarizes older complete turns in batches while retaining a rolling summary and the recent complete task queue. For work that needs a durable handoff, keep a short root `TASK.md`; do-code refreshes it before each model request.
+Use `/stats` to inspect context use and `/compact` to compact it on demand. Near the context limit, do-code summarizes older complete turns in batches while retaining a rolling summary and the recent complete task queue. For work that needs a durable handoff, the agent can maintain a short task note; do-code refreshes it before each model request.
 
 ### Project instructions and isolation
 

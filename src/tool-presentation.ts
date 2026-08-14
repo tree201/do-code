@@ -95,7 +95,7 @@ export function presentationKindForTool(name: string): ToolPresentationKind {
   if (name === "shell") return "command"
   if (["shell_start", "shell_pty_start", "shell_status", "shell_send", "shell_resize", "shell_stop"].includes(name)) return "background-command"
   if (["web_search", "web_fetch"].includes(name)) return "web"
-  if (["todo_write", "todo_read", "enter_plan_mode", "exit_plan_mode"].includes(name)) return "plan"
+  if (["todo_write", "todo_read", "write_task_note", "enter_plan_mode", "exit_plan_mode"].includes(name)) return "plan"
   if (name === "delegate_task") return "delegate"
   if (name === "ask_user") return "interaction"
   return "generic"
