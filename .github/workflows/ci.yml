@@ -38,7 +38,8 @@ jobs:
         run: |
           mkdir -p .release-check
           npm pack ./packages/cli --pack-destination .release-check
-          npm install --global --prefix "$RUNNER_TEMP/do-code-global" .release-check/do-code-*.tgz
+          tarball=$(printf '%s\n' .release-check/*.tgz)
+          npm install --global --prefix "$RUNNER_TEMP/do-code-global" "$tarball"
           "$RUNNER_TEMP/do-code-global/bin/do-code" --help
           MODEL_API_KEY=ci MODEL_BASE_URL=http://127.0.0.1:9/v1 MODEL_ID=ci \
             "$RUNNER_TEMP/do-code-global/bin/do-code" doctor
