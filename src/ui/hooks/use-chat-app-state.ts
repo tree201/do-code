@@ -46,6 +46,9 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
   const [workspaceFiles, setWorkspaceFiles] = useState<string[]>([])
   const [memoryCount, setMemoryCount] = useState(0)
   const [contextPercent, setContextPercent] = useState(0)
+  const [followupSuggestion, setFollowupSuggestion] = useState<string | null>(null)
+  const followupAbort = useRef<AbortController | null>(null)
+  const clearFollowupSuggestion = () => { followupAbort.current?.abort(); followupAbort.current = null; setFollowupSuggestion(null) }
   const dialogInputHandlers = useRef<{ auth?: DialogInputHandler | undefined; model?: DialogInputHandler | undefined; effort?: DialogInputHandler | undefined }>({})
   const activeModel = runtime.modelConfig.preset
   const activeModelPresets = runtime.modelPresets
@@ -101,7 +104,7 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
     pendingToolGroup, liveAssistant, transcriptOwner, activeDialog, setActiveDialog, getActiveDialog,
     history, setHistory, historyIndex, setHistoryIndex, historyDraft, setHistoryDraft, workspaceFiles, setWorkspaceFiles, completionIndex, setCompletionIndex,
     sessionPickerItems, sessionPickerIndex, sessionPickerQuery, memoryCount, setMemoryCount,
-    contextPercent, setContextPercent, dialogInputHandlers, queuedInputs, setQueuedInputs, activeModel, activeModelPresets, inlineNodes,
+    contextPercent, setContextPercent, followupSuggestion, setFollowupSuggestion, followupAbort, clearFollowupSuggestion, dialogInputHandlers, queuedInputs, setQueuedInputs, activeModel, activeModelPresets, inlineNodes,
     updateInlineNodes, activeEffort, activeDefaultEffort,
     activeThinkingMode, activeLanguage, activeApprovalMode, activePlanMode, viewerItems,
     viewerOffset, externalViewportActiveRef, exitConfirmation, armExitConfirmation, clearExitConfirmation,

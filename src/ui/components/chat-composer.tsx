@@ -46,7 +46,7 @@ export function composerInputContent(value: string, cursor: number, nodes: Compo
 
 function ComposerInput({ state }: { state: ChatAppState }) {
   return <Text>{composerInputContent(state.editor.value, state.editor.cursor, state.inlineNodes)}
-    {!state.editor.value ? <Text dimColor> {t(state.activeLanguage, state.running ? "Current task is running; press Enter to queue a message" : "Enter a task or @file path")}</Text> : null}
+    {!state.editor.value ? <Text dimColor> {state.followupSuggestion ?? t(state.activeLanguage, state.running ? "Current task is running; press Enter to queue a message" : "Enter a task or @file path")}</Text> : null}
   </Text>
 }
 

@@ -29,6 +29,8 @@ export function mergeConfig(base: StoredConfig, overlay: StoredConfig): StoredCo
     ...(overlay.defaultReasoningEffort ? { defaultReasoningEffort: overlay.defaultReasoningEffort } : {}),
     ...(base.defaultThinkingMode ? { defaultThinkingMode: base.defaultThinkingMode } : {}),
     ...(overlay.defaultThinkingMode ? { defaultThinkingMode: overlay.defaultThinkingMode } : {}),
+    ...(base.followupSuggestions !== undefined ? { followupSuggestions: base.followupSuggestions } : {}),
+    ...(overlay.followupSuggestions !== undefined ? { followupSuggestions: overlay.followupSuggestions } : {}),
     ...(base.language ? { language: base.language } : {}),
     ...(overlay.language ? { language: overlay.language } : {}),
     agents: { ...base.agents, ...overlay.agents },

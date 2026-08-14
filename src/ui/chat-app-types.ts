@@ -56,4 +56,6 @@ export type ChatAppProps = {
   forwardViewportInput?: (input: string, key: ViewportInputKey) => void
   renderRevision?: number
   runtimeStore?: RuntimeStore
+  followupSuggestions?: boolean
+  generateFollowupSuggestion?: (signal: AbortSignal) => Promise<string | null>
 }

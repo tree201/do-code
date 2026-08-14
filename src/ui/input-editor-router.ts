@@ -28,16 +28,19 @@ function clearDraft(state: ChatAppState) {
 
 export function routeEditorInput(rawInput: string, input: string, key: ChatInputKey, props: ChatAppProps, state: ChatAppState, transcript: TranscriptController, attachments: AttachmentActions, submit: (input: string) => void, exit: () => void) {
   const composer = state.composerOwner.getSnapshot()
+  const dismissFollowup = () => state.clearFollowupSuggestion()
   const pasteStart = /^(?:\u001b)?\[200~/
   const isBracketedPaste = Boolean(key.paste) || pasteStart.test(rawInput) || pasteStart.test(input)
   const isClipboardImageShortcut = (key.ctrl || key.meta) && input.toLowerCase() === "v"
   if (isBracketedPaste) {
+    dismissFollowup()
     state.composerOwner.markPaste()
     const pasted = input.replace(pasteStart, "").replace(/(?:\u001b)?\[201~$/, "")
     if (pasted && !attachments.attachPastedImagePaths(pasted)) attachments.insertPastedText(pasted)
     return
   }
   if (isClipboardImageShortcut) {
+    dismissFollowup()
     state.composerOwner.markPaste()
     void attachments.attachClipboardImage().catch(() => {})
     return
@@ -58,6 +61,8 @@ export function routeEditorInput(rawInput: string, input: string, key: ChatInput
   if (composer.exitConfirmation) state.clearExitConfirmation()
   if (key.ctrl && input === "d") { if (!composer.editor.value) exit(); else state.setEditor((current) => deleteEditor(current)); return }
   if ((key.ctrl && (key.return || input === "j")) || (key.meta && key.return)) { state.setEditor((current) => insertEditorText(current, "\n")); return }
+  const completionItems = completionsForEditor(composer.editor, state.workspaceFiles, state.customCompletions, state.argumentCompletions, state.activeLanguage)?.items ?? []
+  if (!composer.editor.value && !completionItems.length && state.followupSuggestion && (key.tab || key.rightArrow)) { state.setEditor((current) => insertEditorText(current, state.followupSuggestion!)); dismissFollowup(); return }
   if (!key.ctrl && !key.meta && input.includes("\t")) {
     const tabIndex = input.indexOf("\t")
     let next = insertEditorText(composer.editor, input.slice(0, tabIndex))
@@ -71,7 +76,6 @@ export function routeEditorInput(rawInput: string, input: string, key: ChatInput
   }
   const isPlainReturn = !key.ctrl && !key.meta && (key.return || /^(?:\r\n|\r|\n)$/.test(input))
   if (isPlainReturn && state.composerOwner.pastedRecently()) return
-  const completionItems = completionsForEditor(composer.editor, state.workspaceFiles, state.customCompletions, state.argumentCompletions, state.activeLanguage)?.items ?? []
   if (isPlainReturn && completionItems.length) {
     const index = composer.completionIndex
     const selected = completionItems[((index % completionItems.length) + completionItems.length) % completionItems.length]
@@ -83,8 +87,8 @@ export function routeEditorInput(rawInput: string, input: string, key: ChatInput
   }
   const newlineMatches = input.match(/\r\n|\r|\n/g)
   if (!key.ctrl && !key.meta && newlineMatches?.length === 1 && /(?:\r\n|\r|\n)$/.test(input)) { submit(insertEditorText(composer.editor, input.replace(/(?:\r\n|\r|\n)$/, "")).value); return }
-  if (key.return) { submit(composer.editor.value); return }
-  if (key.tab && completionItems.length) { state.setEditor((current) => applyCompletion(current, state.workspaceFiles, composer.completionIndex, state.customCompletions, state.argumentCompletions, state.activeLanguage)); return }
+  if (key.return) { dismissFollowup(); submit(composer.editor.value); return }
+  if (key.tab && completionItems.length) { dismissFollowup(); state.setEditor((current) => applyCompletion(current, state.workspaceFiles, composer.completionIndex, state.customCompletions, state.argumentCompletions, state.activeLanguage)); return }
   if (key.leftArrow) { state.setEditor((current) => moveEditorCursor(current, -1)); return }
   if (key.rightArrow) { state.setEditor((current) => moveEditorCursor(current, 1)); return }
   if (key.home || (key.ctrl && input === "a")) { state.setEditor((current) => moveEditorHome(current)); return }
@@ -106,5 +110,5 @@ export function routeEditorInput(rawInput: string, input: string, key: ChatInput
   if (key.downArrow && composer.editor.value.includes("\n")) { const moved = moveEditorVertical(composer.editor, 1); if (moved.cursor !== composer.editor.cursor) { state.setEditor(moved); return } }
   if (key.upArrow && composer.history.length) { const index = composer.historyIndex === null ? composer.history.length - 1 : Math.max(0, composer.historyIndex - 1); if (composer.historyIndex === null) state.setHistoryDraft(currentDraft(state)); state.setHistoryIndex(index); restoreDraft(state, composer.history[index] ?? { value: "", nodes: [] }); return }
   if (key.downArrow && composer.historyIndex !== null) { const index = composer.historyIndex + 1; if (index >= composer.history.length) { state.setHistoryIndex(null); restoreDraft(state, composer.historyDraft) } else { state.setHistoryIndex(index); restoreDraft(state, composer.history[index] ?? { value: "", nodes: [] }) }; return }
-  if (!key.ctrl && !key.meta && !key.super && input) state.setEditor((current) => insertEditorText(current, input))
+  if (!key.ctrl && !key.meta && !key.super && input) { dismissFollowup(); state.setEditor((current) => insertEditorText(current, input)) }
 }

@@ -65,6 +65,11 @@ test("model preference normalization selects supported fallback levels", () => {
   assert.equal(effectiveThinkingMode("on", ["auto", "off"]), "auto")
 })
 
+test("follow-up suggestion setting accepts only booleans", () => {
+  assert.equal(migrateConfig({ followupSuggestions: false }).followupSuggestions, false)
+  assert.throws(() => migrateConfig({ followupSuggestions: "no" }), /followupSuggestions must be a boolean/)
+})
+
 test("provider migration normalizes model entries and ignores removed credential metadata", () => {
   const config = migrateConfig({
     version: 2,
