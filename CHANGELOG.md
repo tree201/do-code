@@ -4,8 +4,16 @@ All notable changes to do-code are documented here. The project follows [Semanti
 
 ## Unreleased
 
-- Move the task note from the workspace root to do-code's managed project data directory so it no longer pollutes the repository. Legacy `TASK.md` files are migrated automatically on first read.
 - Improve public documentation and release automation.
+
+## 0.3.7 - 2026-08-14
+
+- Add managed durable memory for cross-project user and per-project knowledge.
+- Suggest follow-up prompts after each assistant response.
+- Expand markdown table columns to use available terminal width before truncating.
+- Preserve history navigation when a recalled slash command triggers completion.
+- Move the task note from the workspace root to do-code's managed project data directory so it no longer pollutes the repository. Legacy `TASK.md` files are migrated automatically on first read.
+- Highlight historical image labels correctly.
 
 ## 0.3.6 — 2026-08-14
 
