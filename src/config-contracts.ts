@@ -71,6 +71,7 @@ export type StoredConfig = {
   env?: Record<string, string>
   defaultReasoningEffort?: ReasoningEffort
   defaultThinkingMode?: ThinkingMode
+  followupSuggestions?: boolean
   hooks?: Partial<Record<HookEvent, string[]>>
   mcpServers?: Record<string, McpServerConfig>
   sandbox?: { type?: "local" | "container" | "seatbelt"; image?: string; network?: SandboxNetworkMode }

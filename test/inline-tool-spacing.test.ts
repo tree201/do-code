@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
-import { mkdtemp } from "node:fs/promises"
+import { mkdtemp, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
@@ -34,10 +34,12 @@ test("real inline CLI separates frozen assistant text from later tool activity",
   const address = server.address()
   assert.ok(address && typeof address === "object")
   const workspace = await mkdtemp(path.join(os.tmpdir(), "do-code-tool-spacing-pty-"))
+  const config = path.join(workspace, "do-code.json")
+  await writeFile(config, JSON.stringify({ version: 2, followupSuggestions: false }))
   const terminal = new HeadlessXterm.Terminal({ cols: 100, rows: 28, scrollback: 500, allowProposedApi: true })
   const child = pty.spawn(process.execPath, ["--import", "tsx", "src/cli.ts", "-y", "-C", workspace], {
     cwd: path.resolve("."), cols: 100, rows: 28, name: "xterm-256color",
-    env: { ...process.env, TERM: "xterm-256color", MODEL_API_KEY: "test", MODEL_BASE_URL: `http://127.0.0.1:${address.port}/v1`, MODEL_ID: "fake-model" },
+    env: { ...process.env, DO_CODE_CONFIG_PATH: config, TERM: "xterm-256color", MODEL_API_KEY: "test", MODEL_BASE_URL: `http://127.0.0.1:${address.port}/v1`, MODEL_ID: "fake-model" },
   })
   let raw = ""
   let sent = false, openedCompletion = false, exiting = false

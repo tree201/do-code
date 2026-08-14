@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import { MaxSessionTurnsError } from "../../turn-limits.js"
 import { createToolPresentation } from "../../tool-presentation.js"
 import { expandPromptExtension } from "../../extension-registry.js"
@@ -18,10 +18,18 @@ import type { SessionActions } from "./use-session-actions.js"
 import type { TranscriptController } from "./use-transcript-controller.js"
 
 const EMPTY_DRAFT: ComposerDraft = { value: "", nodes: [] }
+const FOLLOWUP_SUGGESTION_DELAY_MS = 300
 
 export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, transcript: TranscriptController, sessions: SessionActions, exit: () => void) {
   const SHELL_TOOL_NAME = "shell"
+  const suggestionTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const clearSuggestion = useCallback(() => {
+    if (suggestionTimer.current) clearTimeout(suggestionTimer.current)
+    suggestionTimer.current = null
+    state.clearFollowupSuggestion()
+  }, [state])
   const submit = useCallback((rawInput: string | ComposerDraft) => {
+    clearSuggestion()
     const composer = state.composerOwner.getSnapshot()
     const draft = typeof rawInput === "string" ? { value: rawInput, nodes: composer.nodes } : rawInput
     const input = stripAttachmentTokens(draft.value).trim()
@@ -59,6 +67,17 @@ export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, tran
           const stats = props.conversation.stats(); state.setContextPercent(Math.round(stats.currentContextTokens / stats.contextWindow * 100))
         }
         await props.save()
+        if (props.followupSuggestions !== false && !signal.aborted && !input.startsWith("/") && !input.startsWith("!") && !state.activePlanMode && props.generateFollowupSuggestion) {
+          const controller = new AbortController()
+          state.followupAbort.current = controller
+          void props.generateFollowupSuggestion(controller.signal).then((suggestion) => {
+            if (!controller.signal.aborted && state.followupAbort.current === controller && suggestion) {
+              suggestionTimer.current = setTimeout(() => {
+                if (!controller.signal.aborted && state.followupAbort.current === controller && !state.composerOwner.getSnapshot().editor.value) state.setFollowupSuggestion(suggestion)
+              }, FOLLOWUP_SUGGESTION_DELAY_MS)
+            }
+          })
+        }
       } catch (error) {
         if (signal.aborted) state.append({ kind: "info", text: t(state.activeLanguage, "The current task was interrupted.") })
         else if (error instanceof MaxSessionTurnsError) state.append({ kind: "info", text: t(state.activeLanguage, "This task reached the maximum of {maxTurns} model turns. Increase it with --max-steps or the active agent profile.", { maxTurns: error.maxTurns }) })
@@ -66,6 +85,11 @@ export function useTurnSubmission(props: ChatAppProps, state: ChatAppState, tran
       } finally { transcript.flushPendingTools(); state.turnOwner.finish(); state.setActiveTool(null); transcript.clearLiveAssistant() }
     })()
   }, [exit, props, sessions, state, transcript])
+
+  useEffect(() => () => {
+    state.followupAbort.current?.abort()
+    if (suggestionTimer.current) clearTimeout(suggestionTimer.current)
+  }, [])
 
   useEffect(() => {
     if (state.running || hasBlockingDialog(state.activeDialog) || !state.queuedInputs.length) return

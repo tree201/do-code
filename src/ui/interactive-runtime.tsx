@@ -20,6 +20,7 @@ import { ChatApp } from "./chat-app-component.js"
 import { t } from "./i18n.js"
 import { createInteractiveRenderer } from "./interactive-renderer.js"
 import { createInteractiveSessionStore } from "./interactive-session-store.js"
+import { generateFollowupSuggestion } from "./followup-suggestion.js"
 import { createRuntimeStore, type RuntimeStore } from "./runtime-store.js"
 
 const SHELL_TOOL = "shell"
@@ -128,6 +129,8 @@ export async function runInteractiveChat(args: Args, model: SwitchableModel, mod
     reportError={async (error, operation, category, context) => await reportError({ error, operation, ...(category ? { category } : {}), workspace: args.workspace, sessionId: store.session().id, model: store.modelConfig().preset, context: { input: context, approvalMode: runtimeStore.getSnapshot().approvalMode, maxSteps: args.maxSteps, stats: conversation.stats(), messages: conversation.history().slice(-30), events: store.events().slice(-150) } })}
     modelPresets={listModelPresets(config)} promptExtensions={extensions} language={initialLanguage} openTranscriptViewer={renderer.openTranscriptViewer} openHelp={renderer.openHelp} forwardViewportInput={renderer.forwardViewportInput} renderRevision={renderer.revision()}
     pasteImage={pasteImage} pasteImagePaths={pasteImagePaths}
+    followupSuggestions={config.followupSuggestions ?? true}
+    generateFollowupSuggestion={async (signal) => await generateFollowupSuggestion(createChatModel(runtimeStore.getSnapshot().modelConfig), conversation.history(), signal)}
   />
   renderer = createInteractiveRenderer(createApp)
   const instance = renderer.start()

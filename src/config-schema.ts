@@ -25,6 +25,10 @@ export function migrateConfig(value: unknown, source = "configuration"): StoredC
     if (!THINKING_MODES.includes(String(raw.defaultThinkingMode) as ThinkingMode)) throw new Error(`${source}.defaultThinkingMode is invalid`)
     config.defaultThinkingMode = raw.defaultThinkingMode as ThinkingMode
   }
+  if (raw.followupSuggestions !== undefined) {
+    if (typeof raw.followupSuggestions !== "boolean") throw new Error(`${source}.followupSuggestions must be a boolean`)
+    config.followupSuggestions = raw.followupSuggestions
+  }
   if (raw.language !== undefined) {
     if (!isSupportedLanguage(raw.language)) throw new Error(`${source}.language must be one of: ${supportedLanguages().join(", ")}`)
     config.language = raw.language
