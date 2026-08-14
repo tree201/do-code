@@ -41,7 +41,7 @@
     "typescript": "^5.7.0"
   },
   "dependencies": {
-    "@tree201/markdansi": "^0.4.0",
+    "@tree201/markdansi": "^0.4.2",
     "cli-highlight": "^2.1.11",
     "ink": "npm:@jrichman/ink@6.6.9",
     "marked": "^18.0.9",

@@ -36,6 +36,28 @@ test("markdansi renders core GFM structures without source markers", () => {
   assert.doesNotMatch(visible, /\*\*|~~|`inlineCode`|\[链接\]\(/)
 })
 
+test("published Markdansi renders LaTeX math as terminal Unicode", () => {
+  const output = render([
+    "给定非纯函数 $f_{\\mathrm{impure}}:X\\to Y$。",
+    "",
+    "$$",
+    "f:\\Gamma\\times X\\to\\Gamma\\times Y \\tag{1}",
+    "$$",
+    "",
+    "Use `$PATH`, pay $100, and keep code unchanged:",
+    "",
+    "```ts",
+    "const formula = '$x$'",
+    "```",
+  ].join("\n"), { ...plainOptions, width: 60 })
+  const visible = stripVTControlCharacters(output)
+  assert.match(visible, /fᵢₘₚᵤᵣₑ:X→ Y/)
+  assert.match(visible, /f:Γ× X→Γ× Y\s+\(1\)/)
+  assert.match(visible, /\$PATH.*\$100/)
+  assert.match(visible, /const formula = '\$x\$'/)
+  assert.doesNotMatch(visible, /\\mathrm|\\Gamma|\\times|\\tag|\$\$/)
+})
+
 test("markdansi keeps fenced code and tables within ordinary viewport widths", () => {
   const width = 36
   const output = render([
