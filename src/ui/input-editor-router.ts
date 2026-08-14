@@ -61,7 +61,9 @@ export function routeEditorInput(rawInput: string, input: string, key: ChatInput
   if (composer.exitConfirmation) state.clearExitConfirmation()
   if (key.ctrl && input === "d") { if (!composer.editor.value) exit(); else state.setEditor((current) => deleteEditor(current)); return }
   if ((key.ctrl && (key.return || input === "j")) || (key.meta && key.return)) { state.setEditor((current) => insertEditorText(current, "\n")); return }
-  const completionItems = completionsForEditor(composer.editor, state.workspaceFiles, state.customCompletions, state.argumentCompletions, state.activeLanguage)?.items ?? []
+  const completionItems = composer.historyIndex === null
+    ? completionsForEditor(composer.editor, state.workspaceFiles, state.customCompletions, state.argumentCompletions, state.activeLanguage)?.items ?? []
+    : []
   if (!composer.editor.value && !completionItems.length && state.followupSuggestion && (key.tab || key.rightArrow)) { state.setEditor((current) => insertEditorText(current, state.followupSuggestion!)); dismissFollowup(); return }
   if (!key.ctrl && !key.meta && input.includes("\t")) {
     const tabIndex = input.indexOf("\t")
@@ -75,6 +77,23 @@ export function routeEditorInput(rawInput: string, input: string, key: ChatInput
     return
   }
   const isPlainReturn = !key.ctrl && !key.meta && (key.return || /^(?:\r\n|\r|\n)$/.test(input))
+  if (composer.historyIndex !== null && key.upArrow) {
+    const index = Math.max(0, composer.historyIndex - 1)
+    state.setHistoryIndex(index)
+    restoreDraft(state, composer.history[index] ?? { value: "", nodes: [] })
+    return
+  }
+  if (composer.historyIndex !== null && key.downArrow) {
+    const index = composer.historyIndex + 1
+    if (index >= composer.history.length) {
+      state.setHistoryIndex(null)
+      restoreDraft(state, composer.historyDraft)
+    } else {
+      state.setHistoryIndex(index)
+      restoreDraft(state, composer.history[index] ?? { value: "", nodes: [] })
+    }
+    return
+  }
   if (isPlainReturn && state.composerOwner.pastedRecently()) return
   if (isPlainReturn && completionItems.length) {
     const index = composer.completionIndex

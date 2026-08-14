@@ -8,6 +8,33 @@ import type { ChatModel } from "../src/protocol.js"
 import { ApprovalBridge, ChatApp, QuestionBridge, type ChatAppProps } from "../src/ui/chat-app.js"
 import { tick, visibleFrame } from "./support/chat-ui.js"
 
+test("history navigation continues past a recalled slash command", async (t) => {
+  const model: ChatModel = { async complete() { return { content: "unused", toolCalls: [] } } }
+  const conversation = new AgentConversation({ workspace: process.cwd(), model, approveShell: async () => false })
+  const view = render(React.createElement(ChatApp, {
+    workspace: process.cwd(), model: "test-model", approvalMode: "ask", sessionId: "session_history_completion", restored: false,
+    initialMessages: [], conversation, language: "en", approvalBridge: new ApprovalBridge(), attachEventSink: () => {},
+    runShellShortcut: async () => ({ ok: true, output: "" }), listSessions: async () => [], resumeSession: async () => { throw new Error("unused") },
+    renameCurrentSession: async () => { throw new Error("unused") }, exportCurrentSession: async () => "unused", save: async () => {},
+    reportError: async () => ({ id: "err_test", file: "/tmp/error.json" }),
+  } satisfies ChatAppProps))
+  t.after(() => view.unmount())
+
+  view.stdin.write("/status\r")
+  await tick(); await tick()
+  view.stdin.write("/model\r")
+  await tick(); await tick()
+  view.stdin.write("\u001b")
+  await tick(); await tick()
+
+  view.stdin.write("\u001b[A")
+  await tick()
+  assert.match(visibleFrame(view), /› \/model/)
+  view.stdin.write("\u001b[A")
+  await tick()
+  assert.match(visibleFrame(view), /› \/status/)
+})
+
 test("editor shortcuts move, delete, clear, undo, redo, and insert newlines", async (t) => {
   let requests = 0
   const model: ChatModel = { async complete() { requests++; return { content: "unused", toolCalls: [] } } }

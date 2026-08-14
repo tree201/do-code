@@ -85,7 +85,7 @@ export function useChatAppState(props: ChatAppProps, initialWidth: number, initi
   }), [activeLanguage, activeThinkingMode])
   const completion = useMemo(() => completionsForEditor(editor, workspaceFiles, customCompletions, argumentCompletions, activeLanguage, workspaceCompletionIndex), [activeLanguage, argumentCompletions, customCompletions, editor, workspaceCompletionIndex, workspaceFiles])
   const cursorParts = useMemo(() => editorCursorParts(editor), [editor])
-  const completionItems = completion?.items ?? []
+  const completionItems = historyIndex === null ? completion?.items ?? [] : []
   const completionWindowStart = Math.max(0, Math.min(completionIndex - 4, completionItems.length - 6))
   const viewerHeight = inlineViewerHeight(terminalWidth, terminalHeight)
   const viewerRows = Math.max(3, viewerHeight - 4)
