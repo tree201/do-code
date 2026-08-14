@@ -46,7 +46,7 @@ function runNpm(args) {
 
 async function main() {
   const input = parseArgs(process.argv)
-  if (runGit("status --porcelain")) die("working tree must be clean before releasing")
+  if (runGit("status --porcelain --untracked-files=no")) die("tracked files must be clean before releasing")
   const root = await readJson(rootPkg)
   const cli = await readJson(cliPkg)
   const current = root.version
