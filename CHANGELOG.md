@@ -4,6 +4,7 @@ All notable changes to do-code are documented here. The project follows [Semanti
 
 ## Unreleased
 
+- Render inline and display LaTeX math with terminal-safe Unicode through Markdansi.
 - Improve public documentation and release automation.
 
 ## 0.3.7 - 2026-08-14

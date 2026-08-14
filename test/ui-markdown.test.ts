@@ -42,6 +42,18 @@ test("terminal markdown components render headings, code and diff content", (t) 
   assert.match(visibleFrame(diff), /\+new/)
 })
 
+test("terminal markdown renders inline and display LaTeX math", (t) => {
+  const view = render(React.createElement(MarkdownText, {
+    children: "给定 $f_{\\mathrm{impure}}:X\\to Y$。\n\n$$\\Gamma\\times X\\to\\Gamma\\times Y$$",
+    width: 60,
+  }))
+  t.after(() => view.unmount())
+  const frame = visibleFrame(view)
+  assert.match(frame, /fᵢₘₚᵤᵣₑ:X→ Y/)
+  assert.match(frame, /Γ× X→Γ× Y/)
+  assert.doesNotMatch(frame, /\$\$|\\mathrm|\\Gamma|\\times|\\to/)
+})
+
 test("markdown lists stay compact even when source separates list items", (t) => {
   const view = render(React.createElement(MarkdownText, {
     children: "### 验证结果\n1. 第一项\n   - 子项一\n   - 子项二\n\n2. 第二项\n   - 子项三",
