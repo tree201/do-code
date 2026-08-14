@@ -74,7 +74,7 @@ Utilisez `/thinking` et `/effort` pour ajuster le raisonnement pendant une sessi
 - **Lisez le Markdown de terminal de façon fiable** — le code en ligne long, les URL, le texte CJK sans espace et les emoji se replient selon la largeur visible du terminal sans perte de contenu.
 - **Conservez le choix d’autorisation avec le travail** — chaque session mémorise son mode d’approbation ; utilisez le raccourci main gauche `Ctrl+G` pour le modifier pendant le travail.
 - **Gardez le cap sur les tâches longues** — la compaction conserve un résumé glissant et les tours complets récents, tout en résumant les travaux plus anciens par lots.
-- **Reprenez depuis une note courte** — lorsqu’une tâche doit conserver son avancement entre plusieurs étapes, utilisez un `TASK.md` facultatif avec l’objectif, l’avancement, les preuves, les blocages et la prochaine étape.
+- **Reprenez depuis une note courte** - lorsqu'une tâche doit conserver son avancement entre plusieurs étapes, l'agent maintient automatiquement une note de tâche avec l'objectif, l'avancement, les preuves, les blocages et la prochaine étape, stockée en dehors de l'espace de travail.
 
 ## Exécutez-le comme vous le souhaitez
 
@@ -98,7 +98,7 @@ do-code sessions delete <session-id>
 do-code sessions export <session-id> md ./session.md
 ```
 
-Utilisez `/stats` pour inspecter l’utilisation du contexte et `/compact` pour le compacter à la demande. À l’approche de la limite, do-code résume par lots les anciens tours complets et conserve un résumé glissant avec la file des tâches complètes récentes. Pour une transmission durable, gardez un `TASK.md` court à la racine ; il est relu avant chaque requête au modèle.
+Utilisez `/stats` pour inspecter l'utilisation du contexte et `/compact` pour le compacter à la demande. À l'approche de la limite, do-code résume par lots les anciens tours complets et conserve un résumé glissant avec la file des tâches complètes récentes. Pour une transmission durable, l'agent peut maintenir une courte note de tâche ; elle est relue avant chaque requête au modèle.
 
 ### Instructions du projet et isolation
 

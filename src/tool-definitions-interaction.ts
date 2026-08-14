@@ -3,6 +3,7 @@ import { optionalStringArray, stringArray, toolSchema } from "./tool-definition-
 import { text } from "./tool-input.js"
 import { TOOL_NAMES } from "./tool-names.js"
 import { deleteDurableMemory, listDurableMemories, readDurableMemory, writeDurableMemory, type MemoryScope, type MemoryType } from "./durable-memory.js"
+import { writeTaskNote } from "./task-note.js"
 
 function memoryScope(value: unknown): MemoryScope {
   if (value === "user" || value === "project") return value
@@ -66,6 +67,20 @@ const memoryDeleteTool: ToolImplementation = {
     const memoryPath = text(args, "path")
     await deleteDurableMemory(context.workspace, scope, memoryPath)
     return { ok: true, output: `Deleted durable memory: ${scope}/${memoryPath}` }
+  },
+}
+
+const writeTaskNoteTool: ToolImplementation = {
+  definition: { type: "function", function: {
+    name: TOOL_NAMES.WRITE_TASK_NOTE,
+    description: "Create or replace the durable task note used to track goal, progress, evidence, blockers, and next step across model requests. The note is stored outside the workspace and refreshed automatically before each request.",
+    parameters: toolSchema({ content: { type: "string" } }, ["content"]),
+  } },
+  async execute(args, context) {
+    const content = text(args, "content")
+    if (!content.trim()) return { ok: false, output: "content must not be empty" }
+    await writeTaskNote(context.workspace, content)
+    return { ok: true, output: "Saved task note" }
   },
 }
 
@@ -179,4 +194,4 @@ const todoReadTool: ToolImplementation = {
   },
 }
 
-export const interactionTools = [memoryListTool, memoryReadTool, memoryWriteTool, memoryDeleteTool, enterPlanModeTool, exitPlanModeTool, askUserTool, todoWriteTool, todoReadTool] satisfies ToolImplementation[]
+export const interactionTools = [memoryListTool, memoryReadTool, memoryWriteTool, memoryDeleteTool, writeTaskNoteTool, enterPlanModeTool, exitPlanModeTool, askUserTool, todoWriteTool, todoReadTool] satisfies ToolImplementation[]

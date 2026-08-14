@@ -62,7 +62,7 @@ function actionForGroup(name: string, count: number, ok: boolean, language: DoCo
     write_file: ["Failed to write", "Wrote"], edit_file: ["Failed to edit", "Edited"], apply_patch: ["Failed to apply patch", "Applied patch"],
     shell: ["Command failed", "Ran command"], shell_start: ["Failed to start command", "Started command"], shell_status: ["Failed to check command", "Checked command"],
     web_search: ["Web search failed", "Searched the web"], web_fetch: ["Failed to fetch page", "Fetched page"],
-    todo_write: ["Failed to update plan", "Updated plan"], enter_plan_mode: ["Failed to enter planning", "Entered planning"], exit_plan_mode: ["Failed to submit plan", "Reviewed plan"],
+    todo_write: ["Failed to update plan", "Updated plan"], write_task_note: ["Failed to save task note", "Saved task note"], enter_plan_mode: ["Failed to enter planning", "Entered planning"], exit_plan_mode: ["Failed to submit plan", "Reviewed plan"],
     delegate_task: ["Delegation failed", "Completed delegated task"],
   }
   const action = t(language, actions[name]?.[failed ? 0 : 1] ?? (failed ? "{name} failed" : "{name}"), { name })
@@ -115,7 +115,7 @@ export function activeToolSummary(name: string, args: unknown, language: DoCodeL
   const actions: Record<string, string> = {
     read_file: "Reading", read_many_files: "Reading files", list_directory: "Listing", glob: "Finding files", search: "Searching",
     write_file: "Writing", edit_file: "Editing", apply_patch: "Applying patch", shell: "Running command", shell_start: "Starting command", shell_status: "Checking command",
-    web_search: "Searching the web", web_fetch: "Fetching page", todo_write: "Updating plan", enter_plan_mode: "Entering planning", exit_plan_mode: "Submitting plan", delegate_task: "Delegating task",
+    web_search: "Searching the web", web_fetch: "Fetching page", todo_write: "Updating plan", write_task_note: "Saving task note", enter_plan_mode: "Entering planning", exit_plan_mode: "Submitting plan", delegate_task: "Delegating task",
   }
   const action = t(language, actions[name] ?? "Running {name}", { name })
   return detail ? `${action}  ${detail}` : action
