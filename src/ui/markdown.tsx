@@ -1,5 +1,5 @@
 import { Text } from "ink"
-import { render } from "markdansi"
+import { render } from "@tree201/markdansi"
 import { marked } from "marked"
 import { tuiTheme } from "./theme.js"
 

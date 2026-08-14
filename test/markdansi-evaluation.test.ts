@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import test from "node:test"
 import { stripVTControlCharacters } from "node:util"
-import { createMarkdownStreamer, render } from "markdansi"
+import { createMarkdownStreamer, render } from "@tree201/markdansi"
 import { displayWidth } from "../src/ui/terminal-text.js"
 
 const plainOptions = { color: false, hyperlinks: false } as const
@@ -83,8 +83,8 @@ test("markdansi streaming buffers fenced code and tables until complete", () => 
   assert.match(stripVTControlCharacters(finished), /do-code.*完成/s)
 })
 
-test("pinned markdansi fork supports do-code's Node 20 runtime", async () => {
-  const packageJson = JSON.parse(await readFile(new URL("../node_modules/markdansi/package.json", import.meta.url), "utf8")) as { engines?: { node?: string } }
+test("published Markdansi fork supports do-code's Node 20 runtime", async () => {
+  const packageJson = JSON.parse(await readFile(new URL("../node_modules/@tree201/markdansi/package.json", import.meta.url), "utf8")) as { engines?: { node?: string } }
   assert.equal(packageJson.engines?.node, ">=20.19.0")
 })
 
