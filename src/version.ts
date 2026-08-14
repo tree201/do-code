@@ -1,1 +1,1 @@
-export const DO_CODE_VERSION = "0.3.8"
+export const DO_CODE_VERSION = "0.3.9"
