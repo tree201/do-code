@@ -27,7 +27,7 @@
     "test:ui": "tsx --test test/chat-ui-*.test.ts",
     "verify:fast": "npm run typecheck && npm run check:file-size",
     "verify:local": "npm run typecheck && npm test",
-    "activate:local": "npm run verify:local && npm run build:agent",
+    "activate:local": "npm run build:agent && npm run verify:local",
     "release:pack": "npm run build:agent && mkdir -p .do-code/releases && npm pack ./packages/cli --pack-destination .do-code/releases",
     "release": "node scripts/release.mjs",
     "test": "tsx --test test/*.test.ts",
