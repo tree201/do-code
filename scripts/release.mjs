@@ -58,6 +58,12 @@ async function main() {
   if (!/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(next)) die(`invalid version: ${next}`)
 
   const date = new Date().toISOString().slice(0, 10)
+  const text = await readFile(changelog, "utf8")
+  const updated = text.replace(
+    /^## Unreleased\n\n((?:- .+\n)+)/m,
+    `## Unreleased\n\n## ${next} - ${date}\n\n$1`,
+  )
+  if (updated === text) die("could not find Unreleased section with entries in CHANGELOG.md")
 
   root.version = next
   await writeJson(rootPkg, root)
@@ -67,13 +73,6 @@ async function main() {
   await writeJson(cliPkg, cli)
   await writeFile(versionFile, `export const DO_CODE_VERSION = "${next}"\n`)
   runNpm("install --package-lock-only --ignore-scripts")
-
-  const text = await readFile(changelog, "utf8")
-  const updated = text.replace(
-    /^## Unreleased\n\n((?:- .+\n)+)/m,
-    `## Unreleased\n\n## ${next} - ${date}\n\n$1`,
-  )
-  if (updated === text) die("could not find Unreleased section with entries in CHANGELOG.md")
   await writeFile(changelog, updated)
 
   runGit(`add ${path.relative(projectRoot, rootPkg)} ${path.relative(projectRoot, cliPkg)} ${path.relative(projectRoot, versionFile)} package-lock.json ${path.relative(projectRoot, changelog)}`)
