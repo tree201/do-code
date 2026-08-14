@@ -30,6 +30,8 @@ jobs:
           fi
       - run: npm run build:agent
       - run: npm test
+        env:
+          FORCE_COLOR: "1"
       - run: npm run typecheck
       - run: npm run build
       - name: Verify published CLI package in a clean temporary prefix
